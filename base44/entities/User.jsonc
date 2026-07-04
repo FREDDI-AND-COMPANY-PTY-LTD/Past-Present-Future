@@ -8,6 +8,11 @@
         "user",
         "elder"
       ]
+    },
+    "login_count": {
+      "type": "number",
+      "description": "Number of times the user has logged in (tracked for onboarding helpers)",
+      "default": 0
     }
   },
   "required": [

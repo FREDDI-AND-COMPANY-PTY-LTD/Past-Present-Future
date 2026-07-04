@@ -5,6 +5,7 @@ import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import SearchBar from '@/components/SearchBar';
 import ContentCard from '@/components/ContentCard';
+import UploadHelperBanner from '@/components/UploadHelperBanner';
 
 export default function Home() {
   const [recentItems, setRecentItems] = useState([]);
@@ -23,6 +24,7 @@ export default function Home() {
 
   return (
     <Layout>
+      <UploadHelperBanner />
       {/* Hero */}
       <section className="relative h-[70vh] min-h-[500px] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0">
