@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Calendar, MessageCircle, ChevronLeft, Newspaper, Loader2 } from 'lucide-react';
+import { Calendar, ChevronLeft, Newspaper, Loader2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
-import CommentThread from '@/components/CommentThread';
+import EngageButton from '@/components/EngageButton';
 
 export default function NewsletterDetail() {
   const { id } = useParams();
@@ -110,7 +110,8 @@ export default function NewsletterDetail() {
 }
 
 function FeaturedItemWithComments({ item }) {
-  const [expanded, setExpanded] = useState(false);
+  const [user, setUser] = useState(null);
+  useEffect(() => { base44.auth.me().then(setUser).catch(() => {}); }, []);
   const typeLabels = {
     photo: 'Photograph', story: 'Story', press_clipping: 'Press Clipping', video: 'Video',
     certificate: 'Certificate', narrative: 'Narrative', passport: 'Passport',
@@ -133,18 +134,9 @@ function FeaturedItemWithComments({ item }) {
           {item.description && <p className="text-sm text-parchment/60 line-clamp-2 mt-1">{item.description}</p>}
         </div>
       </div>
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="mt-3 flex items-center gap-1.5 text-sm text-amber-light/70 hover:text-amber-light transition-colors"
-      >
-        <MessageCircle size={14} />
-        {expanded ? 'Hide comments' : 'View / add comments'}
-      </button>
-      {expanded && (
-        <div className="mt-2 pt-3 border-t border-[rgba(201,145,58,0.1)]">
-          <CommentThread entityType="ContentItem" entityId={item.id} fieldName="newsletter_discussion" />
-        </div>
-      )}
+      <div className="mt-3 pt-3 border-t border-[rgba(201,145,58,0.1)]">
+        <EngageButton item={item} user={user} />
+      </div>
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ArrowDownUp, MapPin, Image, FileText, Newspaper, Video, Award, Calendar, BookUser, IdCard, Mail, Heart } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
+import EngageButton from '@/components/EngageButton';
 
 const typeIcons = {
   photo: Image,
@@ -22,6 +23,7 @@ export default function TimelinePage() {
   const [ancestors, setAncestors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [reverse, setReverse] = useState(true);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
     Promise.all([
@@ -31,6 +33,7 @@ export default function TimelinePage() {
       setItems(ci || []);
       setAncestors(ancs || []);
     }).catch(() => {}).finally(() => setLoading(false));
+    base44.auth.me().then(setUser).catch(() => {});
   }, []);
 
   const sorted = [...items]
@@ -95,6 +98,9 @@ export default function TimelinePage() {
                           {tagged.map(a => <span key={a.id} className="text-amber-light/60">{a.full_name}</span>)}
                         </div>
                       </Link>
+                      <div className="mt-2">
+                        <EngageButton item={item} user={user} />
+                      </div>
                     </div>
                   </div>
                 );

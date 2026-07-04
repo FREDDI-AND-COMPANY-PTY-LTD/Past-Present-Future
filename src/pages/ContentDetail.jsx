@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { MapPin, Calendar, Flag, ChevronLeft, ExternalLink, FileText, Award } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
+import EngageButton from '@/components/EngageButton';
 
 export default function ContentDetail() {
   const { id } = useParams();
@@ -12,6 +13,7 @@ export default function ContentDetail() {
   const [showFlagForm, setShowFlagForm] = useState(false);
   const [flagText, setFlagText] = useState('');
   const [flagSubmitted, setFlagSubmitted] = useState(false);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
     Promise.all([
@@ -21,6 +23,7 @@ export default function ContentDetail() {
       setItem(ci);
       setAncestors(ancs || []);
     }).catch(() => {}).finally(() => setLoading(false));
+    base44.auth.me().then(setUser).catch(() => {});
   }, [id]);
 
   const taggedAncestors = (item?.ancestor_ids || [])
@@ -107,6 +110,11 @@ export default function ContentDetail() {
               </div>
             )}
           </div>
+        </div>
+
+        {/* Engage: comment or upload related event */}
+        <div className="aged-card rounded-xl p-6">
+          <EngageButton item={item} user={user} />
         </div>
 
         {/* Flag conflict */}
