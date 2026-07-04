@@ -1,4 +1,6 @@
 {
+  "name": "User",
+  "type": "object",
   "properties": {
     "role": {
       "type": "string",
@@ -13,11 +15,14 @@
       "type": "number",
       "description": "Number of times the user has logged in (tracked for onboarding helpers)",
       "default": 0
+    },
+    "newsletter_opt_in": {
+      "type": "boolean",
+      "description": "Whether the user has opted in to receive the monthly newsletter",
+      "default": false
     }
   },
   "required": [
     "role"
-  ],
-  "name": "User",
-  "type": "object"
+  ]
 }

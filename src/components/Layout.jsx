@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Home, Users, Map, Clock, Network, GitBranch, Upload, Shield, Search, Menu, X, Sparkles, Database, Inbox, AlertCircle } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import ReportProblemDialog from '@/components/ReportProblemDialog';
+import NewsletterOptIn from '@/components/NewsletterOptIn';
 
 const navItems = [
   { label: 'Home', path: '/', icon: Home },
@@ -84,6 +85,9 @@ export default function Layout({ children }) {
               <div className="mb-3 px-4 py-2 text-xs text-parchment/50">
                 Signed in as<br />
                 <span className="text-amber-light">{user.full_name || user.email}</span>
+              </div>
+              <div className="mb-3">
+                <NewsletterOptIn user={user} onUpdate={setUser} />
               </div>
               <Link
                 to="/branches"
