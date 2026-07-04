@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Users, Map, Clock, Network, GitBranch, Upload, Shield, Search, Menu, X, Sparkles, Database } from 'lucide-react';
+import { Home, Users, Map, Clock, Network, GitBranch, Upload, Shield, Search, Menu, X, Sparkles, Database, Inbox, AlertCircle } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import ReportProblemDialog from '@/components/ReportProblemDialog';
 
 const navItems = [
   { label: 'Home', path: '/', icon: Home },
@@ -27,7 +28,7 @@ export default function Layout({ children }) {
   const isAdmin = user?.role === 'admin';
 
   const navItemsWithAdmin = isAdmin
-    ? [...navItems, { label: 'Admin', path: '/admin', icon: Shield }]
+    ? [...navItems, { label: 'Admin', path: '/admin', icon: Shield }, { label: 'Admin Inbox', path: '/admin-inbox', icon: Inbox }]
     : navItems;
 
   return (
@@ -133,15 +134,23 @@ export default function Layout({ children }) {
               <p className="font-display text-lg text-gold">Freddi Ancestry Archive</p>
               <p className="text-xs text-parchment/40 mt-1">A private family history — preserved for generations</p>
             </div>
-            {user && (
-              <Link
-                to="/branches"
-                className="flex items-center gap-2 px-5 py-2.5 rounded-lg border border-[rgba(201,145,58,0.3)] text-amber-light text-sm hover:bg-[rgba(201,145,58,0.08)] transition-colors"
-              >
-                <GitBranch size={16} />
-                Start Your Branch
-              </Link>
-            )}
+            <div className="flex items-center gap-3">
+              <ReportProblemDialog>
+                <button className="flex items-center gap-2 px-4 py-2 rounded-lg border border-[rgba(201,145,58,0.2)] text-parchment/60 text-sm hover:text-amber-light hover:border-[rgba(201,145,58,0.4)] transition-colors">
+                  <AlertCircle size={14} />
+                  Report a Problem
+                </button>
+              </ReportProblemDialog>
+              {user && (
+                <Link
+                  to="/branches"
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-lg border border-[rgba(201,145,58,0.3)] text-amber-light text-sm hover:bg-[rgba(201,145,58,0.08)] transition-colors"
+                >
+                  <GitBranch size={16} />
+                  Start Your Branch
+                </Link>
+              )}
+            </div>
           </div>
         </footer>
       </div>

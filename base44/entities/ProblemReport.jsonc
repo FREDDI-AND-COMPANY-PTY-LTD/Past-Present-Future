@@ -1,0 +1,51 @@
+{
+  "name": "ProblemReport",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Short title summarizing the problem"
+    },
+    "description": {
+      "type": "string",
+      "description": "Detailed description of the problem reported by the user"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "open",
+        "in_progress",
+        "resolved"
+      ],
+      "default": "open",
+      "description": "Current status of the problem report"
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "default": "medium",
+      "description": "Priority level assigned by admin"
+    },
+    "reported_by_id": {
+      "type": "string",
+      "description": "User ID of the person reporting the problem"
+    },
+    "reported_by_name": {
+      "type": "string",
+      "description": "Display name of the reporter"
+    },
+    "admin_response": {
+      "type": "string",
+      "description": "Admin's response or resolution notes"
+    }
+  },
+  "required": [
+    "title",
+    "description",
+    "status"
+  ]
+}

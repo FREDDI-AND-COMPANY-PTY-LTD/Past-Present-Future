@@ -90,6 +90,16 @@
       "default": "none",
       "description": "Conflict flag status"
     },
+    "review_status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "reviewed",
+        "flagged"
+      ],
+      "default": "pending",
+      "description": "Admin review status for this uploaded content"
+    },
     "tags": {
       "type": "array",
       "items": {

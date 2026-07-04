@@ -14,6 +14,7 @@ import TimelinePage from '@/pages/TimelinePage';
 import FamilyTree from '@/pages/FamilyTree';
 import UploadEvent from '@/pages/UploadEvent';
 import AdminDashboard from '@/pages/AdminDashboard';
+import AdminInbox from '@/pages/AdminInbox';
 import ContentDetail from '@/pages/ContentDetail';
 import Branches from '@/pages/Branches';
 import ArchiveDataset from '@/pages/ArchiveDataset';
@@ -48,6 +49,7 @@ const AuthenticatedApp = () => {
       <Route path="/family-tree" element={<FamilyTree />} />
       <Route path="/upload" element={<UploadEvent />} />
       <Route path="/admin" element={<AdminDashboard />} />
+      <Route path="/admin-inbox" element={<AdminInbox />} />
       <Route path="/content/:id" element={<ContentDetail />} />
       <Route path="/branches" element={<Branches />} />
       <Route path="/archive-dataset" element={<ArchiveDataset />} />
