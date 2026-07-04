@@ -4,13 +4,15 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UserPlus, Mail, Lock, Loader2 } from "lucide-react";
+import { UserPlus, Mail, Lock, Loader2, User } from "lucide-react";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
 import { toast } from "@/components/ui/use-toast";
 
 export default function Register() {
+  const [givenNames, setGivenNames] = useState("");
+  const [familyName, setFamilyName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -24,6 +26,10 @@ export default function Register() {
     setError("");
     if (password !== confirmPassword) {
       setError("Passwords do not match");
+      return;
+    }
+    if (!givenNames.trim() || !familyName.trim()) {
+      setError("Please enter your given names and family name as they appear on your birth certificate");
       return;
     }
     setLoading(true);
@@ -44,6 +50,11 @@ export default function Register() {
       const result = await base44.auth.verifyOtp({ email, otpCode });
       if (result?.access_token) {
         base44.auth.setToken(result.access_token);
+        // Persist the birth-certificate-style name: given names + CAPITALISED family name
+        await base44.auth.updateMe({
+          given_names: givenNames.trim(),
+          family_name: familyName.trim().toUpperCase(),
+        }).catch(() => {});
       }
       window.location.href = "/";
     } catch (err) {
@@ -163,6 +174,42 @@ export default function Register() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="givenNames">Given Names</Label>
+          <div className="relative">
+            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
+            <Input
+              id="givenNames"
+              type="text"
+              autoComplete="given-name"
+              autoFocus
+              placeholder="Jason Lewis"
+              value={givenNames}
+              onChange={(e) => setGivenNames(e.target.value)}
+              className="pl-10 h-12"
+              required
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">As they appear on your birth certificate</p>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="familyName">Family / Surname</Label>
+          <div className="relative">
+            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
+            <Input
+              id="familyName"
+              type="text"
+              autoComplete="family-name"
+              placeholder="FREDDI"
+              value={familyName}
+              onChange={(e) => setFamilyName(e.target.value.toUpperCase())}
+              onBlur={() => setFamilyName(familyName.trim().toUpperCase())}
+              className="pl-10 h-12 uppercase tracking-wide font-medium"
+              required
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">Capitalised as on your birth certificate</p>
+        </div>
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
           <div className="relative">

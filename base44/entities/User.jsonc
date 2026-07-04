@@ -20,6 +20,14 @@
       "type": "boolean",
       "description": "Whether the user has opted in to receive the monthly newsletter",
       "default": false
+    },
+    "given_names": {
+      "type": "string",
+      "description": "Given / first names as they appear on the birth certificate (e.g. Jason Lewis)"
+    },
+    "family_name": {
+      "type": "string",
+      "description": "Surname / family name as capitalised on the birth certificate (e.g. FREDDI)"
     }
   },
   "required": [

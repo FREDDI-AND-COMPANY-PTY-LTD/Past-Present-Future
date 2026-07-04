@@ -36,7 +36,7 @@ export default function Layout({ children }) {
     <div className="min-h-screen bg-charcoal flex flex-col">
       {/* Top bar - mobile */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-charcoal/95 backdrop-blur-md border-b border-[rgba(201,145,58,0.15)] px-4 h-16 flex items-center justify-between">
-        <Link to="/" className="font-display text-xl text-gold tracking-wide">Freddi Ancestry</Link>
+        <Link to="/" className="font-display text-lg text-gold tracking-wide">Jason Lewis FREDDI</Link>
         <button onClick={() => setSidebarOpen(!sidebarOpen)} className="text-parchment p-2">
           {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
@@ -50,8 +50,8 @@ export default function Layout({ children }) {
       `}>
         <div className="p-6 border-b border-[rgba(201,145,58,0.15)]">
           <Link to="/" onClick={() => setSidebarOpen(false)} className="block">
-            <h1 className="font-display text-2xl text-gold tracking-wide leading-tight">Freddi</h1>
-            <p className="font-display text-sm text-amber-light/70 tracking-widest uppercase">Ancestry</p>
+            <h1 className="font-display text-xl text-gold tracking-wide leading-tight">Jason Lewis FREDDI</h1>
+            <p className="font-display text-xs text-amber-light/70 tracking-widest uppercase mt-1">Present, Past, Future</p>
           </Link>
         </div>
 
@@ -135,7 +135,7 @@ export default function Layout({ children }) {
         <footer className="border-t border-[rgba(201,145,58,0.15)] px-6 lg:px-12 py-8 mt-auto">
           <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
             <div>
-              <p className="font-display text-lg text-gold">Freddi Ancestry Archive</p>
+              <p className="font-display text-lg text-gold">Jason Lewis FREDDI, Present, Past, Future</p>
               <p className="text-xs text-parchment/40 mt-1">A private family history — preserved for generations</p>
             </div>
             <div className="flex items-center gap-3">
