@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, Upload, FileText, Image as ImageIcon, Award, Loader2, Check, Sparkles, Newspaper, Tag, Link2, Search, UserPlus } from 'lucide-react';
+import { Camera, Upload, FileText, Image as ImageIcon, Award, Loader2, Check, Sparkles, Newspaper, Tag, Link2, Search, UserPlus, BookUser, IdCard, Mail, Heart } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 
@@ -45,9 +45,10 @@ export default function UploadEvent() {
 
   const selectedAncestor = ancestors.find(a => a.id === selectedAncestorId) || null;
 
-  const canAttachToProfile = classification === 'certificate' &&
-    (documentSubtype === 'birth_certificate' || documentSubtype === 'marriage_certificate' || documentSubtype === 'passport_or_travel_document') &&
-    selectedAncestor;
+  const canAttachToProfile = selectedAncestor && (
+    (classification === 'certificate' && (documentSubtype === 'birth_certificate' || documentSubtype === 'marriage_certificate')) ||
+    classification === 'passport'
+  );
 
   useEffect(() => {
     base44.entities.Ancestor.list().then(setAncestors).catch(() => {});
@@ -67,9 +68,17 @@ export default function UploadEvent() {
 
 CATEGORIES (choose the single best fit):
 1. "photo" — A PHOTOGRAPH of a person, place, or event (no significant text content)
-2. "narrative" — A LETTER, DIARY ENTRY, MEMOIR, or handwritten story — transcribe the full text
-3. "press_clipping" — A NEWSPAPER ARTICLE or published media clipping — transcribe the full text and note the publication if visible
-4. "certificate" — Any FORMAL RECORD or official document. Determine the document_subtype:
+2. "narrative" — A DIARY ENTRY, MEMOIR, or handwritten personal story — transcribe the full text
+3. "correspondence" — A LETTER, POSTCARD, or TELEGRAM (personal correspondence between family members) — transcribe the full text, note sender and recipient if visible
+4. "press_clipping" — A NEWSPAPER ARTICLE or published media clipping — transcribe the full text and note the publication if visible
+5. "passport" — A PASSPORT or travel document (historical/expired or current). Extract all passport-specific fields. Determine the document_subtype:
+   • passport_or_travel_document
+6. "identity_document" — Other IDENTITY or TRAVEL documents that are NOT passports and NOT certificates (e.g. driver's licence, national ID card, residency permit, visa). Determine the document_subtype:
+   • passport_or_travel_document
+   • naturalization_or_citizenship
+   • immigration_or_border_record
+   • other_official_record
+7. "certificate" — Any FORMAL RECORD, official document, or certificate. Determine the document_subtype:
    • birth_certificate
    • death_certificate
    • marriage_certificate
@@ -95,8 +104,8 @@ DOCUMENT INTELLIGENCE — For certificates and any document containing text, rea
 
 Return JSON with this structure:
 {
-  "type": "photo" | "narrative" | "press_clipping" | "certificate",
-  "document_subtype": "birth_certificate" | "death_certificate" | "marriage_certificate" | "baptism_or_church_record" | "passenger_manifest_or_ship_record" | "passport_or_travel_document" | "naturalization_or_citizenship" | "census_record" | "military_record" | "immigration_or_border_record" | "statutory_declaration_or_affidavit" | "property_or_land_record" | "other_official_record" | "" (empty if not a certificate),
+  "type": "photo" | "narrative" | "correspondence" | "press_clipping" | "passport" | "identity_document" | "certificate",
+  "document_subtype": "birth_certificate" | "death_certificate" | "marriage_certificate" | "baptism_or_church_record" | "passenger_manifest_or_ship_record" | "passport_or_travel_document" | "naturalization_or_citizenship" | "census_record" | "military_record" | "immigration_or_border_record" | "statutory_declaration_or_affidavit" | "property_or_land_record" | "other_official_record" | "" (empty if not applicable),
   "transcription": "full text transcribed from the document, if any readable text exists — otherwise empty string",
   "extracted_fields": {
     "full_name": "", "date_of_birth": "", "place_of_birth": "", "date_of_death": "", "place_of_death": "",
@@ -112,13 +121,13 @@ Return JSON with this structure:
   "suggested_title": "a short descriptive title for this item, including the document subtype and primary person if known (e.g. 'Birth Certificate — Giuseppe Freddi (1898)')",
   "suggested_description": "a brief description of what this document is and its genealogical significance",
   "suggested_tags": ["array", "of", "relevant", "tags", "e.g. 'immigration', 'Victoria', '1890s', 'Freddi bloodline']"
-}`,
-        file_urls: [url],
-        response_json_schema: {
-          type: 'object',
-          properties: {
-            type: { type: 'string', enum: ['photo', 'narrative', 'press_clipping', 'certificate'] },
-            document_subtype: { type: 'string' },
+  }`,
+  file_urls: [url],
+  response_json_schema: {
+  type: 'object',
+  properties: {
+    type: { type: 'string', enum: ['photo', 'narrative', 'correspondence', 'press_clipping', 'passport', 'identity_document', 'certificate'] },
+    document_subtype: { type: 'string' },
             transcription: { type: 'string' },
             extracted_fields: { type: 'object' },
             suggested_title: { type: 'string' },
@@ -162,9 +171,10 @@ Return JSON with this structure:
       }));
 
       // Auto-suggest attaching certificate to ancestor profile
-      if (result.type === 'certificate' &&
-        (result.document_subtype === 'birth_certificate' || result.document_subtype === 'marriage_certificate' || result.document_subtype === 'passport_or_travel_document') &&
-        matchedAncestorId) {
+      if (matchedAncestorId && (
+        (result.type === 'certificate' && (result.document_subtype === 'birth_certificate' || result.document_subtype === 'marriage_certificate')) ||
+        result.type === 'passport'
+      )) {
         setAttachToProfile(true);
       }
 
@@ -178,10 +188,7 @@ Return JSON with this structure:
   const handleSave = async () => {
     setSaving(true);
     try {
-      const contentType = classification === 'photo' ? 'photo' :
-        classification === 'narrative' ? 'narrative' :
-        classification === 'press_clipping' ? 'press_clipping' :
-        classification === 'certificate' ? 'certificate' : 'photo';
+      const contentType = classification;
 
       const user = await base44.auth.me().catch(() => null);
 
@@ -213,7 +220,7 @@ Return JSON with this structure:
         const profileField =
           documentSubtype === 'birth_certificate' ? 'birth_certificate' :
           documentSubtype === 'marriage_certificate' ? 'marriage_certificate' :
-          documentSubtype === 'passport_or_travel_document' ? 'passport_document' : null;
+          classification === 'passport' ? 'passport_document' : null;
         if (profileField) {
           await base44.entities.Ancestor.update(selectedAncestorId, { [profileField]: fileUrl }).catch(() => {});
         }
@@ -368,12 +375,15 @@ Return JSON with this structure:
             <div className="aged-card rounded-xl p-4 flex items-center gap-3">
               {classification === 'photo' && <ImageIcon size={24} className="text-gold" />}
               {classification === 'narrative' && <FileText size={24} className="text-gold" />}
+              {classification === 'correspondence' && <Mail size={24} className="text-gold" />}
               {classification === 'press_clipping' && <Newspaper size={24} className="text-gold" />}
               {classification === 'certificate' && <Award size={24} className="text-gold" />}
+              {classification === 'passport' && <BookUser size={24} className="text-gold" />}
+              {classification === 'identity_document' && <IdCard size={24} className="text-gold" />}
               <div>
                 <p className="text-xs text-parchment/40 uppercase tracking-wider">Detected Type</p>
                 <p className="text-parchment font-medium">
-                  {classification === 'photo' ? 'Photograph' : classification === 'narrative' ? 'Narrative Document' : classification === 'press_clipping' ? 'Press Clipping' : 'Certificate / Formal Record'}
+                  {classification === 'photo' ? 'Photograph' : classification === 'narrative' ? 'Narrative Document' : classification === 'correspondence' ? 'Correspondence' : classification === 'press_clipping' ? 'Press Clipping' : classification === 'certificate' ? 'Certificate / Formal Record' : classification === 'passport' ? 'Passport / Travel Document' : classification === 'identity_document' ? 'Identity Document' : 'Document'}
                   {documentSubtype && documentSubtype !== 'other_official_record' && (
                     <span className="text-amber-light/70 text-sm ml-2">({documentSubtype.replace(/_/g, ' ')})</span>
                   )}
@@ -390,7 +400,7 @@ Return JSON with this structure:
                     Attach to {selectedAncestor.full_name}'s profile
                   </p>
                   <p className="text-xs text-parchment/40">
-                    {documentSubtype === 'birth_certificate' ? 'Birth certificate' : documentSubtype === 'marriage_certificate' ? 'Marriage certificate' : 'Passport document'} will be saved to their profile page
+                    {classification === 'passport' ? 'Passport document' : documentSubtype === 'birth_certificate' ? 'Birth certificate' : 'Marriage certificate'} will be saved to their profile page
                   </p>
                 </div>
                 <button
@@ -415,7 +425,7 @@ Return JSON with this structure:
             )}
 
             {/* Extracted document fields */}
-            {(classification === 'certificate' || classification === 'press_clipping') && extractedData && (
+            {(classification === 'certificate' || classification === 'press_clipping' || classification === 'passport' || classification === 'identity_document') && extractedData && (
               <div className="aged-card rounded-xl p-6">
                 <div className="flex items-center gap-2 mb-4">
                   <Award size={18} className="text-gold" />
@@ -439,7 +449,7 @@ Return JSON with this structure:
             )}
 
             {/* Transcribed text */}
-            {(classification === 'narrative' || classification === 'press_clipping') && transcribedText && (
+            {(classification === 'narrative' || classification === 'correspondence' || classification === 'press_clipping') && transcribedText && (
               <div className="aged-card rounded-xl p-6">
                 <div className="flex items-center gap-2 mb-3">
                   <FileText size={18} className="text-gold" />

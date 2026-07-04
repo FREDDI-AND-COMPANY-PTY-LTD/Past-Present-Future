@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { MapPin, Calendar, Flag, FileText, Image, Newspaper, Video, Award } from 'lucide-react';
+import { MapPin, Calendar, Flag, FileText, Image, Newspaper, Video, Award, BookUser, IdCard, Mail, Heart } from 'lucide-react';
 
 const typeIcons = {
   photo: Image,
@@ -9,6 +9,10 @@ const typeIcons = {
   video: Video,
   certificate: Award,
   narrative: FileText,
+  passport: BookUser,
+  identity_document: IdCard,
+  correspondence: Mail,
+  memorial: Heart,
 };
 
 const typeLabels = {
@@ -18,6 +22,10 @@ const typeLabels = {
   video: 'Video / Podcast',
   certificate: 'Certificate',
   narrative: 'Narrative',
+  passport: 'Passport',
+  identity_document: 'Identity Document',
+  correspondence: 'Correspondence',
+  memorial: 'Memorial',
 };
 
 export default function ContentCard({ item, ancestors = [] }) {

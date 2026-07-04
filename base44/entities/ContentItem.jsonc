@@ -14,7 +14,11 @@
         "press_clipping",
         "video",
         "certificate",
-        "narrative"
+        "narrative",
+        "passport",
+        "identity_document",
+        "correspondence",
+        "memorial"
       ],
       "default": "photo",
       "description": "Type of content"

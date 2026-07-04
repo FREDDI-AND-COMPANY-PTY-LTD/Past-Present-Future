@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowDownUp, MapPin, Image, FileText, Newspaper, Video, Award, Calendar } from 'lucide-react';
+import { ArrowDownUp, MapPin, Image, FileText, Newspaper, Video, Award, Calendar, BookUser, IdCard, Mail, Heart } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 
@@ -11,6 +11,10 @@ const typeIcons = {
   video: Video,
   certificate: Award,
   narrative: FileText,
+  passport: BookUser,
+  identity_document: IdCard,
+  correspondence: Mail,
+  memorial: Heart,
 };
 
 export default function TimelinePage() {
