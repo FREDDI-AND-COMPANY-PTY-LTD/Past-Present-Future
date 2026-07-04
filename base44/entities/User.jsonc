@@ -33,6 +33,15 @@
       "type": "string",
       "format": "date-time",
       "description": "ISO timestamp of when the user last concluded their notification review"
+    },
+    "cloud_folder_address": {
+      "type": "string",
+      "description": "Cloud folder address for automatic archive backups (entered when upgrading to a Branch Member)"
+    },
+    "is_branch_member": {
+      "type": "boolean",
+      "description": "Whether the user has upgraded to a Branch Member subscription",
+      "default": false
     }
   },
   "required": [

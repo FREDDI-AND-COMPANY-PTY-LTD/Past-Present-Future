@@ -5,6 +5,8 @@ import { base44 } from '@/api/base44Client';
 import ReportProblemDialog from '@/components/ReportProblemDialog';
 import NewsletterOptIn from '@/components/NewsletterOptIn';
 import NotificationPopup from '@/components/NotificationPopup';
+import CloudFolderSetting from '@/components/CloudFolderSetting';
+import LogoutButton from '@/components/LogoutButton';
 
 const navItems = [
   { label: 'Home', path: '/', icon: Home },
@@ -91,6 +93,10 @@ export default function Layout({ children }) {
               <div className="mb-3">
                 <NewsletterOptIn user={user} onUpdate={setUser} />
               </div>
+              <div className="mb-3">
+                <CloudFolderSetting user={user} onUpdate={setUser} />
+              </div>
+              <LogoutButton user={user} />
             </>
           ) : (
             <div className="space-y-2">
