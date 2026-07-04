@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Users, Map, Clock, Network, GitBranch, Upload, Shield, Search, Menu, X, Sparkles } from 'lucide-react';
+import { Home, Users, Map, Clock, Network, GitBranch, Upload, Shield, Search, Menu, X, Sparkles, Database } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
 const navItems = [
@@ -11,6 +11,7 @@ const navItems = [
   { label: 'Family Tree', path: '/family-tree', icon: Network },
   { label: 'Branches', path: '/branches', icon: GitBranch },
   { label: 'Upload Event', path: '/upload', icon: Upload },
+  { label: 'Dataset', path: '/archive-dataset', icon: Database },
 ];
 
 export default function Layout({ children }) {

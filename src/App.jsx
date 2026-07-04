@@ -16,6 +16,7 @@ import UploadEvent from '@/pages/UploadEvent';
 import AdminDashboard from '@/pages/AdminDashboard';
 import ContentDetail from '@/pages/ContentDetail';
 import Branches from '@/pages/Branches';
+import ArchiveDataset from '@/pages/ArchiveDataset';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -49,6 +50,7 @@ const AuthenticatedApp = () => {
       <Route path="/admin" element={<AdminDashboard />} />
       <Route path="/content/:id" element={<ContentDetail />} />
       <Route path="/branches" element={<Branches />} />
+      <Route path="/archive-dataset" element={<ArchiveDataset />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
