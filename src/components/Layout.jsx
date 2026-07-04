@@ -137,7 +137,7 @@ export default function Layout({ children }) {
               <ReportProblemDialog>
                 <button className="flex items-center gap-2 px-4 py-2 rounded-lg border border-[rgba(201,145,58,0.2)] text-parchment/60 text-sm hover:text-amber-light hover:border-[rgba(201,145,58,0.4)] transition-colors">
                   <AlertCircle size={14} />
-                  Report a Problem
+                  Contact Admin
                 </button>
               </ReportProblemDialog>
             </div>
