@@ -4,6 +4,7 @@ import L from 'leaflet';
 import { Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
+import { useBranchRoot } from '@/hooks/useBranchRoot';
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -28,6 +29,7 @@ export default function MapPage() {
   const [ancestors, setAncestors] = useState([]);
   const [loading, setLoading] = useState(true);
   const mapRef = useRef(null);
+  const { descendantIds, loading: branchLoading } = useBranchRoot();
 
   useEffect(() => {
     Promise.all([
@@ -41,7 +43,16 @@ export default function MapPage() {
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
-  const itemsWithLocation = contentItems.filter(i => i.latitude && i.longitude);
+  const branchItems = descendantIds.size > 0
+    ? contentItems.filter(i => (i.ancestor_ids || []).some(aid => descendantIds.has(aid)))
+    : contentItems;
+  const branchRoutes = descendantIds.size > 0
+    ? routes.filter(r => !r.ancestor_id || descendantIds.has(r.ancestor_id))
+    : routes;
+  const branchAncestors = descendantIds.size > 0
+    ? ancestors.filter(a => descendantIds.has(a.id))
+    : ancestors;
+  const itemsWithLocation = branchItems.filter(i => i.latitude && i.longitude);
 
   return (
     <Layout>
@@ -53,7 +64,7 @@ export default function MapPage() {
       </div>
 
       <div className="px-6 lg:px-12 pb-12 max-w-7xl mx-auto">
-        {loading ? (
+        {(loading || branchLoading) ? (
           <div className="aged-card rounded-2xl h-[600px] animate-pulse" />
         ) : (
           <div className="aged-card rounded-2xl overflow-hidden p-1">
@@ -72,7 +83,7 @@ export default function MapPage() {
               />
 
               {/* Migration routes */}
-              {routes.map((route, ri) => {
+              {branchRoutes.map((route, ri) => {
                 const waypoints = (route.waypoints || []).filter(w => w.lat && w.lng);
                 if (waypoints.length < 2) return null;
                 const color = route.color || routeColors[ri % routeColors.length];
@@ -101,8 +112,8 @@ export default function MapPage() {
               {/* Content item pins */}
               {itemsWithLocation.map(item => {
                 const tagged = (item.ancestor_ids || [])
-                  .map(aid => ancestors.find(a => a.id === aid))
-                  .filter(Boolean);
+                                 .map(aid => branchAncestors.find(a => a.id === aid))
+                                 .filter(Boolean);
                 return (
                   <Marker key={item.id} position={[item.latitude, item.longitude]} icon={goldIcon}>
                     <Popup>
@@ -127,11 +138,11 @@ export default function MapPage() {
         )}
 
         {/* Legend */}
-        {routes.length > 0 && (
+        {branchRoutes.length > 0 && (
           <div className="aged-card rounded-xl p-4 mt-4">
             <p className="text-xs text-parchment/40 uppercase tracking-wider mb-2">Migration Routes</p>
             <div className="flex flex-wrap gap-4">
-              {routes.map((route, ri) => (
+              {branchRoutes.map((route, ri) => (
                 <div key={route.id} className="flex items-center gap-2">
                   <div className="w-6 h-0.5" style={{ backgroundColor: route.color || routeColors[ri % routeColors.length] }} />
                   <span className="text-sm text-parchment/70">{route.name}</span>

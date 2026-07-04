@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ZoomIn, ZoomOut, ChevronRight, X } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
+import { useBranchRoot } from '@/hooks/useBranchRoot';
 
 export default function FamilyTree() {
   const [ancestors, setAncestors] = useState([]);
@@ -13,6 +14,7 @@ export default function FamilyTree() {
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const dragStart = useRef({ x: 0, y: 0 });
+  const { descendantIds, rootAncestorId, loading: branchLoading } = useBranchRoot();
 
   useEffect(() => {
     Promise.all([
@@ -24,13 +26,18 @@ export default function FamilyTree() {
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
+  // Filter to branch descendants when available
+  const branchAncestors = descendantIds.size > 0
+    ? ancestors.filter(a => descendantIds.has(a.id))
+    : ancestors;
+
   // Build tree structure
   const buildTree = useCallback(() => {
     const nodes = new Map();
-    ancestors.forEach(a => nodes.set(a.id, { ...a, children: [], level: 0 }));
+    branchAncestors.forEach(a => nodes.set(a.id, { ...a, children: [], level: 0 }));
 
     // Link children to parents
-    ancestors.forEach(a => {
+    branchAncestors.forEach(a => {
       if (a.mother_id && nodes.has(a.mother_id)) {
         nodes.get(a.mother_id).children.push(a.id);
       }
@@ -40,12 +47,14 @@ export default function FamilyTree() {
       }
     });
 
-    // Find roots (no parents in system)
-    const roots = ancestors.filter(a => {
-      const hasMother = a.mother_id && nodes.has(a.mother_id);
-      const hasFather = a.father_id && nodes.has(a.father_id);
-      return !hasMother && !hasFather;
-    });
+    // Root: the branch root ancestor if available, else ancestors with no parents in system
+    const roots = (rootAncestorId && nodes.has(rootAncestorId))
+      ? [branchAncestors.find(a => a.id === rootAncestorId)]
+      : branchAncestors.filter(a => {
+          const hasMother = a.mother_id && nodes.has(a.mother_id);
+          const hasFather = a.father_id && nodes.has(a.father_id);
+          return !hasMother && !hasFather;
+        });
 
     // Assign levels and positions
     const positions = new Map();
@@ -74,7 +83,7 @@ export default function FamilyTree() {
     roots.forEach(r => assignPositions(r.id, 0));
 
     return { nodes, positions, roots };
-  }, [ancestors]);
+  }, [branchAncestors, rootAncestorId]);
 
   const { nodes, positions, roots } = loading ? { nodes: new Map(), positions: new Map(), roots: [] } : buildTree();
 
@@ -125,13 +134,13 @@ export default function FamilyTree() {
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
       >
-        {loading ? (
+        {(loading || branchLoading) ? (
           <div className="flex items-center justify-center h-full">
             <p className="text-parchment/50">Building the family tree...</p>
           </div>
-        ) : ancestors.length === 0 ? (
+        ) : branchAncestors.length === 0 ? (
           <div className="flex items-center justify-center h-full">
-            <p className="text-parchment/50">No ancestors in the tree yet.</p>
+            <p className="text-parchment/50">No ancestors in this branch yet.</p>
           </div>
         ) : (
           <div

@@ -4,6 +4,7 @@ import { ArrowDownUp, MapPin, Image, FileText, Newspaper, Video, Award, Calendar
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import EngageButton from '@/components/EngageButton';
+import { useBranchRoot } from '@/hooks/useBranchRoot';
 
 const typeIcons = {
   photo: Image,
@@ -24,6 +25,7 @@ export default function TimelinePage() {
   const [loading, setLoading] = useState(true);
   const [reverse, setReverse] = useState(true);
   const [user, setUser] = useState(null);
+  const { descendantIds, loading: branchLoading } = useBranchRoot();
 
   useEffect(() => {
     Promise.all([
@@ -36,7 +38,15 @@ export default function TimelinePage() {
     base44.auth.me().then(setUser).catch(() => {});
   }, []);
 
-  const sorted = [...items]
+  const branchItems = descendantIds.size > 0
+    ? items.filter(i => (i.ancestor_ids || []).some(aid => descendantIds.has(aid)))
+    : items;
+
+  const branchAncestors = descendantIds.size > 0
+    ? ancestors.filter(a => descendantIds.has(a.id))
+    : ancestors;
+
+  const sorted = [...branchItems]
     .filter(i => i.date)
     .sort((a, b) => new Date(b.date) - new Date(a.date));
 
@@ -59,7 +69,7 @@ export default function TimelinePage() {
           </button>
         </div>
 
-        {loading ? (
+        {(loading || branchLoading) ? (
           <div className="space-y-6">{[1,2,3].map(i => <div key={i} className="aged-card rounded-xl h-32 animate-pulse" />)}</div>
         ) : sorted.length > 0 ? (
           <div className="relative">
@@ -69,7 +79,7 @@ export default function TimelinePage() {
             <div className="space-y-8">
               {sorted.map((item, idx) => {
                 const Icon = typeIcons[item.content_type] || FileText;
-                const tagged = (item.ancestor_ids || []).map(aid => ancestors.find(a => a.id === aid)).filter(Boolean);
+                const tagged = (item.ancestor_ids || []).map(aid => branchAncestors.find(a => a.id === aid)).filter(Boolean);
                 const isLeft = idx % 2 === 0;
 
                 return (

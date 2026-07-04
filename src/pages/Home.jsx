@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronRight, MapPin, Clock, Network, Users, Sparkles } from 'lucide-react';
+import { ChevronRight, MapPin, Clock, Network, Users, Sparkles, GitBranch } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import SearchBar from '@/components/SearchBar';
 import ContentCard from '@/components/ContentCard';
 import UploadHelperBanner from '@/components/UploadHelperBanner';
+import { useBranchRoot } from '@/hooks/useBranchRoot';
 
 export default function Home() {
   const [recentItems, setRecentItems] = useState([]);
   const [ancestors, setAncestors] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { rootAncestor, rootAncestorId } = useBranchRoot();
 
   useEffect(() => {
     Promise.all([
@@ -71,6 +73,29 @@ export default function Home() {
           })}
         </div>
       </section>
+
+      {/* Bloodline original branch */}
+      {rootAncestor && (
+        <section className="px-6 lg:px-12 py-8 max-w-7xl mx-auto">
+          <Link to={`/ancestor/${rootAncestorId}`} className="block aged-card rounded-2xl p-8 hover:border-[rgba(201,145,58,0.4)] transition-all duration-300 group">
+            <div className="flex items-center gap-6">
+              {rootAncestor.profile_photo ? (
+                <img src={rootAncestor.profile_photo} alt={rootAncestor.full_name} className="w-20 h-20 rounded-full object-cover sepia-tint border-2 border-[#C9913A] flex-shrink-0" />
+              ) : (
+                <div className="w-20 h-20 rounded-full bg-[rgba(201,145,58,0.1)] border-2 border-[#C9913A] flex items-center justify-center flex-shrink-0">
+                  <GitBranch size={28} className="text-gold" />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-amber-light/60 tracking-widest uppercase mb-1">Bloodline — Original Branch</p>
+                <h2 className="font-display text-3xl text-parchment group-hover:text-gold transition-colors">{rootAncestor.full_name}</h2>
+                <p className="text-sm text-parchment/50 mt-1">{rootAncestor.birth_place || rootAncestor.nationality || 'The root of the Freddi family tree'}</p>
+              </div>
+              <ChevronRight size={24} className="text-gold/40 group-hover:text-gold group-hover:translate-x-1 transition-all flex-shrink-0" />
+            </div>
+          </Link>
+        </section>
+      )}
 
       {/* Recent items */}
       <section className="px-6 lg:px-12 py-16 max-w-7xl mx-auto">
