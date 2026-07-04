@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, Upload, FileText, Image as ImageIcon, Award, Loader2, Check, Sparkles, Newspaper, Tag } from 'lucide-react';
+import { Camera, Upload, FileText, Image as ImageIcon, Award, Loader2, Check, Sparkles, Newspaper, Tag, Link2, Search, UserPlus } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 
@@ -32,8 +32,21 @@ export default function UploadEvent() {
   });
   const [ancestors, setAncestors] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [selectedAncestorId, setSelectedAncestorId] = useState('');
+  const [attachToProfile, setAttachToProfile] = useState(false);
+  const [ancestorSearch, setAncestorSearch] = useState('');
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
+
+  const filteredAncestors = ancestorSearch
+    ? ancestors.filter(a => a.full_name.toLowerCase().includes(ancestorSearch.toLowerCase()))
+    : ancestors;
+
+  const selectedAncestor = ancestors.find(a => a.id === selectedAncestorId) || null;
+
+  const canAttachToProfile = classification === 'certificate' &&
+    (documentSubtype === 'birth_certificate' || documentSubtype === 'marriage_certificate') &&
+    selectedAncestor;
 
   useEffect(() => {
     base44.entities.Ancestor.list().then(setAncestors).catch(() => {});
@@ -115,13 +128,41 @@ Return JSON with this structure:
       if (result.transcription) setTranscribedText(result.transcription);
       if (result.extracted_fields) setExtractedData(result.extracted_fields);
       if (result.suggested_tags) setSuggestedTags(result.suggested_tags);
+
+      // Auto-match extracted full name to an existing ancestor
+      const extractedName = result.extracted_fields?.full_name;
+      let matchedAncestorId = selectedAncestorId;
+      if (extractedName && ancestors.length > 0) {
+        const lowerName = extractedName.toLowerCase();
+        const match = ancestors.find(a =>
+          a.full_name.toLowerCase() === lowerName ||
+          a.full_name.toLowerCase().includes(lowerName) ||
+          lowerName.includes(a.full_name.toLowerCase())
+        );
+        if (match) {
+          matchedAncestorId = match.id;
+          setSelectedAncestorId(match.id);
+        }
+      }
+
       setFormData(f => ({
         ...f,
         title: result.suggested_title || '',
         description: result.suggested_description || '',
         date: result.extracted_fields?.date_of_event || result.extracted_fields?.date_of_birth || '',
         location_name: result.extracted_fields?.place_of_event || result.extracted_fields?.place_of_birth || result.extracted_fields?.residence_address || '',
+        ancestor_ids: matchedAncestorId && !f.ancestor_ids.includes(matchedAncestorId)
+          ? [...f.ancestor_ids, matchedAncestorId]
+          : f.ancestor_ids,
       }));
+
+      // Auto-suggest attaching certificate to ancestor profile
+      if (result.type === 'certificate' &&
+        (result.document_subtype === 'birth_certificate' || result.document_subtype === 'marriage_certificate') &&
+        matchedAncestorId) {
+        setAttachToProfile(true);
+      }
+
       setStep(STEPS.FORM);
     } catch (e) {
       setClassification('photo');
@@ -147,7 +188,9 @@ Return JSON with this structure:
         location_name: formData.location_name,
         latitude: formData.latitude ? parseFloat(formData.latitude) : null,
         longitude: formData.longitude ? parseFloat(formData.longitude) : null,
-        ancestor_ids: formData.ancestor_ids,
+        ancestor_ids: selectedAncestorId && !formData.ancestor_ids.includes(selectedAncestorId)
+          ? [...formData.ancestor_ids, selectedAncestorId]
+          : formData.ancestor_ids,
         era: formData.era,
         file_url: fileUrl,
         external_url: formData.external_url,
@@ -159,6 +202,12 @@ Return JSON with this structure:
       };
 
       await base44.entities.ContentItem.create(itemData);
+
+      // Attach certificate directly to ancestor's profile
+      if (attachToProfile && canAttachToProfile && fileUrl) {
+        const certField = documentSubtype === 'birth_certificate' ? 'birth_certificate' : 'marriage_certificate';
+        await base44.entities.Ancestor.update(selectedAncestorId, { [certField]: fileUrl }).catch(() => {});
+      }
 
       if (user) {
         await base44.entities.ActivityLog.create({
@@ -194,27 +243,77 @@ Return JSON with this structure:
 
         {step === STEPS.CAPTURE && (
           <div className="aged-card rounded-2xl p-8">
-            <p className="text-parchment/60 text-sm mb-6 text-center">Choose a file from your device or use your camera to photograph a document or photo.</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <button
-                onClick={() => cameraInputRef.current?.click()}
-                className="flex flex-col items-center justify-center gap-3 p-8 rounded-xl border-2 border-dashed border-[rgba(201,145,58,0.25)] hover:border-[#C9913A] hover:bg-[rgba(201,145,58,0.05)] transition-all"
-              >
-                <Camera size={32} className="text-gold" />
-                <span className="text-parchment font-medium">Use Camera</span>
-                <span className="text-xs text-parchment/40">Photograph a document or photo</span>
-              </button>
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="flex flex-col items-center justify-center gap-3 p-8 rounded-xl border-2 border-dashed border-[rgba(201,145,58,0.25)] hover:border-[#C9913A] hover:bg-[rgba(201,145,58,0.05)] transition-all"
-              >
-                <Upload size={32} className="text-gold" />
-                <span className="text-parchment font-medium">Choose File</span>
-                <span className="text-xs text-parchment/40">From your device</span>
-              </button>
+            {/* Ancestor pre-selection */}
+            <div className="mb-6">
+              <label className="text-sm text-parchment/60 mb-2 flex items-center gap-1.5">
+                <UserPlus size={14} /> Link to an Ancestor (recommended)
+              </label>
+              <p className="text-xs text-parchment/40 mb-3">Select who this photo or certificate belongs to — the system will auto-tag them and can attach certificates directly to their profile.</p>
+              <div className="relative">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-parchment/30" />
+                <input
+                  value={ancestorSearch}
+                  onChange={e => setAncestorSearch(e.target.value)}
+                  className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg pl-10 pr-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]"
+                  placeholder="Search ancestors by name..."
+                />
+              </div>
+              {ancestorSearch && (
+                <div className="mt-2 max-h-48 overflow-y-auto rounded-lg border border-[rgba(201,145,58,0.15)] bg-[#0D0B0A]">
+                  {filteredAncestors.length > 0 ? filteredAncestors.map(a => (
+                    <button
+                      key={a.id}
+                      onClick={() => { setSelectedAncestorId(a.id); setAncestorSearch(''); }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-[rgba(201,145,58,0.06)] transition-colors text-left"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-[rgba(201,145,58,0.1)] border border-[rgba(201,145,58,0.2)] flex items-center justify-center text-xs text-gold font-medium">
+                        {a.full_name.charAt(0)}
+                      </div>
+                      <span className="text-sm text-parchment">{a.full_name}</span>
+                      {a.birth_date && <span className="text-xs text-parchment/40">· {new Date(a.birth_date).getFullYear()}</span>}
+                    </button>
+                  )) : (
+                    <p className="px-4 py-3 text-sm text-parchment/40">No ancestors found</p>
+                  )}
+                </div>
+              )}
+              {selectedAncestor && (
+                <div className="mt-3 flex items-center gap-3 p-3 rounded-lg bg-[rgba(201,145,58,0.08)] border border-[rgba(201,145,58,0.2)]">
+                  <div className="w-10 h-10 rounded-full bg-[rgba(201,145,58,0.15)] border border-[#C9913A] flex items-center justify-center text-sm text-gold font-medium">
+                    {selectedAncestor.full_name.charAt(0)}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-parchment font-medium">{selectedAncestor.full_name}</p>
+                    <p className="text-xs text-parchment/40">Will be auto-tagged in this upload</p>
+                  </div>
+                  <button onClick={() => setSelectedAncestorId('')} className="text-parchment/40 hover:text-parchment text-xs">Remove</button>
+                </div>
+              )}
             </div>
-            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={e => handleFile(e.target.files?.[0])} />
-            <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={e => handleFile(e.target.files?.[0])} />
+
+            <div className="border-t border-[rgba(201,145,58,0.1)] pt-6">
+              <p className="text-parchment/60 text-sm mb-6 text-center">Choose a file from your device or use your camera to photograph a document or photo.</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <button
+                  onClick={() => cameraInputRef.current?.click()}
+                  className="flex flex-col items-center justify-center gap-3 p-8 rounded-xl border-2 border-dashed border-[rgba(201,145,58,0.25)] hover:border-[#C9913A] hover:bg-[rgba(201,145,58,0.05)] transition-all"
+                >
+                  <Camera size={32} className="text-gold" />
+                  <span className="text-parchment font-medium">Use Camera</span>
+                  <span className="text-xs text-parchment/40">Photograph a document or photo</span>
+                </button>
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex flex-col items-center justify-center gap-3 p-8 rounded-xl border-2 border-dashed border-[rgba(201,145,58,0.25)] hover:border-[#C9913A] hover:bg-[rgba(201,145,58,0.05)] transition-all"
+                >
+                  <Upload size={32} className="text-gold" />
+                  <span className="text-parchment font-medium">Choose File</span>
+                  <span className="text-xs text-parchment/40">From your device</span>
+                </button>
+              </div>
+              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={e => handleFile(e.target.files?.[0])} />
+              <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={e => handleFile(e.target.files?.[0])} />
+            </div>
 
             <div className="mt-6 pt-6 border-t border-[rgba(201,145,58,0.1)]">
               <p className="text-xs text-parchment/40 text-center">Supported: photographs, letters, certificates, press clippings</p>
@@ -253,6 +352,27 @@ Return JSON with this structure:
                 </p>
               </div>
             </div>
+
+            {/* Attach certificate to profile */}
+            {canAttachToProfile && (
+              <div className="aged-card rounded-xl p-4 flex items-center gap-3">
+                <Link2 size={20} className="text-gold flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm text-parchment font-medium">
+                    Attach to {selectedAncestor.full_name}'s profile
+                  </p>
+                  <p className="text-xs text-parchment/40">
+                    {documentSubtype === 'birth_certificate' ? 'Birth certificate' : 'Marriage certificate'} will be saved to their profile page
+                  </p>
+                </div>
+                <button
+                  onClick={() => setAttachToProfile(!attachToProfile)}
+                  className={`w-11 h-6 rounded-full transition-colors flex-shrink-0 ${attachToProfile ? 'bg-[#C9913A]' : 'bg-[rgba(245,236,215,0.1)]'}`}
+                >
+                  <div className={`w-5 h-5 rounded-full bg-parchment transition-transform ${attachToProfile ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                </button>
+              </div>
+            )}
 
             {/* Preview */}
             {fileUrl && (
@@ -404,7 +524,7 @@ Return JSON with this structure:
             <h2 className="font-display text-2xl text-parchment mb-2">Saved to the Archive</h2>
             <p className="text-parchment/50 text-sm mb-6">Your piece of family history is now part of the Freddi archive.</p>
             <div className="flex gap-3 justify-center">
-              <button onClick={() => { setStep(STEPS.CAPTURE); setFile(null); setFileUrl(null); setClassification(null); setDocumentSubtype(null); setExtractedData(null); setTranscribedText(''); setSuggestedTags([]); setFormData({title:'',description:'',date:'',location_name:'',latitude:'',longitude:'',ancestor_ids:[],era:'',external_url:''}); }}
+              <button onClick={() => { setStep(STEPS.CAPTURE); setFile(null); setFileUrl(null); setClassification(null); setDocumentSubtype(null); setExtractedData(null); setTranscribedText(''); setSuggestedTags([]); setSelectedAncestorId(''); setAttachToProfile(false); setAncestorSearch(''); setFormData({title:'',description:'',date:'',location_name:'',latitude:'',longitude:'',ancestor_ids:[],era:'',external_url:''}); }}
                 className="px-5 py-2.5 rounded-lg border border-[rgba(201,145,58,0.3)] text-amber-light text-sm hover:bg-[rgba(201,145,58,0.08)] transition-colors">
                 Upload Another
               </button>
