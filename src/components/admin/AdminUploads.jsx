@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, Check, Pencil, X, Clock, Image, FileText, Newspaper, Award, BookUser, IdCard, Mail, Heart } from 'lucide-react';
+import { Loader2, Check, Pencil, X, Clock, Image, FileText, Newspaper, Award, BookUser, IdCard, Mail, Heart, HelpCircle } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
 const typeIcons = {
   photo: Image, story: FileText, press_clipping: Newspaper, certificate: Award,
   narrative: FileText, passport: BookUser, identity_document: IdCard,
-  correspondence: Mail, memorial: Heart, video: Image,
+  correspondence: Mail, memorial: Heart, video: Image, uncategorized: HelpCircle,
 };
 
 const typeLabels = {
   photo: 'Photo', story: 'Story', press_clipping: 'Press', certificate: 'Certificate',
   narrative: 'Narrative', passport: 'Passport', identity_document: 'ID',
-  correspondence: 'Correspondence', memorial: 'Memorial', video: 'Video',
+  correspondence: 'Correspondence', memorial: 'Memorial', video: 'Video', uncategorized: 'Uncategorized',
 };
 
 export default function AdminUploads({ refreshKey }) {

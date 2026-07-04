@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Inbox, AlertCircle, Flag, Upload, Loader2, ShieldAlert } from 'lucide-react';
+import { Inbox, AlertCircle, Flag, Upload, Loader2, ShieldAlert, Brain } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import AdminProblems from '@/components/admin/AdminProblems';
 import AdminApprovals from '@/components/admin/AdminApprovals';
 import AdminUploads from '@/components/admin/AdminUploads';
+import AdminUncategorized from '@/components/admin/AdminUncategorized';
 
 const TABS = [
   { key: 'problems', label: 'Inbox Problems', icon: AlertCircle },
   { key: 'approvals', label: 'Admin for Approval', icon: Flag },
   { key: 'uploads', label: 'Review Uploads', icon: Upload },
+  { key: 'uncategorized', label: 'Uncategorized', icon: Brain },
 ];
 
 export default function AdminInbox() {
@@ -17,7 +19,7 @@ export default function AdminInbox() {
   const [authLoading, setAuthLoading] = useState(true);
   const [tab, setTab] = useState('problems');
   const [refreshKey, setRefreshKey] = useState(0);
-  const [counts, setCounts] = useState({ problems: 0, approvals: 0, uploads: 0 });
+  const [counts, setCounts] = useState({ problems: 0, approvals: 0, uploads: 0, uncategorized: 0 });
 
   useEffect(() => {
     base44.auth.me().then(u => {
@@ -32,11 +34,13 @@ export default function AdminInbox() {
       base44.entities.ProblemReport.filter({ status: 'open' }).catch(() => []),
       base44.entities.ConflictFlag.filter({ status: 'open' }).catch(() => []),
       base44.entities.ContentItem.list('-created_date', 50).catch(() => []),
-    ]).then(([probs, flags, items]) => {
+      base44.entities.ContentItem.filter({ content_type: 'uncategorized' }).catch(() => []),
+    ]).then(([probs, flags, items, uncategorized]) => {
       setCounts({
         problems: (probs || []).length,
         approvals: (flags || []).length,
         uploads: (items || []).filter(i => !i.review_status || i.review_status === 'pending').length,
+        uncategorized: (uncategorized || []).length,
       });
     }).catch(() => {});
   }, [user, refreshKey]);
@@ -76,7 +80,7 @@ export default function AdminInbox() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
           {TABS.map(t => {
             const Icon = t.icon;
-            const count = counts[t.key === 'problems' ? 'problems' : t.key === 'approvals' ? 'approvals' : 'uploads'];
+            const count = counts[t.key] || 0;
             const isActive = tab === t.key;
             return (
               <button
@@ -120,6 +124,7 @@ export default function AdminInbox() {
         {tab === 'problems' && <AdminProblems refreshKey={refreshKey} />}
         {tab === 'approvals' && <AdminApprovals refreshKey={refreshKey} />}
         {tab === 'uploads' && <AdminUploads refreshKey={refreshKey} />}
+        {tab === 'uncategorized' && <AdminUncategorized refreshKey={refreshKey} />}
       </div>
     </Layout>
   );

@@ -18,10 +18,11 @@
         "passport",
         "identity_document",
         "correspondence",
-        "memorial"
+        "memorial",
+        "uncategorized"
       ],
       "default": "photo",
-      "description": "Type of content"
+      "description": "Type of content \u2014 'uncategorized' is used when the AI cannot confidently classify the image"
     },
     "ancestor_ids": {
       "type": "array",
@@ -58,6 +59,69 @@
     "extracted_fields": {
       "type": "object",
       "description": "Fields extracted from certificates by AI"
+    },
+    "raw_ai_analysis": {
+      "type": "object",
+      "description": "Full unstructured AI analysis output \u2014 stored for admin search and future pattern learning"
+    },
+    "ai_confidence": {
+      "type": "number",
+      "description": "AI confidence score (0-1) for the content classification"
+    },
+    "categorization_notes": {
+      "type": "string",
+      "description": "AI's reasoning for the classification, including uncertainty and visual elements that led to the conclusion"
+    },
+    "visual_elements": {
+      "type": "object",
+      "description": "All visual elements extracted by AI \u2014 objects, people, text, dates, locations, format, era indicators, notable features",
+      "properties": {
+        "objects": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "people": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "text_elements": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "dates_visible": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "locations_visible": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "format_description": {
+          "type": "string"
+        },
+        "era_indicators": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "notable_features": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
     },
     "file_url": {
       "type": "string",

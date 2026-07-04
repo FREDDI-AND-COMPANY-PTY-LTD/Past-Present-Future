@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, Upload, FileText, Image as ImageIcon, Award, Loader2, Check, Sparkles, Newspaper, Tag, Link2, Search, UserPlus, BookUser, IdCard, Mail, Heart } from 'lucide-react';
+import { Camera, Upload, FileText, Image as ImageIcon, Award, Loader2, Check, Sparkles, Newspaper, Tag, Link2, Search, UserPlus, BookUser, IdCard, Mail, Heart, HelpCircle, Eye } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 
@@ -19,6 +19,10 @@ export default function UploadEvent() {
   const [extractedData, setExtractedData] = useState(null);
   const [transcribedText, setTranscribedText] = useState('');
   const [suggestedTags, setSuggestedTags] = useState([]);
+  const [rawAiAnalysis, setRawAiAnalysis] = useState(null);
+  const [aiConfidence, setAiConfidence] = useState(null);
+  const [categorizationNotes, setCategorizationNotes] = useState('');
+  const [visualElements, setVisualElements] = useState(null);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -64,77 +68,92 @@ export default function UploadEvent() {
       setFileUrl(url);
 
       const result = await base44.integrations.Core.InvokeLLM({
-        prompt: `You are a genealogical document analyst. Analyse this uploaded image and classify it into the most appropriate category based on both visual cues and any text you can read.
+        prompt: `You are a sophisticated genealogical and historical document analyst working on a family history archive. You are analysing an image that could be ANYTHING — a photograph (portrait, landscape, group photo), a document (certificate, letter, passport, newspaper), a poster, a concert ticket, a postcard, a drawing, a map, a receipt, or any other type of visual artifact from a family's history.
 
-CATEGORIES (choose the single best fit):
-1. "photo" — A PHOTOGRAPH of a person, place, or event (no significant text content)
+Your job is to:
+1. Identify what the image IS — but be honest about uncertainty
+2. Extract ALL visible data — every piece of text, every visible object, every person, every date, every location, every notable visual element
+3. Provide a confidence score for your classification
+4. Note your reasoning — what visual elements led to your conclusion, and what uncertainty remains
+
+CATEGORIES (choose the single best fit, or "uncategorized" if you cannot confidently classify):
+1. "photo" — A PHOTOGRAPH of a person, place, or event (portrait, landscape, group photo, etc.)
 2. "narrative" — A DIARY ENTRY, MEMOIR, or handwritten personal story — transcribe the full text
-3. "correspondence" — A LETTER, POSTCARD, or TELEGRAM (personal correspondence between family members) — transcribe the full text, note sender and recipient if visible
-4. "press_clipping" — A NEWSPAPER ARTICLE or published media clipping — transcribe the full text and note the publication if visible
-5. "passport" — A PASSPORT or travel document (historical/expired or current). Extract all passport-specific fields. Determine the document_subtype:
-   • passport_or_travel_document
-6. "identity_document" — Other IDENTITY or TRAVEL documents that are NOT passports and NOT certificates (e.g. driver's licence, national ID card, residency permit, visa). Determine the document_subtype:
-   • passport_or_travel_document
-   • naturalization_or_citizenship
-   • immigration_or_border_record
-   • other_official_record
-7. "certificate" — Any FORMAL RECORD, official document, or certificate. Determine the document_subtype:
-   • birth_certificate
-   • death_certificate
-   • marriage_certificate
-   • baptism_or_church_record
-   • passenger_manifest_or_ship_record
-   • passport_or_travel_document
-   • naturalization_or_citizenship
-   • census_record
-   • military_record
-   • immigration_or_border_record
-   • statutory_declaration_or_affidavit
-   • property_or_land_record
-   • other_official_record
+3. "correspondence" — A LETTER, POSTCARD, or TELEGRAM (personal correspondence) — transcribe the full text, note sender/recipient
+4. "press_clipping" — A NEWSPAPER ARTICLE or published media clipping — transcribe the full text
+5. "passport" — A PASSPORT or travel document
+6. "identity_document" — Other IDENTITY/TRAVEL documents (driver's licence, national ID, visa, residency permit)
+7. "certificate" — Any FORMAL RECORD, official document, or certificate (birth, death, marriage, baptism, military, census, immigration, naturalization, etc.)
+8. "memorial" — A MEMORIAL, obituary, or commemorative item
+9. "uncategorized" — Use when you CANNOT confidently classify the image. This includes but is not limited to: posters, concert tickets, event programs, receipts, drawings, artwork, maps, mixed-content images, or unclear/poor-quality images where the type cannot be determined.
 
-DOCUMENT INTELLIGENCE — For certificates and any document containing text, read carefully and extract ALL genealogically relevant fields you can identify. For historical identity documents, pay special attention to:
-- Full names (subject, parents, spouse, witnesses, informant/registrant)
+REGARDLESS OF CATEGORY — always extract ALL visible data:
+- Transcribe ALL readable text
+- Note ALL visible dates (in any format)
+- Note ALL visible names
+- Note ALL visible locations/places
+- Describe ALL visible objects, subjects, and visual elements
+- Describe any people visible (age estimate, gender, clothing, posture, count)
+- Note the format, layout, style, and condition of the image
+- Note any era indicators (clothing style, photo quality, document format, language, etc.)
+- Identify any family history relevance
+
+For certificates and formal documents, extract all genealogically relevant fields including:
+- Full names (subject, parents, spouse, witnesses, informant)
 - Dates (birth, death, marriage, event, registration, issue, arrival, naturalization)
 - Places (birth, death, marriage, residence, origin, destination, issuing authority)
 - Nationality, citizenship, religion, occupation
 - Document numbers, registration numbers, volume/page references
-- Ship name, port of departure, port of arrival (for passenger manifests)
+- Ship name, port of departure/arrival (for passenger manifests)
 - Military unit, rank, service number (for military records)
 
 Return JSON with this structure:
 {
-  "type": "photo" | "narrative" | "correspondence" | "press_clipping" | "passport" | "identity_document" | "certificate",
+  "type": "photo" | "narrative" | "correspondence" | "press_clipping" | "passport" | "identity_document" | "certificate" | "memorial" | "uncategorized",
   "document_subtype": "birth_certificate" | "death_certificate" | "marriage_certificate" | "baptism_or_church_record" | "passenger_manifest_or_ship_record" | "passport_or_travel_document" | "naturalization_or_citizenship" | "census_record" | "military_record" | "immigration_or_border_record" | "statutory_declaration_or_affidavit" | "property_or_land_record" | "other_official_record" | "" (empty if not applicable),
-  "transcription": "full text transcribed from the document, if any readable text exists — otherwise empty string",
+  "ai_confidence": 0.0 to 1.0 (your confidence in the classification — be honest; 0.3-0.5 means uncertain, 0.7+ means confident),
+  "categorization_notes": "Your reasoning for the classification. What visual elements led to this conclusion? What uncertainty remains? If uncategorized, explain what the image appears to be and why you couldn't classify it definitively.",
+  "transcription": "Full text transcribed from the image, if any readable text exists — otherwise empty string. Include ALL text, even if fragmented or partially visible.",
   "extracted_fields": {
     "full_name": "", "date_of_birth": "", "place_of_birth": "", "date_of_death": "", "place_of_death": "",
     "mother_name": "", "father_name": "", "spouse_name": "", "witnesses": "", "issuing_authority": "",
     "date_of_event": "", "place_of_event": "", "nationality": "", "religion": "", "occupation": "",
     "document_number": "", "registration_number": "", "ship_name": "", "port_of_departure": "", "port_of_arrival": "",
     "military_unit": "", "rank": "", "service_number": "", "residence_address": "",
-    "passport_number": "", "date_of_issue": "", "date_of_expiry": "", "issuing_country": "", "issuing_authority": "",
+    "passport_number": "", "date_of_issue": "", "date_of_expiry": "", "issuing_country": "",
     "place_of_issue": "", "surname": "", "given_names": "", "national_id_number": "",
-    "date_of_birth": "", "place_of_birth": "", "sex": "", "height": "", "profession": "",
-    "distinguishing_marks": "", "photograph_present": ""
+    "sex": "", "height": "", "profession": "", "distinguishing_marks": "", "photograph_present": ""
   },
-  "suggested_title": "a short descriptive title for this item, including the document subtype and primary person if known (e.g. 'Birth Certificate — Giuseppe Freddi (1898)')",
-  "suggested_description": "a brief description of what this document is and its genealogical significance",
-  "suggested_tags": ["array", "of", "relevant", "tags", "e.g. 'immigration', 'Victoria', '1890s', 'Freddi bloodline']"
-  }`,
+  "visual_elements": {
+    "objects": ["list of ALL visible objects — e.g. 'fountain', 'church spire', 'vintage car', 'furniture'"],
+    "people": ["descriptions of visible people — e.g. 'elderly man in suit, seated', 'young woman in white dress, standing'"],
+    "text_elements": ["notable text elements visible — e.g. 'heading reads The Age', 'handwritten note at bottom'"],
+    "dates_visible": ["any dates visible in any format — e.g. '14 March 1923', '1965'"],
+    "locations_visible": ["any place names visible — e.g. 'Melbourne', 'Via Roma, Venice'"],
+    "format_description": "description of the image format, layout, and style — e.g. 'black and white photograph, landscape orientation, faded edges', 'printed document with official seal, portrait orientation'",
+    "era_indicators": ["visual clues about the time period — e.g. '1950s clothing style', 'sepia tone suggesting early 1900s', 'modern printed text'"],
+    "notable_features": ["any other notable visual features — e.g. 'official stamp in corner', 'watermark visible', 'torn edges', 'photograph within a photograph'"]
+  },
+  "suggested_title": "a short descriptive title for this item, including the type and primary person/place if known (e.g. 'Birth Certificate — Giuseppe Freddi (1898)', 'Group Photo at Beach — circa 1950', 'Concert Ticket — Melbourne Town Hall')",
+  "suggested_description": "a brief description of what this item is and its potential significance to family history",
+  "suggested_tags": ["array", "of", "relevant", "tags", "e.g. 'immigration', 'Victoria', '1890s', 'Freddi bloodline', 'concert', 'poster']"
+}`,
   file_urls: [url],
   response_json_schema: {
-  type: 'object',
-  properties: {
-    type: { type: 'string', enum: ['photo', 'narrative', 'correspondence', 'press_clipping', 'passport', 'identity_document', 'certificate'] },
-    document_subtype: { type: 'string' },
-            transcription: { type: 'string' },
-            extracted_fields: { type: 'object' },
-            suggested_title: { type: 'string' },
-            suggested_description: { type: 'string' },
-            suggested_tags: { type: 'array', items: { type: 'string' } },
-          },
-        },
+    type: 'object',
+    properties: {
+      type: { type: 'string', enum: ['photo', 'narrative', 'correspondence', 'press_clipping', 'passport', 'identity_document', 'certificate', 'memorial', 'uncategorized'] },
+      document_subtype: { type: 'string' },
+      ai_confidence: { type: 'number' },
+      categorization_notes: { type: 'string' },
+      transcription: { type: 'string' },
+      extracted_fields: { type: 'object' },
+      visual_elements: { type: 'object' },
+      suggested_title: { type: 'string' },
+      suggested_description: { type: 'string' },
+      suggested_tags: { type: 'array', items: { type: 'string' } },
+    },
+  },
       });
 
       setClassification(result.type);
@@ -142,6 +161,10 @@ Return JSON with this structure:
       if (result.transcription) setTranscribedText(result.transcription);
       if (result.extracted_fields) setExtractedData(result.extracted_fields);
       if (result.suggested_tags) setSuggestedTags(result.suggested_tags);
+      if (result.visual_elements) setVisualElements(result.visual_elements);
+      if (result.ai_confidence !== undefined) setAiConfidence(result.ai_confidence);
+      if (result.categorization_notes) setCategorizationNotes(result.categorization_notes);
+      setRawAiAnalysis(result);
 
       // Auto-match extracted full name to an existing ancestor
       const extractedName = result.extracted_fields?.full_name;
@@ -180,7 +203,7 @@ Return JSON with this structure:
 
       setStep(STEPS.FORM);
     } catch (e) {
-      setClassification('photo');
+      setClassification('uncategorized');
       setStep(STEPS.FORM);
     }
   };
@@ -208,6 +231,10 @@ Return JSON with this structure:
         external_url: formData.external_url,
         transcribed_text: transcribedText || null,
         extracted_fields: { ...extractedData, document_subtype: documentSubtype } || null,
+        raw_ai_analysis: rawAiAnalysis || null,
+        ai_confidence: aiConfidence,
+        categorization_notes: categorizationNotes || null,
+        visual_elements: visualElements || null,
         uploaded_by_id: user?.id || null,
         conflict_flag_status: 'none',
         tags: suggestedTags || [],
@@ -380,10 +407,11 @@ Return JSON with this structure:
               {classification === 'certificate' && <Award size={24} className="text-gold" />}
               {classification === 'passport' && <BookUser size={24} className="text-gold" />}
               {classification === 'identity_document' && <IdCard size={24} className="text-gold" />}
+              {classification === 'uncategorized' && <HelpCircle size={24} className="text-gold" />}
               <div>
                 <p className="text-xs text-parchment/40 uppercase tracking-wider">Detected Type</p>
                 <p className="text-parchment font-medium">
-                  {classification === 'photo' ? 'Photograph' : classification === 'narrative' ? 'Narrative Document' : classification === 'correspondence' ? 'Correspondence' : classification === 'press_clipping' ? 'Press Clipping' : classification === 'certificate' ? 'Certificate / Formal Record' : classification === 'passport' ? 'Passport / Travel Document' : classification === 'identity_document' ? 'Identity Document' : 'Document'}
+                  {classification === 'photo' ? 'Photograph' : classification === 'narrative' ? 'Narrative Document' : classification === 'correspondence' ? 'Correspondence' : classification === 'press_clipping' ? 'Press Clipping' : classification === 'certificate' ? 'Certificate / Formal Record' : classification === 'passport' ? 'Passport / Travel Document' : classification === 'identity_document' ? 'Identity Document' : classification === 'uncategorized' ? 'Uncategorized — pending review' : 'Document'}
                   {documentSubtype && documentSubtype !== 'other_official_record' && (
                     <span className="text-amber-light/70 text-sm ml-2">({documentSubtype.replace(/_/g, ' ')})</span>
                   )}
@@ -425,7 +453,7 @@ Return JSON with this structure:
             )}
 
             {/* Extracted document fields */}
-            {(classification === 'certificate' || classification === 'press_clipping' || classification === 'passport' || classification === 'identity_document') && extractedData && (
+            {(classification === 'certificate' || classification === 'press_clipping' || classification === 'passport' || classification === 'identity_document' || classification === 'uncategorized') && extractedData && (
               <div className="aged-card rounded-xl p-6">
                 <div className="flex items-center gap-2 mb-4">
                   <Award size={18} className="text-gold" />
@@ -449,7 +477,7 @@ Return JSON with this structure:
             )}
 
             {/* Transcribed text */}
-            {(classification === 'narrative' || classification === 'correspondence' || classification === 'press_clipping') && transcribedText && (
+            {(classification === 'narrative' || classification === 'correspondence' || classification === 'press_clipping' || classification === 'uncategorized') && transcribedText && (
               <div className="aged-card rounded-xl p-6">
                 <div className="flex items-center gap-2 mb-3">
                   <FileText size={18} className="text-gold" />
@@ -461,6 +489,100 @@ Return JSON with this structure:
                   rows={8}
                   className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-3 text-sm text-parchment focus:outline-none focus:border-[#C9913A] leading-relaxed"
                 />
+              </div>
+            )}
+
+            {/* AI confidence and categorization notes */}
+            {aiConfidence !== null && (
+              <div className="aged-card rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Eye size={16} className="text-gold" />
+                  <h3 className="font-display text-sm text-parchment">AI Analysis</h3>
+                  <span className={`ml-auto px-2 py-0.5 rounded-full text-xs ${aiConfidence >= 0.7 ? 'bg-green-500/10 text-green-300' : aiConfidence >= 0.4 ? 'bg-[rgba(201,145,58,0.1)] text-amber-light' : 'bg-red-500/10 text-red-300'}`}>
+                    {Math.round(aiConfidence * 100)}% confidence
+                  </span>
+                </div>
+                {categorizationNotes && (
+                  <p className="text-xs text-parchment/50 leading-relaxed">{categorizationNotes}</p>
+                )}
+              </div>
+            )}
+
+            {/* Visual elements extracted */}
+            {visualElements && (
+              <div className="aged-card rounded-xl p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Eye size={18} className="text-gold" />
+                  <h3 className="font-display text-lg text-parchment">Extracted Visual Elements</h3>
+                </div>
+                <div className="space-y-3">
+                  {visualElements.objects?.length > 0 && (
+                    <div>
+                      <p className="text-xs text-parchment/40 uppercase tracking-wider mb-1">Objects</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {visualElements.objects.map((o, i) => (
+                          <span key={i} className="text-xs text-amber-light/80 bg-[rgba(201,145,58,0.06)] px-2 py-0.5 rounded-full">{o}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {visualElements.people?.length > 0 && (
+                    <div>
+                      <p className="text-xs text-parchment/40 uppercase tracking-wider mb-1">People</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {visualElements.people.map((p, i) => (
+                          <span key={i} className="text-xs text-amber-light/80 bg-[rgba(201,145,58,0.06)] px-2 py-0.5 rounded-full">{p}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {visualElements.dates_visible?.length > 0 && (
+                    <div>
+                      <p className="text-xs text-parchment/40 uppercase tracking-wider mb-1">Dates Visible</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {visualElements.dates_visible.map((d, i) => (
+                          <span key={i} className="text-xs text-amber-light/80 bg-[rgba(201,145,58,0.06)] px-2 py-0.5 rounded-full">{d}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {visualElements.locations_visible?.length > 0 && (
+                    <div>
+                      <p className="text-xs text-parchment/40 uppercase tracking-wider mb-1">Locations Visible</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {visualElements.locations_visible.map((l, i) => (
+                          <span key={i} className="text-xs text-amber-light/80 bg-[rgba(201,145,58,0.06)] px-2 py-0.5 rounded-full">{l}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {visualElements.format_description && (
+                    <div>
+                      <p className="text-xs text-parchment/40 uppercase tracking-wider mb-1">Format</p>
+                      <p className="text-sm text-parchment/60">{visualElements.format_description}</p>
+                    </div>
+                  )}
+                  {visualElements.era_indicators?.length > 0 && (
+                    <div>
+                      <p className="text-xs text-parchment/40 uppercase tracking-wider mb-1">Era Indicators</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {visualElements.era_indicators.map((e, i) => (
+                          <span key={i} className="text-xs text-amber-light/80 bg-[rgba(201,145,58,0.06)] px-2 py-0.5 rounded-full">{e}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {visualElements.notable_features?.length > 0 && (
+                    <div>
+                      <p className="text-xs text-parchment/40 uppercase tracking-wider mb-1">Notable Features</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {visualElements.notable_features.map((f, i) => (
+                          <span key={i} className="text-xs text-amber-light/80 bg-[rgba(201,145,58,0.06)] px-2 py-0.5 rounded-full">{f}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
@@ -567,7 +689,7 @@ Return JSON with this structure:
             <h2 className="font-display text-2xl text-parchment mb-2">Saved to the Archive</h2>
             <p className="text-parchment/50 text-sm mb-6">Your piece of family history is now part of the Freddi archive.</p>
             <div className="flex gap-3 justify-center">
-              <button onClick={() => { setStep(STEPS.CAPTURE); setFile(null); setFileUrl(null); setClassification(null); setDocumentSubtype(null); setExtractedData(null); setTranscribedText(''); setSuggestedTags([]); setSelectedAncestorId(''); setAttachToProfile(false); setAncestorSearch(''); setFormData({title:'',description:'',date:'',location_name:'',latitude:'',longitude:'',ancestor_ids:[],era:'',external_url:''}); }}
+              <button onClick={() => { setStep(STEPS.CAPTURE); setFile(null); setFileUrl(null); setClassification(null); setDocumentSubtype(null); setExtractedData(null); setTranscribedText('');                 setSuggestedTags([]); setSelectedAncestorId(''); setAttachToProfile(false); setAncestorSearch(''); setRawAiAnalysis(null); setAiConfidence(null); setCategorizationNotes(''); setVisualElements(null); setFormData({title:'',description:'',date:'',location_name:'',latitude:'',longitude:'',ancestor_ids:[],era:'',external_url:''}); }}
                 className="px-5 py-2.5 rounded-lg border border-[rgba(201,145,58,0.3)] text-amber-light text-sm hover:bg-[rgba(201,145,58,0.08)] transition-colors">
                 Upload Another
               </button>

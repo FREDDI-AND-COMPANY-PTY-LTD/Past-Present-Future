@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { MapPin, Calendar, Flag, FileText, Image, Newspaper, Video, Award, BookUser, IdCard, Mail, Heart } from 'lucide-react';
+import { MapPin, Calendar, Flag, FileText, Image, Newspaper, Video, Award, BookUser, IdCard, Mail, Heart, HelpCircle } from 'lucide-react';
 
 const typeIcons = {
   photo: Image,
@@ -13,6 +13,7 @@ const typeIcons = {
   identity_document: IdCard,
   correspondence: Mail,
   memorial: Heart,
+  uncategorized: HelpCircle,
 };
 
 const typeLabels = {
@@ -26,6 +27,7 @@ const typeLabels = {
   identity_document: 'Identity Document',
   correspondence: 'Correspondence',
   memorial: 'Memorial',
+  uncategorized: 'Uncategorized',
 };
 
 export default function ContentCard({ item, ancestors = [] }) {
@@ -36,7 +38,7 @@ export default function ContentCard({ item, ancestors = [] }) {
 
   return (
     <Link to={`/content/${item.id}`} className="block aged-card rounded-xl overflow-hidden hover:border-[rgba(201,145,58,0.4)] transition-all duration-300 group">
-      {item.file_url && item.content_type === 'photo' && (
+      {item.file_url && (item.content_type === 'photo' || item.content_type === 'uncategorized') && (
         <div className="relative h-48 overflow-hidden bg-black/40">
           <img
             src={item.file_url}

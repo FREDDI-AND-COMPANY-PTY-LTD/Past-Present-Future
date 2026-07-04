@@ -59,7 +59,7 @@ export default function ContentDetail() {
         </Link>
 
         <div className="aged-card rounded-2xl overflow-hidden mb-8">
-          {item.file_url && item.content_type === 'photo' && (
+          {item.file_url && (item.content_type === 'photo' || item.content_type === 'uncategorized') && (
             <div className="relative bg-black/40">
               <img src={item.file_url} alt={item.title} className="w-full max-h-[600px] object-contain sepia-tint" />
             </div>
