@@ -1,10 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UserPlus, Mail, Lock, Loader2, User, ShieldCheck } from "lucide-react";
+import { UserPlus, Mail, Lock, Loader2, User, ShieldCheck, GitBranch } from "lucide-react";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
@@ -20,6 +20,16 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [showOtp, setShowOtp] = useState(false);
   const [otpCode, setOtpCode] = useState("");
+  const [unclaimedAncestors, setUnclaimedAncestors] = useState([]);
+  const [claimedAncestorId, setClaimedAncestorId] = useState("");
+
+  useEffect(() => {
+    base44.entities.Ancestor.list('full_name')
+      .then((all) => {
+        setUnclaimedAncestors((all || []).filter(a => !a.user_account_id));
+      })
+      .catch(() => {});
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -55,6 +65,14 @@ export default function Register() {
           given_names: givenNames.trim(),
           family_name: familyName.trim().toUpperCase(),
         }).catch(() => {});
+        // If claiming an unclaimed ancestor placeholder, link this user to that profile
+        if (claimedAncestorId) {
+          await base44.entities.Ancestor.update(claimedAncestorId, {
+            user_account_id: result.user_id || (await base44.auth.me())?.id,
+            full_name: `${givenNames.trim()} ${familyName.trim().toUpperCase()}`.trim(),
+            living: true,
+          }).catch(() => {});
+        }
       }
       window.location.href = "/";
     } catch (err) {
@@ -174,6 +192,30 @@ export default function Register() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
+        {unclaimedAncestors.length > 0 && (
+          <div className="space-y-2">
+            <Label htmlFor="claimAncestor" className="flex items-center gap-1.5">
+              <GitBranch className="w-3.5 h-3.5 text-primary" />
+              Claim your Present, Past and Future
+            </Label>
+            <select
+              id="claimAncestor"
+              value={claimedAncestorId}
+              onChange={(e) => setClaimedAncestorId(e.target.value)}
+              className="w-full h-12 rounded-md border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="">— Not listed / I'll create my own —</option>
+              {unclaimedAncestors.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.full_name}{a.birth_date ? ` (b. ${new Date(a.birth_date).getFullYear()})` : ''}{a.bloodline ? ` — ${a.bloodline}` : ''}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-muted-foreground">
+              If the admin has placed your name in the family tree, select it here to claim your ancestor profile.
+            </p>
+          </div>
+        )}
         <div className="space-y-2">
           <Label htmlFor="givenNames">Given Names</Label>
           <div className="relative">
