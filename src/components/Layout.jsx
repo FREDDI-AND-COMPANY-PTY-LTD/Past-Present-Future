@@ -91,14 +91,6 @@ export default function Layout({ children }) {
               <div className="mb-3">
                 <NewsletterOptIn user={user} onUpdate={setUser} />
               </div>
-              <Link
-                to="/branches"
-                onClick={() => setSidebarOpen(false)}
-                className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-gradient-to-r from-[#C9913A] to-[#E8C97A] text-charcoal font-semibold text-sm hover:opacity-90 transition-opacity gold-glow"
-              >
-                <Sparkles size={16} />
-                Start Your Branch
-              </Link>
             </>
           ) : (
             <div className="space-y-2">
@@ -148,15 +140,6 @@ export default function Layout({ children }) {
                   Report a Problem
                 </button>
               </ReportProblemDialog>
-              {user && (
-                <Link
-                  to="/branches"
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-lg border border-[rgba(201,145,58,0.3)] text-amber-light text-sm hover:bg-[rgba(201,145,58,0.08)] transition-colors"
-                >
-                  <GitBranch size={16} />
-                  Start Your Branch
-                </Link>
-              )}
             </div>
           </div>
         </footer>
