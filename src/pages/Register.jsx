@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UserPlus, Mail, Lock, Loader2, User } from "lucide-react";
+import { UserPlus, Mail, Lock, Loader2, User, ShieldCheck } from "lucide-react";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
@@ -270,6 +270,18 @@ export default function Register() {
           )}
         </Button>
       </form>
+
+      <div className="mt-6 p-4 rounded-lg border border-primary/20 bg-primary/5">
+        <div className="flex items-start gap-2.5">
+          <ShieldCheck className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-medium text-foreground">Your data is yours — always</p>
+            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+              Export your complete family archive — every photo, document, certificate, and record — to your own cloud at any time. If you ever leave, you take everything with you. You only lose the interactive social media experience, not your family's history.
+            </p>
+          </div>
+        </div>
+      </div>
     </AuthLayout>
   );
 }

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Table, Search, Download, Cloud, Loader2, Check, ChevronDown, ChevronUp, Database } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
+import DataOwnershipPanel from '@/components/DataOwnershipPanel';
 
 const SECTIONS = [
   { key: 'ancestors', label: 'Ancestors' },
@@ -128,6 +129,8 @@ export default function ArchiveDataset() {
             </button>
           </div>
         </div>
+
+        <DataOwnershipPanel />
 
         {backupResult && (
           <div className={`aged-card rounded-xl p-4 mb-6 flex items-center gap-3 ${backupResult.status === 'success' ? 'border-[rgba(201,145,58,0.4)]' : 'border-red-500/30'}`}>
