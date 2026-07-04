@@ -18,6 +18,8 @@ import AdminInbox from '@/pages/AdminInbox';
 import ContentDetail from '@/pages/ContentDetail';
 import Branches from '@/pages/Branches';
 import ArchiveDataset from '@/pages/ArchiveDataset';
+import Newsletters from '@/pages/Newsletters';
+import NewsletterDetail from '@/pages/NewsletterDetail';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -53,6 +55,8 @@ const AuthenticatedApp = () => {
       <Route path="/content/:id" element={<ContentDetail />} />
       <Route path="/branches" element={<Branches />} />
       <Route path="/archive-dataset" element={<ArchiveDataset />} />
+      <Route path="/newsletters" element={<Newsletters />} />
+      <Route path="/newsletter/:id" element={<NewsletterDetail />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );

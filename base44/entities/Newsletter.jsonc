@@ -1,0 +1,59 @@
+{
+  "name": "Newsletter",
+  "type": "object",
+  "properties": {
+    "headline": {
+      "type": "string",
+      "description": "AI-generated headline for the monthly newsletter"
+    },
+    "intro": {
+      "type": "string",
+      "description": "Opening narrative paragraph(s)"
+    },
+    "sections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "subheading": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Themed body sections of the newsletter story"
+    },
+    "closing": {
+      "type": "string",
+      "description": "Closing paragraph"
+    },
+    "month_label": {
+      "type": "string",
+      "description": "Human-readable month and year (e.g. 'July 2026')"
+    },
+    "item_count": {
+      "type": "number",
+      "description": "Number of content items featured in this newsletter"
+    },
+    "featured_item_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs of ContentItem records featured in this newsletter"
+    },
+    "photo_urls": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "URLs of photos included in the newsletter gallery"
+    }
+  },
+  "required": [
+    "headline",
+    "month_label"
+  ]
+}
