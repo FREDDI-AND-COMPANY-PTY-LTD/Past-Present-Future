@@ -100,8 +100,11 @@ async function uploadFileToDrive(authHeader, folderId, fileName, fileBytes, mime
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    // User auth is optional — allows both manual triggers and scheduled runs
+    let user = null;
+    try {
+      user = await base44.auth.me();
+    } catch (_) {}
 
     const sr = base44.asServiceRole;
 
@@ -123,7 +126,7 @@ Deno.serve(async (req) => {
     // Build comprehensive JSON snapshot — includes ALL fields (raw AI analysis, visual elements, etc.)
     const snapshot = {
       export_date: new Date().toISOString(),
-      exported_by: user.full_name || user.email,
+      exported_by: user ? (user.full_name || user.email) : 'Scheduled monthly backup',
       app: 'Jason Lewis FREDDI — Family History Archive',
       description: 'Complete archive backup — all structured data and media. This snapshot contains everything needed to reconstruct the family tree, migration map, and timeline. Your data is yours.',
       counts: {
@@ -234,8 +237,7 @@ Deno.serve(async (req) => {
     try {
       await sr.entities.ActivityLog.create({
         action_type: 'upload',
-        user_id: user.id,
-        user_name: user.full_name || user.email,
+        ...(user ? { user_id: user.id, user_name: user.full_name || user.email } : {}),
         description: `Full archive backup — ${snapshot.counts.content_items} content items, ${mediaSuccess} media files to Google Drive (Full Backup ${dateStr})`,
       });
     } catch (_) {}

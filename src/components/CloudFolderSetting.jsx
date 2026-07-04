@@ -43,7 +43,7 @@ export default function CloudFolderSetting({ user, onUpdate }) {
         {saving ? 'Saving...' : saved ? 'Saved — backups active' : isBranchMember ? 'Update Folder' : 'Activate Branch Membership'}
       </button>
       <p className="mt-1.5 text-xs text-parchment/30 leading-tight">
-        Your archive auto-backs up here on every logout.
+        Your full archive auto-backs up here on the 1st of each month.
       </p>
     </div>
   );
