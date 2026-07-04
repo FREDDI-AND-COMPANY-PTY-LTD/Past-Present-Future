@@ -5,6 +5,7 @@ import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import AncestorAvatar from '@/components/AncestorAvatar';
 import ContentCard from '@/components/ContentCard';
+import SourcedField from '@/components/SourcedField';
 
 export default function AncestorProfile() {
   const { id } = useParams();
