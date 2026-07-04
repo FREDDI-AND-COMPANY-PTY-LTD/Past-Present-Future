@@ -53,6 +53,10 @@
       "type": "string",
       "description": "Marriage certificate file URL, if applicable"
     },
+    "passport_document": {
+      "type": "string",
+      "description": "Passport document file URL (historical/expired or current)"
+    },
     "mother_id": {
       "type": "string",
       "description": "Reference to mother's Ancestor profile ID"

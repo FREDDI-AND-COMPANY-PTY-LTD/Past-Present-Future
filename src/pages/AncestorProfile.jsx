@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { MapPin, Calendar, Globe, Heart, FileText, Award, Flag, ChevronLeft } from 'lucide-react';
+import { MapPin, Calendar, Globe, Heart, FileText, Award, Flag, ChevronLeft, BookUser } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import AncestorAvatar from '@/components/AncestorAvatar';
@@ -158,7 +158,7 @@ export default function AncestorProfile() {
         )}
 
         {/* Documents */}
-        {(ancestor.birth_certificate || ancestor.marriage_certificate) && (
+        {(ancestor.birth_certificate || ancestor.marriage_certificate || ancestor.passport_document) && (
           <div className="aged-card rounded-2xl p-6 mb-8">
             <h2 className="font-display text-2xl text-parchment mb-4">Documents</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -176,6 +176,15 @@ export default function AncestorProfile() {
                   <Award size={24} className="text-gold" />
                   <div>
                     <p className="text-sm text-parchment">Marriage Certificate</p>
+                    <p className="text-xs text-parchment/40">View document</p>
+                  </div>
+                </a>
+              )}
+              {ancestor.passport_document && (
+                <a href={ancestor.passport_document} target="_blank" rel="noreferrer" className="flex items-center gap-3 p-4 rounded-lg border border-[rgba(201,145,58,0.15)] hover:border-[rgba(201,145,58,0.3)] transition-colors">
+                  <BookUser size={24} className="text-gold" />
+                  <div>
+                    <p className="text-sm text-parchment">Passport Document</p>
                     <p className="text-xs text-parchment/40">View document</p>
                   </div>
                 </a>

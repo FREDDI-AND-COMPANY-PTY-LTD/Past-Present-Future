@@ -46,7 +46,7 @@ export default function UploadEvent() {
   const selectedAncestor = ancestors.find(a => a.id === selectedAncestorId) || null;
 
   const canAttachToProfile = classification === 'certificate' &&
-    (documentSubtype === 'birth_certificate' || documentSubtype === 'marriage_certificate') &&
+    (documentSubtype === 'birth_certificate' || documentSubtype === 'marriage_certificate' || documentSubtype === 'passport_or_travel_document') &&
     selectedAncestor;
 
   useEffect(() => {
@@ -103,7 +103,11 @@ Return JSON with this structure:
     "mother_name": "", "father_name": "", "spouse_name": "", "witnesses": "", "issuing_authority": "",
     "date_of_event": "", "place_of_event": "", "nationality": "", "religion": "", "occupation": "",
     "document_number": "", "registration_number": "", "ship_name": "", "port_of_departure": "", "port_of_arrival": "",
-    "military_unit": "", "rank": "", "service_number": "", "residence_address": ""
+    "military_unit": "", "rank": "", "service_number": "", "residence_address": "",
+    "passport_number": "", "date_of_issue": "", "date_of_expiry": "", "issuing_country": "", "issuing_authority": "",
+    "place_of_issue": "", "surname": "", "given_names": "", "national_id_number": "",
+    "date_of_birth": "", "place_of_birth": "", "sex": "", "height": "", "profession": "",
+    "distinguishing_marks": "", "photograph_present": ""
   },
   "suggested_title": "a short descriptive title for this item, including the document subtype and primary person if known (e.g. 'Birth Certificate — Giuseppe Freddi (1898)')",
   "suggested_description": "a brief description of what this document is and its genealogical significance",
@@ -159,7 +163,7 @@ Return JSON with this structure:
 
       // Auto-suggest attaching certificate to ancestor profile
       if (result.type === 'certificate' &&
-        (result.document_subtype === 'birth_certificate' || result.document_subtype === 'marriage_certificate') &&
+        (result.document_subtype === 'birth_certificate' || result.document_subtype === 'marriage_certificate' || result.document_subtype === 'passport_or_travel_document') &&
         matchedAncestorId) {
         setAttachToProfile(true);
       }
@@ -206,8 +210,13 @@ Return JSON with this structure:
 
       // Attach certificate directly to ancestor's profile
       if (attachToProfile && canAttachToProfile && fileUrl) {
-        const certField = documentSubtype === 'birth_certificate' ? 'birth_certificate' : 'marriage_certificate';
-        await base44.entities.Ancestor.update(selectedAncestorId, { [certField]: fileUrl }).catch(() => {});
+        const profileField =
+          documentSubtype === 'birth_certificate' ? 'birth_certificate' :
+          documentSubtype === 'marriage_certificate' ? 'marriage_certificate' :
+          documentSubtype === 'passport_or_travel_document' ? 'passport_document' : null;
+        if (profileField) {
+          await base44.entities.Ancestor.update(selectedAncestorId, { [profileField]: fileUrl }).catch(() => {});
+        }
       }
 
       if (user) {
@@ -381,7 +390,7 @@ Return JSON with this structure:
                     Attach to {selectedAncestor.full_name}'s profile
                   </p>
                   <p className="text-xs text-parchment/40">
-                    {documentSubtype === 'birth_certificate' ? 'Birth certificate' : 'Marriage certificate'} will be saved to their profile page
+                    {documentSubtype === 'birth_certificate' ? 'Birth certificate' : documentSubtype === 'marriage_certificate' ? 'Marriage certificate' : 'Passport document'} will be saved to their profile page
                   </p>
                 </div>
                 <button
