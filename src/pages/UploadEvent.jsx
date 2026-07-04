@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, Upload, FileText, Image as ImageIcon, Award, Loader2, Check, Sparkles } from 'lucide-react';
+import { Camera, Upload, FileText, Image as ImageIcon, Award, Loader2, Check, Sparkles, Newspaper, Tag } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 
@@ -15,8 +15,10 @@ export default function UploadEvent() {
   const [file, setFile] = useState(null);
   const [fileUrl, setFileUrl] = useState(null);
   const [classification, setClassification] = useState(null);
+  const [documentSubtype, setDocumentSubtype] = useState(null);
   const [extractedData, setExtractedData] = useState(null);
   const [transcribedText, setTranscribedText] = useState('');
+  const [suggestedTags, setSuggestedTags] = useState([]);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -47,44 +49,78 @@ export default function UploadEvent() {
       setFileUrl(url);
 
       const result = await base44.integrations.Core.InvokeLLM({
-        prompt: `Analyse this uploaded image. Determine if it is:
-1. A PHOTOGRAPH (of a person, place, or event) — respond with type "photo"
-2. A NARRATIVE TEXT document (letter, diary entry, news clipping, story) — respond with type "narrative" and transcribe the full text
-3. A CERTIFICATE or formal record (birth, death, marriage, immigration, church record, passenger manifest) — respond with type "certificate" and extract all key fields
+        prompt: `You are a genealogical document analyst. Analyse this uploaded image and classify it into the most appropriate category based on both visual cues and any text you can read.
+
+CATEGORIES (choose the single best fit):
+1. "photo" — A PHOTOGRAPH of a person, place, or event (no significant text content)
+2. "narrative" — A LETTER, DIARY ENTRY, MEMOIR, or handwritten story — transcribe the full text
+3. "press_clipping" — A NEWSPAPER ARTICLE or published media clipping — transcribe the full text and note the publication if visible
+4. "certificate" — Any FORMAL RECORD or official document. Determine the document_subtype:
+   • birth_certificate
+   • death_certificate
+   • marriage_certificate
+   • baptism_or_church_record
+   • passenger_manifest_or_ship_record
+   • passport_or_travel_document
+   • naturalization_or_citizenship
+   • census_record
+   • military_record
+   • immigration_or_border_record
+   • statutory_declaration_or_affidavit
+   • property_or_land_record
+   • other_official_record
+
+DOCUMENT INTELLIGENCE — For certificates and any document containing text, read carefully and extract ALL genealogically relevant fields you can identify. For historical identity documents, pay special attention to:
+- Full names (subject, parents, spouse, witnesses, informant/registrant)
+- Dates (birth, death, marriage, event, registration, issue, arrival, naturalization)
+- Places (birth, death, marriage, residence, origin, destination, issuing authority)
+- Nationality, citizenship, religion, occupation
+- Document numbers, registration numbers, volume/page references
+- Ship name, port of departure, port of arrival (for passenger manifests)
+- Military unit, rank, service number (for military records)
 
 Return JSON with this structure:
 {
-  "type": "photo" | "narrative" | "certificate",
-  "transcription": "full text if narrative, otherwise empty",
+  "type": "photo" | "narrative" | "press_clipping" | "certificate",
+  "document_subtype": "birth_certificate" | "death_certificate" | "marriage_certificate" | "baptism_or_church_record" | "passenger_manifest_or_ship_record" | "passport_or_travel_document" | "naturalization_or_citizenship" | "census_record" | "military_record" | "immigration_or_border_record" | "statutory_declaration_or_affidavit" | "property_or_land_record" | "other_official_record" | "" (empty if not a certificate),
+  "transcription": "full text transcribed from the document, if any readable text exists — otherwise empty string",
   "extracted_fields": {
     "full_name": "", "date_of_birth": "", "place_of_birth": "", "date_of_death": "", "place_of_death": "",
-    "mother_name": "", "father_name": "", "spouse_name": "", "witnesses": "", "issuing_authority": "", "date_of_event": "", "place_of_event": ""
+    "mother_name": "", "father_name": "", "spouse_name": "", "witnesses": "", "issuing_authority": "",
+    "date_of_event": "", "place_of_event": "", "nationality": "", "religion": "", "occupation": "",
+    "document_number": "", "registration_number": "", "ship_name": "", "port_of_departure": "", "port_of_arrival": "",
+    "military_unit": "", "rank": "", "service_number": "", "residence_address": ""
   },
-  "suggested_title": "a short descriptive title for this item",
-  "suggested_description": "a brief description"
+  "suggested_title": "a short descriptive title for this item, including the document subtype and primary person if known (e.g. 'Birth Certificate — Giuseppe Freddi (1898)')",
+  "suggested_description": "a brief description of what this document is and its genealogical significance",
+  "suggested_tags": ["array", "of", "relevant", "tags", "e.g. 'immigration', 'Victoria', '1890s', 'Freddi bloodline']"
 }`,
         file_urls: [url],
         response_json_schema: {
           type: 'object',
           properties: {
-            type: { type: 'string', enum: ['photo', 'narrative', 'certificate'] },
+            type: { type: 'string', enum: ['photo', 'narrative', 'press_clipping', 'certificate'] },
+            document_subtype: { type: 'string' },
             transcription: { type: 'string' },
             extracted_fields: { type: 'object' },
             suggested_title: { type: 'string' },
             suggested_description: { type: 'string' },
+            suggested_tags: { type: 'array', items: { type: 'string' } },
           },
         },
       });
 
       setClassification(result.type);
+      if (result.document_subtype) setDocumentSubtype(result.document_subtype);
       if (result.transcription) setTranscribedText(result.transcription);
       if (result.extracted_fields) setExtractedData(result.extracted_fields);
+      if (result.suggested_tags) setSuggestedTags(result.suggested_tags);
       setFormData(f => ({
         ...f,
         title: result.suggested_title || '',
         description: result.suggested_description || '',
         date: result.extracted_fields?.date_of_event || result.extracted_fields?.date_of_birth || '',
-        location_name: result.extracted_fields?.place_of_event || result.extracted_fields?.place_of_birth || '',
+        location_name: result.extracted_fields?.place_of_event || result.extracted_fields?.place_of_birth || result.extracted_fields?.residence_address || '',
       }));
       setStep(STEPS.FORM);
     } catch (e) {
@@ -98,6 +134,7 @@ Return JSON with this structure:
     try {
       const contentType = classification === 'photo' ? 'photo' :
         classification === 'narrative' ? 'narrative' :
+        classification === 'press_clipping' ? 'press_clipping' :
         classification === 'certificate' ? 'certificate' : 'photo';
 
       const user = await base44.auth.me().catch(() => null);
@@ -115,9 +152,10 @@ Return JSON with this structure:
         file_url: fileUrl,
         external_url: formData.external_url,
         transcribed_text: transcribedText || null,
-        extracted_fields: extractedData || null,
+        extracted_fields: { ...extractedData, document_subtype: documentSubtype } || null,
         uploaded_by_id: user?.id || null,
         conflict_flag_status: 'none',
+        tags: suggestedTags || [],
       };
 
       await base44.entities.ContentItem.create(itemData);
@@ -203,11 +241,15 @@ Return JSON with this structure:
             <div className="aged-card rounded-xl p-4 flex items-center gap-3">
               {classification === 'photo' && <ImageIcon size={24} className="text-gold" />}
               {classification === 'narrative' && <FileText size={24} className="text-gold" />}
+              {classification === 'press_clipping' && <Newspaper size={24} className="text-gold" />}
               {classification === 'certificate' && <Award size={24} className="text-gold" />}
               <div>
                 <p className="text-xs text-parchment/40 uppercase tracking-wider">Detected Type</p>
-                <p className="text-parchment capitalize font-medium">
-                  {classification === 'photo' ? 'Photograph' : classification === 'narrative' ? 'Narrative Document' : 'Certificate / Formal Record'}
+                <p className="text-parchment font-medium">
+                  {classification === 'photo' ? 'Photograph' : classification === 'narrative' ? 'Narrative Document' : classification === 'press_clipping' ? 'Press Clipping' : 'Certificate / Formal Record'}
+                  {documentSubtype && documentSubtype !== 'other_official_record' && (
+                    <span className="text-amber-light/70 text-sm ml-2">({documentSubtype.replace(/_/g, ' ')})</span>
+                  )}
                 </p>
               </div>
             </div>
@@ -219,8 +261,8 @@ Return JSON with this structure:
               </div>
             )}
 
-            {/* Extracted certificate fields */}
-            {classification === 'certificate' && extractedData && (
+            {/* Extracted document fields */}
+            {(classification === 'certificate' || classification === 'press_clipping') && extractedData && (
               <div className="aged-card rounded-xl p-6">
                 <div className="flex items-center gap-2 mb-4">
                   <Award size={18} className="text-gold" />
@@ -244,7 +286,7 @@ Return JSON with this structure:
             )}
 
             {/* Transcribed text */}
-            {classification === 'narrative' && transcribedText && (
+            {(classification === 'narrative' || classification === 'press_clipping') && transcribedText && (
               <div className="aged-card rounded-xl p-6">
                 <div className="flex items-center gap-2 mb-3">
                   <FileText size={18} className="text-gold" />
@@ -309,6 +351,20 @@ Return JSON with this structure:
                 </div>
               ) : null}
 
+              {/* Suggested tags */}
+              {suggestedTags.length > 0 && (
+                <div>
+                  <label className="text-sm text-parchment/60 mb-2 flex items-center gap-1.5"><Tag size={14} /> Suggested Tags</label>
+                  <div className="flex flex-wrap gap-2">
+                    {suggestedTags.map((tag, i) => (
+                      <span key={i} className="px-2.5 py-1 rounded-full text-xs bg-[rgba(201,145,58,0.08)] text-amber-light/80 border border-[rgba(201,145,58,0.15)]">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Ancestor tagging */}
               <div>
                 <label className="text-sm text-parchment/60 mb-2 block">Tag Ancestors</label>
@@ -348,7 +404,7 @@ Return JSON with this structure:
             <h2 className="font-display text-2xl text-parchment mb-2">Saved to the Archive</h2>
             <p className="text-parchment/50 text-sm mb-6">Your piece of family history is now part of the Freddi archive.</p>
             <div className="flex gap-3 justify-center">
-              <button onClick={() => { setStep(STEPS.CAPTURE); setFile(null); setFileUrl(null); setClassification(null); setExtractedData(null); setTranscribedText(''); setFormData({title:'',description:'',date:'',location_name:'',latitude:'',longitude:'',ancestor_ids:[],era:'',external_url:''}); }}
+              <button onClick={() => { setStep(STEPS.CAPTURE); setFile(null); setFileUrl(null); setClassification(null); setDocumentSubtype(null); setExtractedData(null); setTranscribedText(''); setSuggestedTags([]); setFormData({title:'',description:'',date:'',location_name:'',latitude:'',longitude:'',ancestor_ids:[],era:'',external_url:''}); }}
                 className="px-5 py-2.5 rounded-lg border border-[rgba(201,145,58,0.3)] text-amber-light text-sm hover:bg-[rgba(201,145,58,0.08)] transition-colors">
                 Upload Another
               </button>
