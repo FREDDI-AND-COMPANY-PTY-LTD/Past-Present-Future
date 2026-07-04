@@ -92,8 +92,13 @@ export default function AncestorProfile() {
               <AncestorAvatar ancestor={ancestor} size="xl" />
             </div>
             <div className="flex-1 text-center md:text-left">
-              <div className="flex items-center gap-3 justify-center md:justify-start mb-2">
-                <h1 className="font-display text-4xl text-parchment">{ancestor.full_name}</h1>
+            <div className="flex items-center gap-3 justify-center md:justify-start mb-2 flex-wrap">
+              <h1 className="font-display text-4xl text-parchment">
+                {ancestor.full_name}
+                <span className="inline-flex ml-2 align-middle">
+                  <SourcedField entityType="Ancestor" entityId={id} fieldName="full_name" label="Full Name" value="" />
+                </span>
+              </h1>
                 {ancestor.living ? (
                   <span className="text-xs px-2 py-0.5 rounded-full bg-[rgba(201,145,58,0.12)] text-amber-light border border-[rgba(201,145,58,0.2)]">Living</span>
                 ) : (
@@ -101,19 +106,16 @@ export default function AncestorProfile() {
                 )}
               </div>
               <p className="text-amber-light/70 text-lg mb-4">{lifeSpan}</p>
-              <div className="flex flex-wrap gap-4 justify-center md:justify-start text-sm text-parchment/60">
-                {ancestor.nationality && (
-                  <span className="flex items-center gap-1.5"><Globe size={14} className="text-gold/60" /> {ancestor.nationality}</span>
-                )}
-                {ancestor.birth_place && (
-                  <span className="flex items-center gap-1.5"><MapPin size={14} className="text-gold/60" /> {ancestor.birth_place}</span>
-                )}
-                {ancestor.bloodline && (
-                  <span className="flex items-center gap-1.5"><Heart size={14} className="text-gold/60" /> {ancestor.bloodline}</span>
-                )}
+              <div className="flex flex-wrap gap-x-6 gap-y-2 justify-center md:justify-start text-sm text-parchment/60">
+                <SourcedField entityType="Ancestor" entityId={id} fieldName="birth_date" label="Date of Birth" value={ancestor.birth_date ? new Date(ancestor.birth_date).toLocaleDateString('en-AU', { year: 'numeric', month: 'long', day: 'numeric' }) : ''} icon={Calendar} />
+                <SourcedField entityType="Ancestor" entityId={id} fieldName="birth_place" label="Place of Birth" value={ancestor.birth_place} icon={MapPin} />
+                <SourcedField entityType="Ancestor" entityId={id} fieldName="nationality" label="Nationality" value={ancestor.nationality} icon={Globe} />
+                <SourcedField entityType="Ancestor" entityId={id} fieldName="bloodline" label="Bloodline" value={ancestor.bloodline} icon={Heart} />
               </div>
               {ancestor.biography && (
-                <p className="text-parchment/70 mt-4 leading-relaxed">{ancestor.biography}</p>
+                <div className="mt-4">
+                  <SourcedField entityType="Ancestor" entityId={id} fieldName="biography" label="Biography" value={ancestor.biography} />
+                </div>
               )}
             </div>
           </div>
