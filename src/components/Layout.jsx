@@ -78,20 +78,40 @@ export default function Layout({ children }) {
         </nav>
 
         <div className="p-4 border-t border-[rgba(201,145,58,0.15)]">
-          {user && (
-            <div className="mb-3 px-4 py-2 text-xs text-parchment/50">
-              Signed in as<br />
-              <span className="text-amber-light">{user.full_name || user.email}</span>
+          {user ? (
+            <>
+              <div className="mb-3 px-4 py-2 text-xs text-parchment/50">
+                Signed in as<br />
+                <span className="text-amber-light">{user.full_name || user.email}</span>
+              </div>
+              <Link
+                to="/branches"
+                onClick={() => setSidebarOpen(false)}
+                className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-gradient-to-r from-[#C9913A] to-[#E8C97A] text-charcoal font-semibold text-sm hover:opacity-90 transition-opacity gold-glow"
+              >
+                <Sparkles size={16} />
+                Start Your Branch
+              </Link>
+            </>
+          ) : (
+            <div className="space-y-2">
+              <Link
+                to="/login"
+                onClick={() => setSidebarOpen(false)}
+                className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg border border-[rgba(201,145,58,0.3)] text-amber-light text-sm font-semibold hover:bg-[rgba(201,145,58,0.08)] transition-colors"
+              >
+                Login
+              </Link>
+              <Link
+                to="/register"
+                onClick={() => setSidebarOpen(false)}
+                className="flash-pulse flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-gradient-to-r from-[#C9913A] to-[#E8C97A] text-charcoal font-semibold text-sm hover:opacity-90 transition-opacity text-center leading-tight"
+              >
+                <Sparkles size={16} />
+                Become Your Own Ancestor
+              </Link>
             </div>
           )}
-          <Link
-            to="/branches"
-            onClick={() => setSidebarOpen(false)}
-            className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-gradient-to-r from-[#C9913A] to-[#E8C97A] text-charcoal font-semibold text-sm hover:opacity-90 transition-opacity gold-glow"
-          >
-            <Sparkles size={16} />
-            Start Your Branch
-          </Link>
         </div>
       </aside>
 
@@ -113,13 +133,15 @@ export default function Layout({ children }) {
               <p className="font-display text-lg text-gold">Freddi Ancestry Archive</p>
               <p className="text-xs text-parchment/40 mt-1">A private family history — preserved for generations</p>
             </div>
-            <Link
-              to="/branches"
-              className="flex items-center gap-2 px-5 py-2.5 rounded-lg border border-[rgba(201,145,58,0.3)] text-amber-light text-sm hover:bg-[rgba(201,145,58,0.08)] transition-colors"
-            >
-              <GitBranch size={16} />
-              Start Your Branch
-            </Link>
+            {user && (
+              <Link
+                to="/branches"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-lg border border-[rgba(201,145,58,0.3)] text-amber-light text-sm hover:bg-[rgba(201,145,58,0.08)] transition-colors"
+              >
+                <GitBranch size={16} />
+                Start Your Branch
+              </Link>
+            )}
           </div>
         </footer>
       </div>
