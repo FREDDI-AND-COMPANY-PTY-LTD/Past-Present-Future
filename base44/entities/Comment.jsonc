@@ -29,6 +29,13 @@
     "parent_comment_id": {
       "type": "string",
       "description": "ID of parent comment for threaded replies (null if top-level)"
+    },
+    "related_content_item_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs of ContentItems uploaded as related events in response to this comment"
     }
   },
   "required": [

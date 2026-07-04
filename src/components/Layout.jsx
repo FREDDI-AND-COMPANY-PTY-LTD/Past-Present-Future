@@ -4,6 +4,7 @@ import { Home, Users, Map, Clock, Network, GitBranch, Upload, Shield, Search, Me
 import { base44 } from '@/api/base44Client';
 import ReportProblemDialog from '@/components/ReportProblemDialog';
 import NewsletterOptIn from '@/components/NewsletterOptIn';
+import NotificationPopup from '@/components/NotificationPopup';
 
 const navItems = [
   { label: 'Home', path: '/', icon: Home },
@@ -128,6 +129,7 @@ export default function Layout({ children }) {
 
       {/* Main content */}
       <div className="flex-1 lg:ml-64 pt-16 lg:pt-0">
+        {user && <NotificationPopup />}
         <main className="min-h-screen">
           {children}
         </main>

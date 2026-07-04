@@ -28,6 +28,11 @@
     "family_name": {
       "type": "string",
       "description": "Surname / family name as capitalised on the birth certificate (e.g. FREDDI)"
+    },
+    "last_notification_check": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO timestamp of when the user last concluded their notification review"
     }
   },
   "required": [
