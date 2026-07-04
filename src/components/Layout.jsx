@@ -5,7 +5,7 @@ import { base44 } from '@/api/base44Client';
 import ReportProblemDialog from '@/components/ReportProblemDialog';
 import NewsletterOptIn from '@/components/NewsletterOptIn';
 import NotificationPopup from '@/components/NotificationPopup';
-import CloudFolderSetting from '@/components/CloudFolderSetting';
+import BranchUpgradeForm from '@/components/BranchUpgradeForm';
 import LogoutButton from '@/components/LogoutButton';
 
 const navItems = [
@@ -94,7 +94,7 @@ export default function Layout({ children }) {
                 <NewsletterOptIn user={user} onUpdate={setUser} />
               </div>
               <div className="mb-3">
-                <CloudFolderSetting user={user} onUpdate={setUser} />
+                <BranchUpgradeForm user={user} onUpdate={setUser} />
               </div>
               <LogoutButton user={user} />
             </>

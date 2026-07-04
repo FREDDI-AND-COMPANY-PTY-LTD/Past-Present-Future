@@ -36,7 +36,16 @@
     },
     "cloud_folder_address": {
       "type": "string",
-      "description": "Cloud folder address for automatic archive backups (entered when upgrading to a Branch Member)"
+      "description": "Cloud folder path for automatic archive backups (entered when upgrading to a Branch Member)"
+    },
+    "cloud_provider": {
+      "type": "string",
+      "enum": [
+        "google_drive",
+        "one_drive",
+        "dropbox"
+      ],
+      "description": "Which cloud storage provider the branch member uses for monthly archive backups"
     },
     "is_branch_member": {
       "type": "boolean",
