@@ -277,7 +277,7 @@ export default function Register() {
           <div>
             <p className="text-sm font-medium text-foreground">Your data is yours — always</p>
             <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-              Export your complete family archive — every photo, document, certificate, and record — to your own cloud at any time. If you ever leave, you take everything with you. You only lose the interactive social media experience, not your family's history.
+              Your complete family archive is automatically backed up to your own cloud folder every time you log out. When you upgrade to a Branch Member, you'll enter your cloud folder address and your data is continuously safeguarded in a place you control. If you ever leave, you take everything with you — you only lose the interactive social media experience, not your family's history.
             </p>
           </div>
         </div>

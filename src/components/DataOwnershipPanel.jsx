@@ -27,7 +27,7 @@ export default function DataOwnershipPanel() {
         <div>
           <h2 className="font-display text-xl text-parchment">Your Data, Your Archive</h2>
           <p className="text-sm text-parchment/50 mt-1 leading-relaxed">
-            Every photo, document, certificate, and record belongs to you. Export your complete family archive to your Google Drive at any time — all media files, structured data, and AI analysis included. If you ever leave, you take everything with you. You simply lose the interactive social media experience.
+            Your complete family archive — every photo, document, certificate, and record — is automatically backed up to your nominated cloud folder every time you log out. When you upgrade to a Branch Member, you'll enter your own cloud folder address, and from that point on, your data is continuously safeguarded in a place you control. Your family's history is always yours to take with you.
           </p>
         </div>
       </div>
@@ -58,7 +58,7 @@ export default function DataOwnershipPanel() {
 
       <div className="flex items-center gap-1.5 mt-3 text-xs text-parchment/30">
         <Clock size={12} />
-        <span>Creates a dated snapshot in your Google Drive — run before your subscription expires to take everything with you.</span>
+        <span>Automatic backups run on every logout to your nominated cloud folder. You can also trigger a manual backup above at any time.</span>
       </div>
 
       {result && !result.error && (
