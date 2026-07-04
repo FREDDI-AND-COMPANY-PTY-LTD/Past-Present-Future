@@ -6,43 +6,55 @@ import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ScrollToTop from './components/ScrollToTop';
-// Add page imports here
+import Home from '@/pages/Home';
+import Ancestors from '@/pages/Ancestors';
+import AncestorProfile from '@/pages/AncestorProfile';
+import MapPage from '@/pages/MapPage';
+import TimelinePage from '@/pages/TimelinePage';
+import FamilyTree from '@/pages/FamilyTree';
+import UploadEvent from '@/pages/UploadEvent';
+import AdminDashboard from '@/pages/AdminDashboard';
+import ContentDetail from '@/pages/ContentDetail';
+import Branches from '@/pages/Branches';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
 
-  // Show loading spinner while checking app public settings or auth
   if (isLoadingPublicSettings || isLoadingAuth) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
+      <div className="fixed inset-0 flex items-center justify-center bg-[#0D0B0A]">
+        <div className="w-8 h-8 border-4 border-[rgba(201,145,58,0.2)] border-t-[#C9913A] rounded-full animate-spin"></div>
       </div>
     );
   }
 
-  // Handle authentication errors
   if (authError) {
     if (authError.type === 'user_not_registered') {
       return <UserNotRegisteredError />;
     } else if (authError.type === 'auth_required') {
-      // Redirect to login automatically
       navigateToLogin();
       return null;
     }
   }
 
-  // Render the main app
   return (
     <Routes>
-      {/* Add your page Route elements here */}
+      <Route path="/" element={<Home />} />
+      <Route path="/ancestors" element={<Ancestors />} />
+      <Route path="/ancestor/:id" element={<AncestorProfile />} />
+      <Route path="/map" element={<MapPage />} />
+      <Route path="/timeline" element={<TimelinePage />} />
+      <Route path="/family-tree" element={<FamilyTree />} />
+      <Route path="/upload" element={<UploadEvent />} />
+      <Route path="/admin" element={<AdminDashboard />} />
+      <Route path="/content/:id" element={<ContentDetail />} />
+      <Route path="/branches" element={<Branches />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
 };
 
-
 function App() {
-
   return (
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>

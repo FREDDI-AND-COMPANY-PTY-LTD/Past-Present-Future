@@ -1,0 +1,52 @@
+{
+  "name": "ActivityLog",
+  "type": "object",
+  "properties": {
+    "action_type": {
+      "type": "string",
+      "enum": [
+        "upload",
+        "edit",
+        "delete",
+        "branch_create",
+        "conflict_flag",
+        "registration",
+        "conflict_resolve",
+        "approval"
+      ],
+      "description": "Type of action performed"
+    },
+    "user_id": {
+      "type": "string",
+      "description": "User ID who performed the action"
+    },
+    "user_name": {
+      "type": "string",
+      "description": "Display name of the user"
+    },
+    "content_item_id": {
+      "type": "string",
+      "description": "Affected content item ID, if applicable"
+    },
+    "content_item_title": {
+      "type": "string",
+      "description": "Title of affected content item"
+    },
+    "ancestor_id": {
+      "type": "string",
+      "description": "Affected ancestor ID, if applicable"
+    },
+    "branch_id": {
+      "type": "string",
+      "description": "Branch ID, if applicable"
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable description of the action"
+    }
+  },
+  "required": [
+    "action_type",
+    "description"
+  ]
+}

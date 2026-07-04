@@ -1,0 +1,49 @@
+{
+  "name": "MigrationRoute",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Name of the migration route (e.g. Freddi bloodline migration)"
+    },
+    "ancestor_id": {
+      "type": "string",
+      "description": "Ancestor this route belongs to"
+    },
+    "bloodline": {
+      "type": "string",
+      "description": "Bloodline name"
+    },
+    "waypoints": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "lat": {
+            "type": "number"
+          },
+          "lng": {
+            "type": "number"
+          },
+          "label": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Ordered list of waypoints tracing the migration path"
+    },
+    "color": {
+      "type": "string",
+      "description": "Hex colour for the route line"
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

@@ -1,0 +1,101 @@
+{
+  "name": "ContentItem",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Title or caption for this content item"
+    },
+    "content_type": {
+      "type": "string",
+      "enum": [
+        "photo",
+        "story",
+        "press_clipping",
+        "video",
+        "certificate",
+        "narrative"
+      ],
+      "default": "photo",
+      "description": "Type of content"
+    },
+    "ancestor_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs of ancestors tagged in this item"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date associated with this content"
+    },
+    "location_name": {
+      "type": "string",
+      "description": "Place name where this content is set"
+    },
+    "latitude": {
+      "type": "number",
+      "description": "Latitude for map pin"
+    },
+    "longitude": {
+      "type": "number",
+      "description": "Longitude for map pin"
+    },
+    "description": {
+      "type": "string",
+      "description": "Description or caption"
+    },
+    "transcribed_text": {
+      "type": "string",
+      "description": "OCR transcription of narrative documents"
+    },
+    "extracted_fields": {
+      "type": "object",
+      "description": "Fields extracted from certificates by AI"
+    },
+    "file_url": {
+      "type": "string",
+      "description": "URL to uploaded media file"
+    },
+    "external_url": {
+      "type": "string",
+      "description": "External URL for video (YouTube/Vimeo)"
+    },
+    "era": {
+      "type": "string",
+      "description": "Historical era or time period"
+    },
+    "uploaded_by_id": {
+      "type": "string",
+      "description": "User ID of uploader"
+    },
+    "branch_id": {
+      "type": "string",
+      "description": "Branch this content originated from"
+    },
+    "conflict_flag_status": {
+      "type": "string",
+      "enum": [
+        "none",
+        "open",
+        "resolved",
+        "dismissed"
+      ],
+      "default": "none",
+      "description": "Conflict flag status"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Additional tags"
+    }
+  },
+  "required": [
+    "title",
+    "content_type"
+  ]
+}

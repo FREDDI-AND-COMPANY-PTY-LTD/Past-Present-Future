@@ -1,0 +1,80 @@
+{
+  "name": "Ancestor",
+  "type": "object",
+  "properties": {
+    "full_name": {
+      "type": "string",
+      "description": "Full name of the ancestor"
+    },
+    "birth_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of birth"
+    },
+    "birth_place": {
+      "type": "string",
+      "description": "Place of birth (city, country)"
+    },
+    "death_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of death, if deceased"
+    },
+    "death_place": {
+      "type": "string",
+      "description": "Place of death, if applicable"
+    },
+    "nationality": {
+      "type": "string",
+      "description": "Nationality or country of origin"
+    },
+    "biography": {
+      "type": "string",
+      "description": "Brief biography"
+    },
+    "bloodline": {
+      "type": "string",
+      "description": "Bloodline or family line name"
+    },
+    "living": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether this ancestor is currently living"
+    },
+    "profile_photo": {
+      "type": "string",
+      "description": "Portrait photo URL"
+    },
+    "birth_certificate": {
+      "type": "string",
+      "description": "Birth certificate file URL"
+    },
+    "marriage_certificate": {
+      "type": "string",
+      "description": "Marriage certificate file URL, if applicable"
+    },
+    "mother_id": {
+      "type": "string",
+      "description": "Reference to mother's Ancestor profile ID"
+    },
+    "father_id": {
+      "type": "string",
+      "description": "Reference to father's Ancestor profile ID"
+    },
+    "partner_id": {
+      "type": "string",
+      "description": "Reference to partner/spouse's Ancestor profile ID"
+    },
+    "era": {
+      "type": "string",
+      "description": "Historical era or time period"
+    },
+    "user_account_id": {
+      "type": "string",
+      "description": "If this ancestor is a registered user, their user ID"
+    }
+  },
+  "required": [
+    "full_name"
+  ]
+}

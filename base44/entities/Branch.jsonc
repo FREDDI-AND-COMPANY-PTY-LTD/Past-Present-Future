@@ -1,0 +1,29 @@
+{
+  "name": "Branch",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Name of the branch (e.g. family surname line)"
+    },
+    "founder_id": {
+      "type": "string",
+      "description": "User ID of the member who started this branch"
+    },
+    "ancestor_id": {
+      "type": "string",
+      "description": "Ancestor node this branch stems from"
+    },
+    "accent_color": {
+      "type": "string",
+      "description": "Hex colour for this branch's accent"
+    },
+    "description": {
+      "type": "string",
+      "description": "Description of the branch"
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

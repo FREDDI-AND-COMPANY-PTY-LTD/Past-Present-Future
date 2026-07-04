@@ -1,0 +1,56 @@
+{
+  "name": "ConflictFlag",
+  "type": "object",
+  "properties": {
+    "content_item_id": {
+      "type": "string",
+      "description": "ID of the content item being disputed"
+    },
+    "ancestor_id": {
+      "type": "string",
+      "description": "ID of the ancestor profile being disputed, if applicable"
+    },
+    "field_name": {
+      "type": "string",
+      "description": "Which field or data point is disputed"
+    },
+    "raised_by_id": {
+      "type": "string",
+      "description": "User ID of the person raising the flag"
+    },
+    "dispute_description": {
+      "type": "string",
+      "description": "Description of what is disputed and the correct information"
+    },
+    "supporting_file_url": {
+      "type": "string",
+      "description": "Optional supporting document"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "open",
+        "resolved",
+        "dismissed"
+      ],
+      "default": "open",
+      "description": "Status of the conflict flag"
+    },
+    "resolution_note": {
+      "type": "string",
+      "description": "Note from Elder/Admin on resolution"
+    },
+    "resolved_by_id": {
+      "type": "string",
+      "description": "User ID of the resolver"
+    },
+    "bloodline": {
+      "type": "string",
+      "description": "Bloodline this conflict belongs to"
+    }
+  },
+  "required": [
+    "dispute_description",
+    "status"
+  ]
+}
