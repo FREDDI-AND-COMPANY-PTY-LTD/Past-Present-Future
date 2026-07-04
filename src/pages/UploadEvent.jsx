@@ -36,6 +36,7 @@ export default function UploadEvent() {
   const [attachToProfile, setAttachToProfile] = useState(false);
   const [ancestorSearch, setAncestorSearch] = useState('');
   const fileInputRef = useRef(null);
+  const imageInputRef = useRef(null);
   const cameraInputRef = useRef(null);
 
   const filteredAncestors = ancestorSearch
@@ -292,40 +293,58 @@ Return JSON with this structure:
             </div>
 
             <div className="border-t border-[rgba(201,145,58,0.1)] pt-6">
-              <p className="text-parchment/60 text-sm mb-6 text-center">Choose a file from your device or use your camera to photograph a document or photo.</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <p className="text-parchment/60 text-sm mb-6 text-center">Upload a file from your device, or use your camera to photograph a document.</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex flex-col items-center justify-center gap-3 p-8 rounded-xl border-2 border-dashed border-[rgba(201,145,58,0.25)] hover:border-[#C9913A] hover:bg-[rgba(201,145,58,0.05)] transition-all"
+                >
+                  <Upload size={32} className="text-gold" />
+                  <span className="text-parchment font-medium">Upload File</span>
+                  <span className="text-xs text-parchment/40">PDF, JPG, PNG</span>
+                </button>
+                <button
+                  onClick={() => imageInputRef.current?.click()}
+                  className="flex flex-col items-center justify-center gap-3 p-8 rounded-xl border-2 border-dashed border-[rgba(201,145,58,0.25)] hover:border-[#C9913A] hover:bg-[rgba(201,145,58,0.05)] transition-all"
+                >
+                  <ImageIcon size={32} className="text-gold" />
+                  <span className="text-parchment font-medium">Choose Photo</span>
+                  <span className="text-xs text-parchment/40">JPG or PNG image</span>
+                </button>
                 <button
                   onClick={() => cameraInputRef.current?.click()}
                   className="flex flex-col items-center justify-center gap-3 p-8 rounded-xl border-2 border-dashed border-[rgba(201,145,58,0.25)] hover:border-[#C9913A] hover:bg-[rgba(201,145,58,0.05)] transition-all"
                 >
                   <Camera size={32} className="text-gold" />
                   <span className="text-parchment font-medium">Use Camera</span>
-                  <span className="text-xs text-parchment/40">Photograph a document or photo</span>
-                </button>
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex flex-col items-center justify-center gap-3 p-8 rounded-xl border-2 border-dashed border-[rgba(201,145,58,0.25)] hover:border-[#C9913A] hover:bg-[rgba(201,145,58,0.05)] transition-all"
-                >
-                  <Upload size={32} className="text-gold" />
-                  <span className="text-parchment font-medium">Choose File</span>
-                  <span className="text-xs text-parchment/40">From your device</span>
+                  <span className="text-xs text-parchment/40">Photograph a document</span>
                 </button>
               </div>
-              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={e => handleFile(e.target.files?.[0])} />
+              <input ref={fileInputRef} type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,image/*" className="hidden" onChange={e => handleFile(e.target.files?.[0])} />
+              <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={e => handleFile(e.target.files?.[0])} />
               <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={e => handleFile(e.target.files?.[0])} />
             </div>
 
             <div className="mt-6 pt-6 border-t border-[rgba(201,145,58,0.1)]">
-              <p className="text-xs text-parchment/40 text-center">Supported: photographs, letters, certificates, press clippings</p>
+              <p className="text-xs text-parchment/40 text-center">Supported: PDF, JPG, PNG, WebP — photographs, letters, certificates, press clippings</p>
             </div>
           </div>
         )}
 
         {step === STEPS.ANALYSING && (
           <div className="aged-card rounded-2xl p-12 text-center">
-            {file && (
+            {file && file.type.startsWith('image/') && (
               <div className="mb-6 flex justify-center">
                 <img src={URL.createObjectURL(file)} alt="preview" className="max-h-48 rounded-lg sepia-tint" />
+              </div>
+            )}
+            {file && file.type === 'application/pdf' && (
+              <div className="mb-6 flex justify-center">
+                <div className="w-48 h-48 rounded-lg bg-[rgba(201,145,58,0.08)] border border-[rgba(201,145,58,0.2)] flex flex-col items-center justify-center gap-2">
+                  <FileText size={32} className="text-gold" />
+                  <span className="text-sm text-parchment/60">{file.name}</span>
+                  <span className="text-xs text-parchment/40">PDF document</span>
+                </div>
               </div>
             )}
             <Loader2 size={32} className="text-gold mx-auto mb-4 animate-spin gold-pulse rounded-full" />
@@ -375,9 +394,14 @@ Return JSON with this structure:
             )}
 
             {/* Preview */}
-            {fileUrl && (
+            {fileUrl && file && file.type.startsWith('image/') && (
               <div className="aged-card rounded-xl p-4">
                 <img src={fileUrl} alt="preview" className="max-h-64 mx-auto rounded-lg sepia-tint" />
+              </div>
+            )}
+            {fileUrl && file && file.type === 'application/pdf' && (
+              <div className="aged-card rounded-xl p-4">
+                <iframe src={fileUrl} title="preview" className="w-full h-80 rounded-lg bg-parchment" />
               </div>
             )}
 
