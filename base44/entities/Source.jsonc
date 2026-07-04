@@ -1,0 +1,64 @@
+{
+  "name": "Source",
+  "type": "object",
+  "properties": {
+    "entity_type": {
+      "type": "string",
+      "description": "Type of entity this source validates (e.g., Ancestor, ContentItem)"
+    },
+    "entity_id": {
+      "type": "string",
+      "description": "ID of the entity being sourced"
+    },
+    "field_name": {
+      "type": "string",
+      "description": "Which field on the entity this source validates (e.g., birth_date, full_name)"
+    },
+    "source_type": {
+      "type": "string",
+      "enum": [
+        "document",
+        "hearsay"
+      ],
+      "default": "hearsay",
+      "description": "Whether this source is a supporting document or hearsay from a family member"
+    },
+    "document_url": {
+      "type": "string",
+      "description": "Uploaded document file URL (if source_type is document)"
+    },
+    "document_type": {
+      "type": "string",
+      "description": "Type of document (e.g., birth certificate, passport, statutory declaration)"
+    },
+    "provided_by_id": {
+      "type": "string",
+      "description": "User ID of the family member providing this information"
+    },
+    "provided_by_name": {
+      "type": "string",
+      "description": "Display name of the family member providing this information"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Additional notes about this source"
+    },
+    "validation_status": {
+      "type": "string",
+      "enum": [
+        "validated",
+        "hearsay",
+        "disputed"
+      ],
+      "default": "hearsay",
+      "description": "Validation status: validated (document-backed), hearsay (unverified), or disputed"
+    }
+  },
+  "required": [
+    "entity_type",
+    "entity_id",
+    "field_name",
+    "source_type",
+    "validation_status"
+  ]
+}

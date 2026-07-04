@@ -1,0 +1,40 @@
+{
+  "name": "Comment",
+  "type": "object",
+  "properties": {
+    "entity_type": {
+      "type": "string",
+      "description": "Type of entity this comment relates to"
+    },
+    "entity_id": {
+      "type": "string",
+      "description": "ID of the entity"
+    },
+    "field_name": {
+      "type": "string",
+      "description": "Field name this comment relates to"
+    },
+    "author_id": {
+      "type": "string",
+      "description": "User ID of the commenter"
+    },
+    "author_name": {
+      "type": "string",
+      "description": "Display name of the commenter"
+    },
+    "content": {
+      "type": "string",
+      "description": "Comment text"
+    },
+    "parent_comment_id": {
+      "type": "string",
+      "description": "ID of parent comment for threaded replies (null if top-level)"
+    }
+  },
+  "required": [
+    "entity_type",
+    "entity_id",
+    "field_name",
+    "content"
+  ]
+}
