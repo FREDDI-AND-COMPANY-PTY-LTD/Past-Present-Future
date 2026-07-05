@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, Upload, FileText, Image as ImageIcon, Award, Loader2, Check, Sparkles, Newspaper, Tag, Link2, Search, UserPlus, BookUser, IdCard, Mail, Heart, HelpCircle, Eye, MessageSquare } from 'lucide-react';
+import { Camera, Upload, FileText, Image as ImageIcon, Award, Loader2, Check, Sparkles, Newspaper, Tag, Link2, Search, UserPlus, BookUser, IdCard, Mail, Heart, HelpCircle, Eye, MessageSquare, AlertCircle } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import UploadAssistant from '@/components/UploadAssistant';
+import AncestorMatchDialog from '@/components/AncestorMatchDialog';
 
 const STEPS = {
   CAPTURE: 'capture',
@@ -46,6 +47,7 @@ export default function UploadEvent() {
   const [users, setUsers] = useState([]);
   const [user, setUser] = useState(null);
   const [showTagPicker, setShowTagPicker] = useState(false);
+  const [matchDialog, setMatchDialog] = useState(null);
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
   const cameraInputRef = useRef(null);
@@ -176,21 +178,68 @@ Return JSON with this structure:
       if (result.categorization_notes) setCategorizationNotes(result.categorization_notes);
       setRawAiAnalysis(result);
 
-      // Auto-match extracted full name to an existing ancestor
-      const extractedName = result.extracted_fields?.full_name;
-      let matchedAncestorId = selectedAncestorId;
-      if (extractedName && ancestors.length > 0) {
-        const lowerName = extractedName.toLowerCase();
-        const match = ancestors.find(a =>
-          a.full_name.toLowerCase() === lowerName ||
-          a.full_name.toLowerCase().includes(lowerName) ||
-          lowerName.includes(a.full_name.toLowerCase())
-        );
-        if (match) {
-          matchedAncestorId = match.id;
-          setSelectedAncestorId(match.id);
+      // ── Ancestor name matching ──
+      // Collect ALL text from the AI result to search for ancestor names
+      const allTextSources = [
+        result.extracted_fields?.full_name,
+        result.extracted_fields?.mother_name,
+        result.extracted_fields?.father_name,
+        result.extracted_fields?.spouse_name,
+        result.extracted_fields?.witnesses,
+        result.extracted_fields?.given_names,
+        result.extracted_fields?.surname,
+        result.suggested_title,
+        result.suggested_description,
+        result.transcription,
+        ...(result.visual_elements?.people || []),
+        ...(result.visual_elements?.text_elements || []),
+        ...(result.visual_elements?.locations_visible || []),
+      ].filter(Boolean).join(' ');
+
+      const lowerText = allTextSources.toLowerCase();
+
+      const exactMatches = [];
+      const nearMatches = [];
+
+      if (ancestors.length > 0 && allTextSources.trim()) {
+        for (const ancestor of ancestors) {
+          const fullName = (ancestor.full_name || '').toLowerCase().trim();
+          if (!fullName) continue;
+          const parts = fullName.split(/\s+/);
+          const givenName = parts[0];
+          const surname = parts.length > 1 ? parts[parts.length - 1] : '';
+
+          // Exact: full name string appears in text
+          if (lowerText.includes(fullName)) {
+            exactMatches.push({ ancestor, reason: 'Full name found in extracted data' });
+          }
+          // Near: given name + surname both appear (but not as the full name string)
+          else if (surname && givenName.length > 2 && lowerText.includes(surname) && lowerText.includes(givenName)) {
+            nearMatches.push({ ancestor, reason: `First name "${givenName}" and surname "${surname}" found separately` });
+          }
+          // Near: given name appears, and only one ancestor has this given name
+          else if (givenName.length > 2 && lowerText.includes(givenName)) {
+            const sameGivenName = ancestors.filter(a =>
+              (a.full_name || '').toLowerCase().split(/\s+/)[0] === givenName
+            );
+            if (sameGivenName.length === 1) {
+              nearMatches.push({ ancestor, reason: `First name "${givenName}" found (unique match)` });
+            }
+          }
         }
       }
+
+      // Auto-tag exact matches silently
+      const exactMatchIds = exactMatches.map(m => m.ancestor.id);
+      let autoTaggedIds = [...exactMatchIds];
+
+      // If the user pre-selected an ancestor, keep it
+      if (selectedAncestorId) autoTaggedIds.push(selectedAncestorId);
+      // Deduplicate
+      autoTaggedIds = [...new Set(autoTaggedIds)];
+
+      const matchedAncestorId = exactMatchIds[0] || selectedAncestorId || '';
+      if (matchedAncestorId) setSelectedAncestorId(matchedAncestorId);
 
       const eventLocation = result.event_location
         || result.extracted_fields?.place_of_event
@@ -208,9 +257,7 @@ Return JSON with this structure:
         description: result.suggested_description || '',
         date: result.extracted_fields?.date_of_event || result.extracted_fields?.date_of_birth || '',
         location_name: eventLocation,
-        ancestor_ids: matchedAncestorId && !f.ancestor_ids.includes(matchedAncestorId)
-          ? [...f.ancestor_ids, matchedAncestorId]
-          : f.ancestor_ids,
+        ancestor_ids: autoTaggedIds,
       }));
 
       // Auto-suggest attaching certificate to ancestor profile
@@ -222,6 +269,15 @@ Return JSON with this structure:
       }
 
       setStep(STEPS.FORM);
+
+      // If near matches found (but no exact), ask user to confirm
+      if (exactMatches.length === 0 && nearMatches.length > 0) {
+        setMatchDialog({ mode: 'confirm', matches: nearMatches });
+      }
+      // If no matches at all and no ancestor was pre-selected, prompt user
+      else if (exactMatches.length === 0 && nearMatches.length === 0 && !selectedAncestorId) {
+        setMatchDialog({ mode: 'prompt' });
+      }
     } catch (e) {
       setClassification('uncategorized');
       setStep(STEPS.FORM);
@@ -313,6 +369,21 @@ Return JSON with this structure:
         ? f.ancestor_ids.filter(a => a !== id)
         : [...f.ancestor_ids, id],
     }));
+  };
+
+  // Combined ancestor IDs (selectedAncestorId + tagged ancestors)
+  const effectiveAncestorIds = selectedAncestorId
+    ? [...new Set([...formData.ancestor_ids, selectedAncestorId])]
+    : formData.ancestor_ids;
+  const hasAncestor = effectiveAncestorIds.length > 0;
+
+  const handleMatchConfirm = (selectedIds) => {
+    setFormData(f => ({
+      ...f,
+      ancestor_ids: [...new Set([...f.ancestor_ids, ...selectedIds])],
+    }));
+    if (selectedIds[0] && !selectedAncestorId) setSelectedAncestorId(selectedIds[0]);
+    setMatchDialog(null);
   };
 
   return (
@@ -777,9 +848,26 @@ Return JSON with this structure:
               </div>
             </div>
 
+            {/* Ancestor requirement warning */}
+            {!hasAncestor && (
+              <div className="aged-card rounded-xl p-4 flex items-center gap-3 border-[rgba(201,145,58,0.3)]">
+                <AlertCircle size={20} className="text-gold flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm text-parchment font-medium">An ancestor is required</p>
+                  <p className="text-xs text-parchment/40">Every event in the archive must be associated with at least one ancestor. Please tag one below.</p>
+                </div>
+                <button
+                  onClick={() => setMatchDialog({ mode: 'prompt' })}
+                  className="px-3 py-1.5 rounded-lg bg-[#C9913A] text-charcoal text-xs font-semibold hover:opacity-90 transition-opacity flex-shrink-0"
+                >
+                  Select
+                </button>
+              </div>
+            )}
+
             <button
               onClick={handleSave}
-              disabled={saving || !formData.title}
+              disabled={saving || !formData.title || !hasAncestor}
               className="w-full py-3 rounded-lg bg-gradient-to-r from-[#C9913A] to-[#E8C97A] text-charcoal font-semibold disabled:opacity-50 hover:opacity-90 transition-opacity gold-glow"
             >
               {saving ? <Loader2 size={20} className="animate-spin mx-auto" /> : 'Save to Archive'}
@@ -795,7 +883,7 @@ Return JSON with this structure:
             <h2 className="font-display text-2xl text-parchment mb-2">Saved to the Archive</h2>
             <p className="text-parchment/50 text-sm mb-6">Your piece of family history is now part of the Freddi archive.</p>
             <div className="flex gap-3 justify-center">
-              <button onClick={() => { setStep(STEPS.CAPTURE); setFile(null); setFileUrl(null); setClassification(null); setDocumentSubtype(null); setExtractedData(null); setTranscribedText('');                 setSuggestedTags([]); setSelectedAncestorId(''); setAttachToProfile(false); setAncestorSearch(''); setRawAiAnalysis(null); setAiConfidence(null); setCategorizationNotes(''); setVisualElements(null); setFormData({title:'',description:'',date:'',location_name:'',latitude:'',longitude:'',ancestor_ids:[],era:'',external_url:'',comment:'',is_query:false,tagged_user_ids:[]}); }}
+              <button onClick={() => { setStep(STEPS.CAPTURE); setFile(null); setFileUrl(null); setClassification(null); setDocumentSubtype(null); setExtractedData(null); setTranscribedText('');                 setSuggestedTags([]); setSelectedAncestorId(''); setAttachToProfile(false); setAncestorSearch(''); setRawAiAnalysis(null); setAiConfidence(null); setCategorizationNotes(''); setVisualElements(null); setMatchDialog(null); setFormData({title:'',description:'',date:'',location_name:'',latitude:'',longitude:'',ancestor_ids:[],era:'',external_url:'',comment:'',is_query:false,tagged_user_ids:[]}); }}
                 className="px-5 py-2.5 rounded-lg border border-[rgba(201,145,58,0.3)] text-amber-light text-sm hover:bg-[rgba(201,145,58,0.08)] transition-colors">
                 Upload Another
               </button>
@@ -806,6 +894,17 @@ Return JSON with this structure:
           </div>
         )}
       </div>
+
+      {matchDialog && (
+        <AncestorMatchDialog
+          mode={matchDialog.mode}
+          matches={matchDialog.matches}
+          ancestors={ancestors}
+          onConfirm={handleMatchConfirm}
+          onDismiss={() => setMatchDialog(null)}
+        />
+      )}
+
       <UploadAssistant />
     </Layout>
   );
