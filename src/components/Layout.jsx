@@ -26,8 +26,9 @@ export default function Layout({ children }) {
   const [user, setUser] = useState(null);
   const location = useLocation();
   const navigate = useNavigate();
-  const { rootAncestorId } = useBranchRoot();
+  const { rootAncestorId, rootAncestor } = useBranchRoot();
   const branchRootPath = rootAncestorId ? `/ancestor/${rootAncestorId}` : '/';
+  const sidebarTitle = rootAncestor?.full_name || 'Jason Lewis FREDDI';
 
   useEffect(() => {
     base44.auth.me().then(setUser).catch(() => {});
@@ -43,7 +44,7 @@ export default function Layout({ children }) {
     <div className="min-h-screen bg-charcoal flex flex-col">
       {/* Top bar - mobile */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-charcoal/95 backdrop-blur-md border-b border-[rgba(201,145,58,0.15)] px-4 h-16 flex items-center justify-between">
-        <Link to={branchRootPath} className="font-display text-lg text-gold tracking-wide">Jason Lewis FREDDI</Link>
+        <Link to={branchRootPath} className="font-display text-lg text-gold tracking-wide">{sidebarTitle}</Link>
         <button onClick={() => setSidebarOpen(!sidebarOpen)} className="text-parchment p-2">
           {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
@@ -57,7 +58,7 @@ export default function Layout({ children }) {
       `}>
         <div className="p-6 border-b border-[rgba(201,145,58,0.15)]">
           <Link to={branchRootPath} onClick={() => setSidebarOpen(false)} className="block">
-            <h1 className="font-display text-xl text-gold tracking-wide leading-tight">Jason Lewis FREDDI</h1>
+            <h1 className="font-display text-xl text-gold tracking-wide leading-tight">{sidebarTitle}</h1>
             <p className="font-display text-xs text-amber-light/70 tracking-widest uppercase mt-1">Present, Past, Future</p>
           </Link>
         </div>

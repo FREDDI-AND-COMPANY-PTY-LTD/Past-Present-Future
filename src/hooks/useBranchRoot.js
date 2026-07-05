@@ -1,10 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
 
+const STORAGE_KEY = 'freddi_branch_root_id';
+
 /**
- * Resolves the "Freddi Bloodline — Original Branch" and computes the set of
- * descendant ancestor IDs starting from its root ancestor (Alfredo Freddi).
- * Includes blood descendants and partners married into the line.
+ * Resolves the active branch root ancestor and computes the set of
+ * descendant ancestor IDs (blood descendants + partners married in).
+ *
+ * The root is read from localStorage (set via the Branches page).
+ * Falls back to the "Freddi Bloodline — Original Branch" if nothing selected.
  */
 export function useBranchRoot() {
   const [rootAncestorId, setRootAncestorId] = useState(null);
@@ -12,65 +16,79 @@ export function useBranchRoot() {
   const [descendantIds, setDescendantIds] = useState(new Set());
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const [branches, allAncestors] = await Promise.all([
-          base44.entities.Branch.filter({}),
-          base44.entities.Ancestor.list(),
-        ]);
+  const compute = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [branches, allAncestors] = await Promise.all([
+        base44.entities.Branch.filter({}),
+        base44.entities.Ancestor.list(),
+      ]);
 
+      // 1. Check localStorage for a user-selected root
+      let rootId = localStorage.getItem(STORAGE_KEY);
+
+      // 2. Fall back to the original bloodline branch
+      if (!rootId) {
         const rootBranch = (branches || []).find(b =>
           (b.name || '').toLowerCase().includes('bloodline') ||
           (b.name || '').toLowerCase().includes('original branch')
         );
-        let rootId = rootBranch?.ancestor_id;
-        let rootAnc = allAncestors.find(a => a.id === rootId);
+        rootId = rootBranch?.ancestor_id;
+      }
 
-        // Fallback: find Alfredo Freddi by name
-        if (!rootAnc) {
-          rootAnc = allAncestors.find(a =>
-            (a.full_name || '').toLowerCase().includes('alfredo')
-          );
-          rootId = rootAnc?.id;
-        }
+      // 3. Fall back to Alfredo Freddi by name
+      let rootAnc = allAncestors.find(a => a.id === rootId);
+      if (!rootAnc) {
+        rootAnc = allAncestors.find(a =>
+          (a.full_name || '').toLowerCase().includes('alfredo')
+        );
+        rootId = rootAnc?.id;
+      }
 
-        if (cancelled) return;
-        if (!rootId) { setLoading(false); return; }
+      if (!rootId) { setLoading(false); return; }
 
-        setRootAncestorId(rootId);
-        setRootAncestor(rootAnc);
+      setRootAncestorId(rootId);
+      setRootAncestor(rootAnc);
 
-        // BFS: collect all blood descendants
-        const idSet = new Set([rootId]);
-        let changed = true;
-        while (changed) {
-          changed = false;
-          for (const a of allAncestors) {
-            if (idSet.has(a.id)) continue;
-            if ((a.mother_id && idSet.has(a.mother_id)) ||
-                (a.father_id && idSet.has(a.father_id))) {
-              idSet.add(a.id);
-              changed = true;
-            }
-          }
-        }
-
-        // Add partners married into the bloodline
+      // BFS: collect all blood descendants
+      const idSet = new Set([rootId]);
+      let changed = true;
+      while (changed) {
+        changed = false;
         for (const a of allAncestors) {
-          if (idSet.has(a.id) && a.partner_id) {
-            idSet.add(a.partner_id);
+          if (idSet.has(a.id)) continue;
+          if ((a.mother_id && idSet.has(a.mother_id)) ||
+              (a.father_id && idSet.has(a.father_id))) {
+            idSet.add(a.id);
+            changed = true;
           }
         }
+      }
 
-        if (cancelled) return;
-        setDescendantIds(idSet);
-      } catch (e) {}
-      if (!cancelled) setLoading(false);
-    })();
-    return () => { cancelled = true; };
+      // Add partners married into the bloodline
+      for (const a of allAncestors) {
+        if (idSet.has(a.id) && a.partner_id) {
+          idSet.add(a.partner_id);
+        }
+      }
+
+      setDescendantIds(idSet);
+    } catch (e) {}
+    setLoading(false);
   }, []);
 
-  return { rootAncestorId, rootAncestor, descendantIds, loading };
+  useEffect(() => {
+    compute();
+  }, [compute]);
+
+  const setBranchRoot = useCallback((ancestorId) => {
+    if (ancestorId) {
+      localStorage.setItem(STORAGE_KEY, ancestorId);
+    } else {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+    compute();
+  }, [compute]);
+
+  return { rootAncestorId, rootAncestor, descendantIds, loading, setBranchRoot };
 }

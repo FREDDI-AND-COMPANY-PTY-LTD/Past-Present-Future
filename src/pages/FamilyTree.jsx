@@ -155,7 +155,7 @@ export default function FamilyTree() {
           >
             <svg width="100%" height="100%" style={{ minWidth: '1000px', minHeight: '600px' }}>
               {/* Connection lines */}
-              {ancestors.map(a => {
+              {branchAncestors.map(a => {
                 const pos = positions.get(a.id);
                 if (!pos) return null;
                 const x = pos.level * levelGap + 100;
@@ -182,7 +182,7 @@ export default function FamilyTree() {
               })}
 
               {/* Nodes */}
-              {ancestors.map(a => {
+              {branchAncestors.map(a => {
                 const pos = positions.get(a.id);
                 if (!pos) return null;
                 const x = pos.level * levelGap + 10;

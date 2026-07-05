@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { GitBranch, Plus, Sparkles } from 'lucide-react';
+import { GitBranch, Plus, Sparkles, Check } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import AncestorAvatar from '@/components/AncestorAvatar';
+import { useBranchRoot } from '@/hooks/useBranchRoot';
 
 const branchColors = ['#C9913A', '#E8C97A', '#8B6914', '#D4A04C', '#B8860B', '#CD853F'];
 
@@ -12,6 +13,7 @@ export default function Branches() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: '', ancestor_id: '', description: '' });
+  const { rootAncestorId, setBranchRoot } = useBranchRoot();
 
   useEffect(() => {
     Promise.all([
@@ -103,6 +105,18 @@ export default function Branches() {
                     {ancestor && <p className="text-sm text-amber-light/70">Rooted in: {ancestor.full_name}</p>}
                     {branch.description && <p className="text-xs text-parchment/50 mt-1">{branch.description}</p>}
                   </div>
+                  {branch.ancestor_id && (
+                    <button
+                      onClick={() => setBranchRoot(branch.ancestor_id)}
+                      className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors flex-shrink-0 ${
+                        rootAncestorId === branch.ancestor_id
+                          ? 'bg-[rgba(201,145,58,0.15)] text-gold border border-[rgba(201,145,58,0.4)]'
+                          : 'border border-[rgba(201,145,58,0.2)] text-amber-light/70 hover:text-amber-light hover:border-[rgba(201,145,58,0.4)]'
+                      }`}
+                    >
+                      {rootAncestorId === branch.ancestor_id ? <><Check size={14} /> Active Root</> : 'Set as Root'}
+                    </button>
+                  )}
                 </div>
               );
             })}
