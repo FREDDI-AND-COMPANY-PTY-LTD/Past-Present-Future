@@ -43,12 +43,43 @@ const goldPinSvg = encodeURIComponent(
   '<circle cx="14" cy="14" r="5" fill="#E8C97A"/></svg>'
 );
 
+let clustererScriptPromise = null;
+
+function loadMarkerClusterer() {
+  if (window.MarkerClusterer) return Promise.resolve(window.MarkerClusterer);
+  if (clustererScriptPromise) return clustererScriptPromise;
+  clustererScriptPromise = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/js-marker-clusterer/1.0.0/markerclusterer.min.js';
+    s.async = true;
+    s.onload = () => resolve(window.MarkerClusterer);
+    s.onerror = () => { clustererScriptPromise = null; reject(new Error('Failed to load MarkerClusterer')); };
+    document.head.appendChild(s);
+  });
+  return clustererScriptPromise;
+}
+
+function clusterIconSvg(size, fillColor) {
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '">' +
+    '<circle cx="' + (size / 2) + '" cy="' + (size / 2) + '" r="' + (size / 2 - 3) + '" fill="' + fillColor + '" stroke="#0D0B0A" stroke-width="2" opacity="0.9"/>' +
+    '<circle cx="' + (size / 2) + '" cy="' + (size / 2) + '" r="' + (size / 2 - 7) + '" fill="none" stroke="#0D0B0A" stroke-width="1" opacity="0.3"/>' +
+    '</svg>';
+  return 'data:image/svg+xml;utf-8,' + encodeURIComponent(svg);
+}
+
+const clusterStyles = [
+  { url: clusterIconSvg(40, '#C9913A'), height: 40, width: 40, textColor: '#0D0B0A', textSize: 13, textDecoration: 'none' },
+  { url: clusterIconSvg(50, '#D4A04C'), height: 50, width: 50, textColor: '#0D0B0A', textSize: 14, textDecoration: 'none' },
+  { url: clusterIconSvg(60, '#E8C97A'), height: 60, width: 60, textColor: '#0D0B0A', textSize: 15, textDecoration: 'none' },
+];
+
 export default function GoogleMap({ markers = [], routes = [], loading = false }) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
   const gmapsRef = useRef(null);
   const markersRef = useRef([]);
   const polylinesRef = useRef([]);
+  const clustererRef = useRef(null);
   const [error, setError] = useState(null);
   const [mapsReady, setMapsReady] = useState(false);
 
@@ -87,6 +118,9 @@ export default function GoogleMap({ markers = [], routes = [], loading = false }
           fullscreenControl: true,
           zoomControl: true,
         });
+        try {
+          await loadMarkerClusterer();
+        } catch (e) { /* clustering optional */ }
         setMapsReady(true);
       } catch (e) {
         setError(e.message || 'Failed to load map');
@@ -106,6 +140,10 @@ export default function GoogleMap({ markers = [], routes = [], loading = false }
     polylinesRef.current.forEach(p => p.setMap(null));
     markersRef.current = [];
     polylinesRef.current = [];
+    if (clustererRef.current) {
+      clustererRef.current.clearMarkers();
+      clustererRef.current = null;
+    }
 
     const bounds = new gmaps.LatLngBounds();
     const infoWindow = new gmaps.InfoWindow();
@@ -142,7 +180,7 @@ export default function GoogleMap({ markers = [], routes = [], loading = false }
           ${wp.description ? `<p style="color:#F5ECD7;font-size:12px;opacity:0.6;margin:4px 0 0">${wp.description}</p>` : ''}
           <p style="color:#C9913A;font-size:11px;opacity:0.6;margin:6px 0 0">${route.name}</p>
         </div>`;
-        const marker = new gmaps.Marker({ position: pos, map, icon: pinIcon, title: wp.label || 'Waypoint' });
+        const marker = new gmaps.Marker({ position: pos, icon: pinIcon, title: wp.label || 'Waypoint' });
         marker.addListener('click', () => { infoWindow.setContent(html); infoWindow.open(map, marker); });
         markersRef.current.push(marker);
       });
@@ -152,10 +190,21 @@ export default function GoogleMap({ markers = [], routes = [], loading = false }
     markers.forEach(m => {
       if (!m.position) return;
       bounds.extend(m.position);
-      const marker = new gmaps.Marker({ position: m.position, map, icon: pinIcon, title: m.title });
+      const marker = new gmaps.Marker({ position: m.position, icon: pinIcon, title: m.title });
       marker.addListener('click', () => { infoWindow.setContent(m.htmlContent); infoWindow.open(map, marker); });
       markersRef.current.push(marker);
     });
+
+    // Cluster markers for cleaner display at lower zoom levels
+    if (window.MarkerClusterer && markersRef.current.length > 0) {
+      clustererRef.current = new window.MarkerClusterer(map, markersRef.current, {
+        styles: clusterStyles,
+        maxZoom: 15,
+        gridSize: 50,
+      });
+    } else {
+      markersRef.current.forEach(m => m.setMap(map));
+    }
 
     // Auto-fit bounds to show all pins
     if (!bounds.isEmpty()) {
