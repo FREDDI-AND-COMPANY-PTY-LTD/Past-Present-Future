@@ -2,12 +2,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
 const DRIVE_FOLDER_NAME = 'Freddi Ancestry Archive';
 
-// App-user connector IDs — set these after registering the workspace connectors.
-// Until then, OneDrive and Dropbox members are skipped gracefully.
-const CONNECTOR_IDS: Record<string, string> = {
-  one_drive: '',
-  dropbox: '',
-};
+
 
 function guessMimeType(fileName: string): string {
   const ext = (fileName || '').split('.').pop()?.toLowerCase();
@@ -101,73 +96,7 @@ async function backupToGoogleDrive(sr: any, snapshot: any, mediaFiles: any[], da
   return { mediaSuccess, mediaFailed };
 }
 
-// ── OneDrive helpers (app-user connector, Microsoft Graph) ───────────────────
 
-async function oneDriveUploadFile(accessToken: string, folderPath: string, fileName: string, fileBytes: Uint8Array, mimeType: string): Promise<void> {
-  const itemPath = `${folderPath}/${fileName}`;
-  const res = await fetch(`https://graph.microsoft.com/v1.0/me/drive/root:/${itemPath}:/content`, {
-    method: 'PUT',
-    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': mimeType },
-    body: fileBytes,
-  });
-  if (!res.ok) throw new Error(`OneDrive upload failed for ${fileName}`);
-}
-
-async function backupToOneDrive(sr: any, member: any, snapshot: any, mediaFiles: any[], dateStr: string): Promise<{ mediaSuccess: number; mediaFailed: number }> {
-  const { accessToken } = await sr.connectors.getCurrentAppUserConnection(CONNECTOR_IDS.one_drive);
-  const folderPath = `${member.cloud_folder_address || DRIVE_FOLDER_NAME}/Full Backup ${dateStr}`;
-
-  const jsonBytes = new TextEncoder().encode(JSON.stringify(snapshot, null, 2));
-  await oneDriveUploadFile(accessToken, folderPath, 'archive_data.json', jsonBytes, 'application/json');
-
-  let mediaSuccess = 0, mediaFailed = 0;
-  for (const media of mediaFiles) {
-    try {
-      const fileRes = await fetch(media.url);
-      if (!fileRes.ok) { mediaFailed++; continue; }
-      const fileBytes = new Uint8Array(await fileRes.arrayBuffer());
-      await oneDriveUploadFile(accessToken, `${folderPath}/media`, media.name, fileBytes, guessMimeType(media.name));
-      mediaSuccess++;
-    } catch { mediaFailed++; }
-  }
-  return { mediaSuccess, mediaFailed };
-}
-
-// ── Dropbox helpers (app-user connector) ─────────────────────────────────────
-
-async function dropboxUploadFile(accessToken: string, folderPath: string, fileName: string, fileBytes: Uint8Array): Promise<void> {
-  const apiArg = JSON.stringify({ path: `${folderPath}/${fileName}`, mode: 'overwrite', autorename: true });
-  const res = await fetch('https://content.dropboxapi.com/2/files/upload', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Dropbox-API-Arg': apiArg,
-      'Content-Type': 'application/octet-stream',
-    },
-    body: fileBytes,
-  });
-  if (!res.ok) throw new Error(`Dropbox upload failed for ${fileName}`);
-}
-
-async function backupToDropbox(sr: any, member: any, snapshot: any, mediaFiles: any[], dateStr: string): Promise<{ mediaSuccess: number; mediaFailed: number }> {
-  const { accessToken } = await sr.connectors.getCurrentAppUserConnection(CONNECTOR_IDS.dropbox);
-  const folderPath = `${member.cloud_folder_address || DRIVE_FOLDER_NAME}/Full Backup ${dateStr}`;
-
-  const jsonBytes = new TextEncoder().encode(JSON.stringify(snapshot, null, 2));
-  await dropboxUploadFile(accessToken, folderPath, 'archive_data.json', jsonBytes);
-
-  let mediaSuccess = 0, mediaFailed = 0;
-  for (const media of mediaFiles) {
-    try {
-      const fileRes = await fetch(media.url);
-      if (!fileRes.ok) { mediaFailed++; continue; }
-      const fileBytes = new Uint8Array(await fileRes.arrayBuffer());
-      await dropboxUploadFile(accessToken, `${folderPath}/media`, media.name, fileBytes);
-      mediaSuccess++;
-    } catch { mediaFailed++; }
-  }
-  return { mediaSuccess, mediaFailed };
-}
 
 // ── Snapshot builder ──────────────────────────────────────────────────────────
 
@@ -253,41 +182,14 @@ Deno.serve(async (req) => {
     const { snapshot, mediaFiles } = await buildSnapshot(sr);
     const dateStr = new Date().toISOString().slice(0, 10);
 
-    // Get all branch members
-    const branchMembers = await sr.entities.User.filter({ is_branch_member: true });
-
     const results: any[] = [];
 
-    for (const member of branchMembers) {
-      const provider = member.cloud_provider || 'google_drive';
-      try {
-        let mediaResult;
-        if (provider === 'google_drive') {
-          mediaResult = await backupToGoogleDrive(sr, snapshot, mediaFiles, dateStr);
-        } else if (provider === 'one_drive') {
-          if (!CONNECTOR_IDS.one_drive) throw new Error('OneDrive connector not configured');
-          mediaResult = await backupToOneDrive(sr, member, snapshot, mediaFiles, dateStr);
-        } else if (provider === 'dropbox') {
-          if (!CONNECTOR_IDS.dropbox) throw new Error('Dropbox connector not configured');
-          mediaResult = await backupToDropbox(sr, member, snapshot, mediaFiles, dateStr);
-        } else {
-          throw new Error(`Unknown provider: ${provider}`);
-        }
-
-        results.push({ member: member.email, provider, status: 'success', ...mediaResult });
-      } catch (e: any) {
-        results.push({ member: member.email, provider, status: 'failed', reason: e.message });
-      }
-    }
-
-    // If no branch members yet (e.g. still onboarding), fall back to shared Google Drive
-    if (branchMembers.length === 0) {
-      try {
-        const mediaResult = await backupToGoogleDrive(sr, snapshot, mediaFiles, dateStr);
-        results.push({ member: 'fallback (no branch members)', provider: 'google_drive', status: 'success', ...mediaResult });
-      } catch (e: any) {
-        results.push({ member: 'fallback', provider: 'google_drive', status: 'failed', reason: e.message });
-      }
+    // Admin-only: back up to the shared Google Drive connector (builder's account)
+    try {
+      const mediaResult = await backupToGoogleDrive(sr, snapshot, mediaFiles, dateStr);
+      results.push({ target: 'admin Google Drive', status: 'success', ...mediaResult });
+    } catch (e: any) {
+      results.push({ target: 'admin Google Drive', status: 'failed', reason: e.message });
     }
 
     // Log the backup
@@ -295,7 +197,7 @@ Deno.serve(async (req) => {
       await sr.entities.ActivityLog.create({
         action_type: 'upload',
         ...(user ? { user_id: user.id, user_name: user.full_name || user.email } : {}),
-        description: `Monthly archive backup — ${branchMembers.length} branch member(s) processed (${dateStr})`,
+        description: `Monthly archive backup to admin Google Drive (${dateStr})`,
       });
     } catch (_) {}
 
