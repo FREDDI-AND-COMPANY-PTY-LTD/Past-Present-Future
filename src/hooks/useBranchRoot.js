@@ -14,6 +14,7 @@ export function useBranchRoot() {
   const [rootAncestorId, setRootAncestorId] = useState(null);
   const [rootAncestor, setRootAncestor] = useState(null);
   const [descendantIds, setDescendantIds] = useState(new Set());
+  const [parentAncestors, setParentAncestors] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const compute = useCallback(async () => {
@@ -72,6 +73,11 @@ export function useBranchRoot() {
         }
       }
 
+      // Include the root's parents (senior line) — enables one-click switch to a more senior branch
+      const parentIds = [rootAnc?.mother_id, rootAnc?.father_id].filter(Boolean);
+      parentIds.forEach(pid => idSet.add(pid));
+
+      setParentAncestors(parentIds.map(pid => allAncestors.find(a => a.id === pid)).filter(Boolean));
       setDescendantIds(idSet);
     } catch (e) {}
     setLoading(false);
@@ -90,5 +96,5 @@ export function useBranchRoot() {
     compute();
   }, [compute]);
 
-  return { rootAncestorId, rootAncestor, descendantIds, loading, setBranchRoot };
+  return { rootAncestorId, rootAncestor, descendantIds, parentAncestors, loading, setBranchRoot };
 }

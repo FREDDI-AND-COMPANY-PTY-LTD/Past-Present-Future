@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { ZoomIn, ZoomOut, ChevronRight, X } from 'lucide-react';
+import { ZoomIn, ZoomOut, ChevronRight, X, GitBranch } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import { useBranchRoot } from '@/hooks/useBranchRoot';
@@ -14,7 +14,7 @@ export default function FamilyTree() {
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const dragStart = useRef({ x: 0, y: 0 });
-  const { descendantIds, rootAncestorId, loading: branchLoading } = useBranchRoot();
+  const { descendantIds, rootAncestorId, parentAncestors, setBranchRoot, loading: branchLoading } = useBranchRoot();
 
   useEffect(() => {
     Promise.all([
@@ -81,6 +81,19 @@ export default function FamilyTree() {
     };
 
     roots.forEach(r => assignPositions(r.id, 0));
+
+    // Position the root's parents (senior line) at level -1
+    if (rootAncestorId && positions.has(rootAncestorId)) {
+      const rootPos = positions.get(rootAncestorId);
+      const rootNode = nodes.get(rootAncestorId);
+      let pIdx = 0;
+      [rootNode?.mother_id, rootNode?.father_id].forEach(pid => {
+        if (pid && nodes.has(pid) && !positions.has(pid)) {
+          positions.set(pid, { level: -1, y: rootPos.y + (pIdx === 0 ? -0.5 : 0.5) });
+          pIdx++;
+        }
+      });
+    }
 
     return { nodes, positions, roots };
   }, [branchAncestors, rootAncestorId]);
@@ -158,13 +171,13 @@ export default function FamilyTree() {
               {branchAncestors.map(a => {
                 const pos = positions.get(a.id);
                 if (!pos) return null;
-                const x = pos.level * levelGap + 100;
+                const x = (pos.level + 1) * levelGap + 100;
                 const y = pos.y * yGap + 50;
                 const lines = [];
                 [a.mother_id, a.father_id].forEach(pid => {
                   if (pid && positions.has(pid)) {
                     const ppos = positions.get(pid);
-                    const px = ppos.level * levelGap + 100;
+                    const px = (ppos.level + 1) * levelGap + 100;
                     const py = ppos.y * yGap + 50;
                     lines.push(
                       <path
@@ -185,8 +198,9 @@ export default function FamilyTree() {
               {branchAncestors.map(a => {
                 const pos = positions.get(a.id);
                 if (!pos) return null;
-                const x = pos.level * levelGap + 10;
+                const x = (pos.level + 1) * levelGap + 10;
                 const y = pos.y * yGap;
+                const isParent = parentAncestors?.some(p => p.id === a.id);
                 return (
                   <foreignObject key={a.id} x={x} y={y} width={nodeWidth} height={nodeHeight}>
                     <div
@@ -194,7 +208,7 @@ export default function FamilyTree() {
                       style={{
                         width: '100%', height: '100%', cursor: 'pointer',
                         background: '#1A1614', borderRadius: '12px',
-                        border: `2px solid ${a.living ? '#E8C97A' : 'rgba(201,145,58,0.4)'}`,
+                        border: `2px ${isParent ? 'dashed' : 'solid'} ${a.living ? '#E8C97A' : 'rgba(201,145,58,0.4)'}`,
                         display: 'flex', alignItems: 'center', gap: '8px', padding: '8px',
                         boxShadow: a.living ? '0 0 15px rgba(201,145,58,0.15)' : 'none',
                       }}
@@ -247,6 +261,14 @@ export default function FamilyTree() {
             </div>
             {selectedAncestor.biography && <p className="text-parchment/50 text-sm leading-relaxed mb-6">{selectedAncestor.biography}</p>}
 
+            {parentAncestors?.some(p => p.id === selectedAncestor.id) && (
+              <button
+                onClick={() => setBranchRoot(selectedAncestor.id)}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-[rgba(201,145,58,0.4)] text-amber-light text-sm font-semibold hover:bg-[rgba(201,145,58,0.08)] transition-colors mb-3 w-full"
+              >
+                <GitBranch size={16} /> Set as Branch Root
+              </button>
+            )}
             <Link to={`/ancestor/${selectedAncestor.id}`} className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-[#C9913A] text-charcoal text-sm font-semibold hover:opacity-90 transition-opacity mb-6">
               View Full Profile <ChevronRight size={16} />
             </Link>
