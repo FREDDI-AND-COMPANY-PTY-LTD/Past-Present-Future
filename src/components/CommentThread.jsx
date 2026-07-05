@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Loader2, MessageCircle, Send, ChevronLeft, CornerDownRight } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Loader2, MessageCircle, Send, ChevronLeft, CornerDownRight, AtSign, X, HelpCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 
@@ -11,9 +11,16 @@ export default function CommentThread({ entityType, entityId, fieldName }) {
   const [replyText, setReplyText] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [user, setUser] = useState(null);
+  const [users, setUsers] = useState([]);
+  const [taggedUserIds, setTaggedUserIds] = useState([]);
+  const [showTagPicker, setShowTagPicker] = useState(false);
+  const [isQuery, setIsQuery] = useState(false);
+  const [replyTaggedIds, setReplyTaggedIds] = useState({});
+  const [replyShowTagPicker, setReplyShowTagPicker] = useState({});
 
   useEffect(() => {
     base44.auth.me().then(setUser).catch(() => {});
+    base44.entities.User.list().then(setUsers).catch(() => {});
     loadComments();
   }, [entityId]);
 
@@ -40,8 +47,14 @@ export default function CommentThread({ entityType, entityId, fieldName }) {
         author_id: user?.id || null,
         author_name: user?.full_name || user?.email || 'Family Member',
         parent_comment_id: null,
+        tagged_user_ids: taggedUserIds.length > 0 ? taggedUserIds : null,
+        is_query: isQuery,
+        acknowledged_by: [],
       });
       setNewComment('');
+      setTaggedUserIds([]);
+      setShowTagPicker(false);
+      setIsQuery(false);
       await loadComments();
     } catch (e) {}
     setSubmitting(false);
@@ -51,6 +64,7 @@ export default function CommentThread({ entityType, entityId, fieldName }) {
     if (!replyText.trim()) return;
     setSubmitting(true);
     try {
+      const replyTags = replyTaggedIds[parentId] || [];
       await base44.entities.Comment.create({
         entity_type: entityType,
         entity_id: entityId,
@@ -59,13 +73,30 @@ export default function CommentThread({ entityType, entityId, fieldName }) {
         author_id: user?.id || null,
         author_name: user?.full_name || user?.email || 'Family Member',
         parent_comment_id: parentId,
+        tagged_user_ids: replyTags.length > 0 ? replyTags : null,
+        is_query: false,
+        acknowledged_by: [],
       });
       setReplyText('');
       setReplyTo(null);
+      setReplyTaggedIds({});
+      setReplyShowTagPicker({});
       await loadComments();
     } catch (e) {}
     setSubmitting(false);
   };
+
+  const toggleTag = (uid) => {
+    setTaggedUserIds(prev => prev.includes(uid) ? prev.filter(id => id !== uid) : [...prev, uid]);
+  };
+  const toggleReplyTag = (parentId, uid) => {
+    setReplyTaggedIds(prev => {
+      const current = prev[parentId] || [];
+      return { ...prev, [parentId]: current.includes(uid) ? current.filter(id => id !== uid) : [...current, uid] };
+    });
+  };
+
+  const taggedUsers = (ids) => users.filter(u => ids?.includes(u.id));
 
   const topLevel = comments.filter(c => !c.parent_comment_id);
   const getReplies = (parentId) => comments.filter(c => c.parent_comment_id === parentId);
@@ -82,21 +113,69 @@ export default function CommentThread({ entityType, entityId, fieldName }) {
       </div>
 
       {/* New comment input */}
-      <div className="mb-4 flex gap-2">
-        <input
-          value={newComment}
-          onChange={e => setNewComment(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-          className="flex-1 bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2 text-sm text-parchment focus:outline-none focus:border-[#C9913A]"
-          placeholder="Share a memory or thought..."
-        />
-        <button
-          onClick={handleSubmit}
-          disabled={submitting || !newComment.trim()}
-          className="px-4 py-2 rounded-lg bg-[#C9913A] text-charcoal text-sm font-semibold disabled:opacity-50 hover:opacity-90 transition-opacity flex items-center gap-1.5"
-        >
-          {submitting ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-        </button>
+      <div className="mb-4">
+        <div className="flex gap-2 mb-2">
+          <input
+            value={newComment}
+            onChange={e => setNewComment(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+            className="flex-1 bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2 text-sm text-parchment focus:outline-none focus:border-[#C9913A]"
+            placeholder="Share a memory or thought..."
+          />
+          <button
+            onClick={handleSubmit}
+            disabled={submitting || !newComment.trim()}
+            className="px-4 py-2 rounded-lg bg-[#C9913A] text-charcoal text-sm font-semibold disabled:opacity-50 hover:opacity-90 transition-opacity flex items-center gap-1.5"
+          >
+            {submitting ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+          </button>
+        </div>
+
+        {/* Options row */}
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setShowTagPicker(!showTagPicker)}
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs border transition-colors ${showTagPicker ? 'border-[#C9913A] text-gold bg-[rgba(201,145,58,0.08)]' : 'border-[rgba(201,145,58,0.2)] text-amber-light/70 hover:border-[rgba(201,145,58,0.4)]'}`}
+          >
+            <AtSign size={12} /> Tag {taggedUserIds.length > 0 && `(${taggedUserIds.length})`}
+          </button>
+          <button
+            onClick={() => setIsQuery(!isQuery)}
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs border transition-colors ${isQuery ? 'border-[#C9913A] text-gold bg-[rgba(201,145,58,0.08)]' : 'border-[rgba(201,145,58,0.2)] text-amber-light/70 hover:border-[rgba(201,145,58,0.4)]'}`}
+          >
+            <HelpCircle size={12} /> {isQuery ? 'Query' : 'Comment'}
+          </button>
+          {/* Tagged user chips */}
+          {taggedUsers(taggedUserIds).map(u => (
+            <span key={u.id} className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-[rgba(201,145,58,0.08)] text-amber-light/80 border border-[rgba(201,145,58,0.15)]">
+              {u.full_name || u.email}
+              <button onClick={() => toggleTag(u.id)} className="text-parchment/30 hover:text-parchment"><X size={10} /></button>
+            </span>
+          ))}
+        </div>
+
+        {/* Tag picker */}
+        {showTagPicker && (
+          <div className="mt-2 max-h-40 overflow-y-auto rounded-lg border border-[rgba(201,145,58,0.15)] bg-[#0D0B0A]">
+            {users.filter(u => u.id !== user?.id).length === 0 ? (
+              <p className="px-4 py-3 text-xs text-parchment/40">No other family members to tag.</p>
+            ) : (
+              users.filter(u => u.id !== user?.id).map(u => (
+                <button
+                  key={u.id}
+                  onClick={() => toggleTag(u.id)}
+                  className={`w-full flex items-center gap-2 px-4 py-2 text-left transition-colors ${taggedUserIds.includes(u.id) ? 'bg-[rgba(201,145,58,0.1)]' : 'hover:bg-[rgba(201,145,58,0.05)]'}`}
+                >
+                  <div className="w-6 h-6 rounded-full bg-[rgba(201,145,58,0.1)] border border-[rgba(201,145,58,0.2)] flex items-center justify-center text-xs text-gold">
+                    {(u.full_name || u.email).charAt(0)}
+                  </div>
+                  <span className="text-sm text-parchment">{u.full_name || u.email}</span>
+                  {taggedUserIds.includes(u.id) && <span className="ml-auto text-gold text-xs">✓</span>}
+                </button>
+              ))
+            )}
+          </div>
+        )}
       </div>
 
       {/* Comments list */}
@@ -110,32 +189,57 @@ export default function CommentThread({ entityType, entityId, fieldName }) {
         <div className="space-y-3">
           {topLevel.map(comment => (
             <div key={comment.id}>
-              <CommentBubble comment={comment} formatTime={formatTime} />
+              <CommentBubble comment={comment} formatTime={formatTime} taggedUsers={taggedUsers(comment.tagged_user_ids)} />
               {/* Replies */}
               <div className="ml-6 mt-2 space-y-2 border-l border-[rgba(201,145,58,0.1)] pl-4">
                 {getReplies(comment.id).map(reply => (
-                  <CommentBubble key={reply.id} comment={reply} formatTime={formatTime} isReply />
+                  <CommentBubble key={reply.id} comment={reply} formatTime={formatTime} isReply taggedUsers={taggedUsers(reply.tagged_user_ids)} />
                 ))}
               </div>
               {/* Reply form */}
               {replyTo === comment.id ? (
-                <div className="ml-6 mt-2 flex gap-2">
-                  <input
-                    value={replyText}
-                    onChange={e => setReplyText(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && handleReply(comment.id)}
-                    autoFocus
-                    className="flex-1 bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-3 py-1.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]"
-                    placeholder={`Reply to ${comment.author_name}...`}
-                  />
+                <div className="ml-6 mt-2">
+                  <div className="flex gap-2 mb-1">
+                    <input
+                      value={replyText}
+                      onChange={e => setReplyText(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && handleReply(comment.id)}
+                      autoFocus
+                      className="flex-1 bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-3 py-1.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]"
+                      placeholder={`Reply to ${comment.author_name}...`}
+                    />
+                    <button
+                      onClick={() => handleReply(comment.id)}
+                      disabled={submitting || !replyText.trim()}
+                      className="px-3 py-1.5 rounded-lg bg-[#C9913A] text-charcoal text-xs font-semibold disabled:opacity-50"
+                    >
+                      Reply
+                    </button>
+                    <button onClick={() => { setReplyTo(null); setReplyText(''); setReplyShowTagPicker({}); }} className="text-parchment/40 text-xs px-2">Cancel</button>
+                  </div>
                   <button
-                    onClick={() => handleReply(comment.id)}
-                    disabled={submitting || !replyText.trim()}
-                    className="px-3 py-1.5 rounded-lg bg-[#C9913A] text-charcoal text-xs font-semibold disabled:opacity-50"
+                    onClick={() => setReplyShowTagPicker(prev => ({ ...prev, [comment.id]: !prev[comment.id] }))}
+                    className="flex items-center gap-1 text-xs text-amber-light/60 hover:text-amber-light transition-colors"
                   >
-                    Reply
+                    <AtSign size={10} /> Tag someone
                   </button>
-                  <button onClick={() => { setReplyTo(null); setReplyText(''); }} className="text-parchment/40 text-xs px-2">Cancel</button>
+                  {replyShowTagPicker[comment.id] && (
+                    <div className="mt-1 max-h-32 overflow-y-auto rounded-lg border border-[rgba(201,145,58,0.15)] bg-[#0D0B0A]">
+                      {users.filter(u => u.id !== user?.id).map(u => {
+                        const replyTags = replyTaggedIds[comment.id] || [];
+                        return (
+                          <button
+                            key={u.id}
+                            onClick={() => toggleReplyTag(comment.id, u.id)}
+                            className={`w-full flex items-center gap-2 px-3 py-1.5 text-left transition-colors ${replyTags.includes(u.id) ? 'bg-[rgba(201,145,58,0.1)]' : 'hover:bg-[rgba(201,145,58,0.05)]'}`}
+                          >
+                            <span className="text-xs text-parchment">{u.full_name || u.email}</span>
+                            {replyTags.includes(u.id) && <span className="ml-auto text-gold text-xs">✓</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <button
@@ -153,7 +257,7 @@ export default function CommentThread({ entityType, entityId, fieldName }) {
   );
 }
 
-function CommentBubble({ comment, formatTime, isReply }) {
+function CommentBubble({ comment, formatTime, isReply, taggedUsers }) {
   return (
     <div className={`rounded-lg p-3 ${isReply ? 'bg-[rgba(201,145,58,0.04)]' : 'bg-[#0D0B0A]'} border border-[rgba(201,145,58,0.1)]`}>
       <div className="flex items-center gap-2 mb-1">
@@ -161,9 +265,21 @@ function CommentBubble({ comment, formatTime, isReply }) {
           {comment.author_name?.charAt(0) || '?'}
         </div>
         <span className="text-xs text-amber-light/80 font-medium">{comment.author_name || 'Family Member'}</span>
+        {comment.is_query && (
+          <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-[rgba(201,145,58,0.12)] text-amber-light border border-[rgba(201,145,58,0.2)]">QUERY</span>
+        )}
         <span className="text-xs text-parchment/30">{formatTime(comment.created_date)}</span>
       </div>
       <p className="text-sm text-parchment/70 leading-relaxed">{comment.content}</p>
+      {taggedUsers?.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1">
+          {taggedUsers.map(u => (
+            <span key={u.id} className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] bg-[rgba(201,145,58,0.06)] text-amber-light/60 border border-[rgba(201,145,58,0.1)]">
+              <AtSign size={8} />{u.full_name || u.email}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

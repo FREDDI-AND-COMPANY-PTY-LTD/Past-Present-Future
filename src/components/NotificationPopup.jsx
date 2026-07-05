@@ -63,9 +63,16 @@ export default function NotificationPopup() {
         new Date(c.created_date) > lastCheck
       );
 
+      // Comments where I am tagged since last check
+      const taggedComments = (allComments || []).filter(c =>
+        c.tagged_user_ids?.includes(currentUser.id) &&
+        c.author_id !== currentUser.id &&
+        new Date(c.created_date) > lastCheck
+      );
+
       // Combine, deduplicate, sort chronologically
       const seen = new Set();
-      const allNotifs = [...commentsOnMyItems, ...repliesToMyComments]
+      const allNotifs = [...commentsOnMyItems, ...repliesToMyComments, ...taggedComments]
         .filter(n => {
           if (seen.has(n.id)) return false;
           seen.add(n.id);

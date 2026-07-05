@@ -20,6 +20,7 @@ import Branches from '@/pages/Branches';
 import ArchiveDataset from '@/pages/ArchiveDataset';
 import Newsletters from '@/pages/Newsletters';
 import NewsletterDetail from '@/pages/NewsletterDetail';
+import Tasks from '@/pages/Tasks';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -57,6 +58,7 @@ const AuthenticatedApp = () => {
       <Route path="/archive-dataset" element={<ArchiveDataset />} />
       <Route path="/newsletters" element={<Newsletters />} />
       <Route path="/newsletter/:id" element={<NewsletterDetail />} />
+      <Route path="/tasks" element={<Tasks />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );

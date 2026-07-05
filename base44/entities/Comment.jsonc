@@ -36,6 +36,25 @@
         "type": "string"
       },
       "description": "IDs of ContentItems uploaded as related events in response to this comment"
+    },
+    "tagged_user_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "User IDs tagged in this comment \u2014 they receive a notification and the comment appears in their Tasks area"
+    },
+    "is_query": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this comment is a query/question rather than a statement"
+    },
+    "acknowledged_by": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "User IDs who have acknowledged/dismissed this comment from their Tasks area"
     }
   },
   "required": [

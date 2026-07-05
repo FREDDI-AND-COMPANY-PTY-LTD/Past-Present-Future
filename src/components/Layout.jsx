@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Users, Map, Clock, Network, GitBranch, Upload, Shield, Search, Menu, X, Sparkles, Database, Inbox, AlertCircle, Newspaper } from 'lucide-react';
+import { Home, Users, Map, Clock, Network, GitBranch, Upload, Shield, Search, Menu, X, Sparkles, Database, Inbox, AlertCircle, Newspaper, CheckSquare } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import ReportProblemDialog from '@/components/ReportProblemDialog';
 import NewsletterOptIn from '@/components/NewsletterOptIn';
@@ -17,6 +17,7 @@ const navItems = [
   { label: 'Family Tree', path: '/family-tree', icon: Network },
   { label: 'Branches', path: '/branches', icon: GitBranch },
   { label: 'Upload Event', path: '/upload', icon: Upload },
+  { label: 'Tasks', path: '/tasks', icon: CheckSquare },
   { label: 'Dataset', path: '/archive-dataset', icon: Database },
   { label: 'Chronicle', path: '/newsletters', icon: Newspaper },
 ];

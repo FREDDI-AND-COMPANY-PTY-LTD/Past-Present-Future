@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, Upload, FileText, Image as ImageIcon, Award, Loader2, Check, Sparkles, Newspaper, Tag, Link2, Search, UserPlus, BookUser, IdCard, Mail, Heart, HelpCircle, Eye } from 'lucide-react';
+import { Camera, Upload, FileText, Image as ImageIcon, Award, Loader2, Check, Sparkles, Newspaper, Tag, Link2, Search, UserPlus, BookUser, IdCard, Mail, Heart, HelpCircle, Eye, MessageSquare } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 
@@ -33,12 +33,18 @@ export default function UploadEvent() {
     ancestor_ids: [],
     era: '',
     external_url: '',
+    comment: '',
+    is_query: false,
+    tagged_user_ids: [],
   });
   const [ancestors, setAncestors] = useState([]);
   const [saving, setSaving] = useState(false);
   const [selectedAncestorId, setSelectedAncestorId] = useState('');
   const [attachToProfile, setAttachToProfile] = useState(false);
   const [ancestorSearch, setAncestorSearch] = useState('');
+  const [users, setUsers] = useState([]);
+  const [user, setUser] = useState(null);
+  const [showTagPicker, setShowTagPicker] = useState(false);
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
   const cameraInputRef = useRef(null);
@@ -56,6 +62,8 @@ export default function UploadEvent() {
 
   useEffect(() => {
     base44.entities.Ancestor.list().then(setAncestors).catch(() => {});
+    base44.entities.User.list().then(setUsers).catch(() => {});
+    base44.auth.me().then(setUser).catch(() => {});
   }, []);
 
   const handleFile = async (selectedFile) => {
@@ -251,7 +259,23 @@ Return JSON with this structure:
         tags: suggestedTags || [],
       };
 
-      await base44.entities.ContentItem.create(itemData);
+      const createdItem = await base44.entities.ContentItem.create(itemData);
+
+      // Create initial comment if provided
+      if (formData.comment?.trim()) {
+        await base44.entities.Comment.create({
+          entity_type: 'ContentItem',
+          entity_id: createdItem.id,
+          field_name: 'general_discussion',
+          content: formData.comment.trim(),
+          author_id: user?.id || null,
+          author_name: user?.full_name || user?.email || 'Family Member',
+          parent_comment_id: null,
+          tagged_user_ids: formData.tagged_user_ids.length > 0 ? formData.tagged_user_ids : null,
+          is_query: formData.is_query,
+          acknowledged_by: [],
+        }).catch(() => {});
+      }
 
       // Attach certificate directly to ancestor's profile
       if (attachToProfile && canAttachToProfile && fileUrl) {
@@ -661,6 +685,76 @@ Return JSON with this structure:
                 </div>
               )}
 
+              {/* Comment section with hover tooltip */}
+              <div>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <label className="text-sm text-parchment/60 flex items-center gap-1.5">
+                    <MessageSquare size={14} /> Comment
+                  </label>
+                  <div className="relative group">
+                    <HelpCircle size={14} className="text-parchment/30 cursor-help" />
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 rounded-lg bg-[#1A1614] border border-[rgba(201,145,58,0.3)] text-xs text-parchment whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10 shadow-lg">
+                      Make a comment, Raise a query
+                    </div>
+                  </div>
+                </div>
+                <textarea
+                  value={formData.comment}
+                  onChange={e => setFormData({...formData, comment: e.target.value})}
+                  rows={3}
+                  className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-parchment focus:outline-none focus:border-[#C9913A] placeholder:text-parchment/30"
+                  placeholder="Add a comment or raise a query about this event..."
+                />
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => setFormData({...formData, is_query: !formData.is_query})}
+                    className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs border transition-colors ${formData.is_query ? 'border-[#C9913A] text-gold bg-[rgba(201,145,58,0.08)]' : 'border-[rgba(201,145,58,0.2)] text-amber-light/70 hover:border-[rgba(201,145,58,0.4)]'}`}
+                  >
+                    <HelpCircle size={12} /> {formData.is_query ? 'Query' : 'Comment'}
+                  </button>
+                  <button
+                    onClick={() => setShowTagPicker(!showTagPicker)}
+                    className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs border transition-colors ${showTagPicker ? 'border-[#C9913A] text-gold bg-[rgba(201,145,58,0.08)]' : 'border-[rgba(201,145,58,0.2)] text-amber-light/70 hover:border-[rgba(201,145,58,0.4)]'}`}
+                  >
+                    <Tag size={12} /> Tag {formData.tagged_user_ids.length > 0 && `(${formData.tagged_user_ids.length})`}
+                  </button>
+                  {users.filter(u => u.id !== user?.id && formData.tagged_user_ids.includes(u.id)).map(u => (
+                    <span key={u.id} className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-[rgba(201,145,58,0.08)] text-amber-light/80 border border-[rgba(201,145,58,0.15)]">
+                      {u.full_name || u.email}
+                      <button onClick={() => setFormData({...formData, tagged_user_ids: formData.tagged_user_ids.filter(id => id !== u.id)})} className="text-parchment/30 hover:text-parchment">✕</button>
+                    </span>
+                  ))}
+                </div>
+                {showTagPicker && (
+                  <div className="mt-2 max-h-40 overflow-y-auto rounded-lg border border-[rgba(201,145,58,0.15)] bg-[#0D0B0A]">
+                    {users.filter(u => u.id !== user?.id).length === 0 ? (
+                      <p className="px-4 py-3 text-xs text-parchment/40">No other family members to tag.</p>
+                    ) : (
+                      users.filter(u => u.id !== user?.id).map(u => (
+                        <button
+                          key={u.id}
+                          onClick={() => {
+                            setFormData(f => ({
+                              ...f,
+                              tagged_user_ids: f.tagged_user_ids.includes(u.id)
+                                ? f.tagged_user_ids.filter(id => id !== u.id)
+                                : [...f.tagged_user_ids, u.id]
+                            }));
+                          }}
+                          className={`w-full flex items-center gap-2 px-4 py-2 text-left transition-colors ${formData.tagged_user_ids.includes(u.id) ? 'bg-[rgba(201,145,58,0.1)]' : 'hover:bg-[rgba(201,145,58,0.05)]'}`}
+                        >
+                          <div className="w-6 h-6 rounded-full bg-[rgba(201,145,58,0.1)] border border-[rgba(201,145,58,0.2)] flex items-center justify-center text-xs text-gold">
+                            {(u.full_name || u.email).charAt(0)}
+                          </div>
+                          <span className="text-sm text-parchment">{u.full_name || u.email}</span>
+                          {formData.tagged_user_ids.includes(u.id) && <span className="ml-auto text-gold text-xs">✓</span>}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+
               {/* Ancestor tagging */}
               <div>
                 <label className="text-sm text-parchment/60 mb-2 block">Tag Ancestors</label>
@@ -700,7 +794,7 @@ Return JSON with this structure:
             <h2 className="font-display text-2xl text-parchment mb-2">Saved to the Archive</h2>
             <p className="text-parchment/50 text-sm mb-6">Your piece of family history is now part of the Freddi archive.</p>
             <div className="flex gap-3 justify-center">
-              <button onClick={() => { setStep(STEPS.CAPTURE); setFile(null); setFileUrl(null); setClassification(null); setDocumentSubtype(null); setExtractedData(null); setTranscribedText('');                 setSuggestedTags([]); setSelectedAncestorId(''); setAttachToProfile(false); setAncestorSearch(''); setRawAiAnalysis(null); setAiConfidence(null); setCategorizationNotes(''); setVisualElements(null); setFormData({title:'',description:'',date:'',location_name:'',latitude:'',longitude:'',ancestor_ids:[],era:'',external_url:''}); }}
+              <button onClick={() => { setStep(STEPS.CAPTURE); setFile(null); setFileUrl(null); setClassification(null); setDocumentSubtype(null); setExtractedData(null); setTranscribedText('');                 setSuggestedTags([]); setSelectedAncestorId(''); setAttachToProfile(false); setAncestorSearch(''); setRawAiAnalysis(null); setAiConfidence(null); setCategorizationNotes(''); setVisualElements(null); setFormData({title:'',description:'',date:'',location_name:'',latitude:'',longitude:'',ancestor_ids:[],era:'',external_url:'',comment:'',is_query:false,tagged_user_ids:[]}); }}
                 className="px-5 py-2.5 rounded-lg border border-[rgba(201,145,58,0.3)] text-amber-light text-sm hover:bg-[rgba(201,145,58,0.08)] transition-colors">
                 Upload Another
               </button>
