@@ -195,7 +195,7 @@ Return JSON with this structure:
 
       setFormData(f => ({
         ...f,
-        title: result.suggested_title || '',
+        title: result.suggested_title || (selectedFile?.name ? selectedFile.name.replace(/\.[^.]+$/, '') : ''),
         description: result.suggested_description || '',
         date: result.extracted_fields?.date_of_event || result.extracted_fields?.date_of_birth || '',
         location_name: eventLocation,
