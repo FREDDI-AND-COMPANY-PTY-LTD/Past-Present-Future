@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, Upload, FileText, Image as ImageIcon, Award, Loader2, Check, Sparkles, Newspaper, Tag, Link2, Search, UserPlus, BookUser, IdCard, Mail, Heart, HelpCircle, Eye, MessageSquare, AlertCircle } from 'lucide-react';
+import { Camera, Upload, FileText, Image as ImageIcon, Award, Loader2, Check, Sparkles, Newspaper, Tag, Link2, Search, UserPlus, BookUser, IdCard, Mail, Heart, HelpCircle, Eye, MessageSquare, AlertCircle, MapPin, Calendar } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import UploadAssistant from '@/components/UploadAssistant';
@@ -525,6 +525,47 @@ Return JSON with this structure:
                 </p>
               </div>
             </div>
+
+            {/* Missing location prompt */}
+            {!formData.location_name && (
+              <div className="aged-card rounded-xl p-4 border-[rgba(201,145,58,0.25)]">
+                <div className="flex items-center gap-2 mb-2">
+                  <MapPin size={18} className="text-gold" />
+                  <p className="text-sm text-parchment font-medium">Event location not identified</p>
+                </div>
+                <p className="text-xs text-parchment/40 mb-3">The AI couldn't determine where this event took place. Can you help? Enter the city, state, or address where the photo was taken or the event occurred.</p>
+                <input
+                  value={formData.location_name}
+                  onChange={e => setFormData({ ...formData, location_name: e.target.value })}
+                  className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]"
+                  placeholder="e.g. Melbourne, Victoria, Australia"
+                  autoFocus
+                />
+              </div>
+            )}
+
+            {/* Missing date prompt */}
+            {!formData.date && (
+              <div className="aged-card rounded-xl p-4 border-[rgba(201,145,58,0.25)]">
+                <div className="flex items-center gap-2 mb-2">
+                  <Calendar size={18} className="text-gold" />
+                  <p className="text-sm text-parchment font-medium">Event date not identified</p>
+                </div>
+                <p className="text-xs text-parchment/40 mb-3">The AI couldn't determine when this event took place. If you know the exact date, enter it below. If not sure, use the "Era" field for an approximation (e.g. "circa 1950").</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-parchment/50 mb-1 block">Exact date (if known)</label>
+                    <input type="date" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })}
+                      className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-parchment/50 mb-1 block">Approximate era</label>
+                    <input value={formData.era} onChange={e => setFormData({ ...formData, era: e.target.value })}
+                      className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]" placeholder="e.g. circa 1950" />
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Attach certificate to profile */}
             {canAttachToProfile && (
