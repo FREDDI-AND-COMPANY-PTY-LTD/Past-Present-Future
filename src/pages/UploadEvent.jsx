@@ -124,6 +124,7 @@ Return JSON with this structure:
     "place_of_issue": "", "surname": "", "given_names": "", "national_id_number": "",
     "sex": "", "height": "", "profession": "", "distinguishing_marks": "", "photograph_present": ""
   },
+  "event_location": "The geographic location WHERE THE EVENT DEPICTED in this image/document took place — NOT the location of the person viewing or uploading it. For a photo, this is where the photo was taken. For a certificate, this is where the birth/marriage/death was registered. For a letter, this is where it was written or sent from. For a passport, this is where it was issued. Be as specific as possible (city, state, country). Empty string if no location can be determined from the image.",
   "visual_elements": {
     "objects": ["list of ALL visible objects — e.g. 'fountain', 'church spire', 'vintage car', 'furniture'"],
     "people": ["descriptions of visible people — e.g. 'elderly man in suit, seated', 'young woman in white dress, standing'"],
@@ -182,12 +183,22 @@ Return JSON with this structure:
         }
       }
 
+      const eventLocation = result.event_location
+        || result.extracted_fields?.place_of_event
+        || result.extracted_fields?.place_of_birth
+        || result.extracted_fields?.place_of_death
+        || result.extracted_fields?.place_of_issue
+        || result.extracted_fields?.residence_address
+        || result.extracted_fields?.port_of_arrival
+        || result.visual_elements?.locations_visible?.[0]
+        || '';
+
       setFormData(f => ({
         ...f,
         title: result.suggested_title || '',
         description: result.suggested_description || '',
         date: result.extracted_fields?.date_of_event || result.extracted_fields?.date_of_birth || '',
-        location_name: result.extracted_fields?.place_of_event || result.extracted_fields?.place_of_birth || result.extracted_fields?.residence_address || '',
+        location_name: eventLocation,
         ancestor_ids: matchedAncestorId && !f.ancestor_ids.includes(matchedAncestorId)
           ? [...f.ancestor_ids, matchedAncestorId]
           : f.ancestor_ids,
@@ -613,9 +624,9 @@ Return JSON with this structure:
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div className="col-span-1">
-                  <label className="text-sm text-parchment/60 mb-1 block">Location Name</label>
+                  <label className="text-sm text-parchment/60 mb-1 block">Event Location <span className="text-parchment/30 text-xs">(where the event took place)</span></label>
                   <input value={formData.location_name} onChange={e => setFormData({...formData, location_name: e.target.value})}
-                    className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-parchment focus:outline-none focus:border-[#C9913A]" placeholder="Melbourne, VIC" />
+                    className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-parchment focus:outline-none focus:border-[#C9913A]" placeholder="Where the photo was taken or event occurred" />
                 </div>
                 <div>
                   <label className="text-sm text-parchment/60 mb-1 block">Latitude</label>
