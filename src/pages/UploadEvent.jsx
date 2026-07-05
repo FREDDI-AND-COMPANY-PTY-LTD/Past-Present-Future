@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Camera, Upload, FileText, Image as ImageIcon, Award, Loader2, Check, Sparkles, Newspaper, Tag, Link2, Search, UserPlus, BookUser, IdCard, Mail, Heart, HelpCircle, Eye, MessageSquare } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
+import UploadAssistant from '@/components/UploadAssistant';
 
 const STEPS = {
   CAPTURE: 'capture',
@@ -805,6 +806,7 @@ Return JSON with this structure:
           </div>
         )}
       </div>
+      <UploadAssistant />
     </Layout>
   );
 }
