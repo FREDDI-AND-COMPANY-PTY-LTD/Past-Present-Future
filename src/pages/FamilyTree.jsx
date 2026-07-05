@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { ZoomIn, ZoomOut, ChevronRight, X, GitBranch } from 'lucide-react';
+import { ZoomIn, ZoomOut, ChevronRight, ChevronLeft, ChevronUp, ChevronDown, X, GitBranch, Maximize2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import { useBranchRoot } from '@/hooks/useBranchRoot';
@@ -102,8 +102,16 @@ export default function FamilyTree() {
 
   const nodeWidth = 180;
   const nodeHeight = 100;
-  const levelGap = 280;
-  const yGap = 140;
+  const levelGap = 220; // vertical gap between generations
+  const yGap = 230;     // horizontal gap between siblings
+
+  // Compute SVG dimensions based on tree extent for horizontal scrolling
+  const allPositions = [...positions.values()];
+  const maxY = allPositions.length > 0 ? Math.max(...allPositions.map(p => p.y)) : 0;
+  const minLevel = allPositions.length > 0 ? Math.min(...allPositions.map(p => p.level)) : 0;
+  const maxLevel = allPositions.length > 0 ? Math.max(...allPositions.map(p => p.level)) : 0;
+  const svgWidth = Math.max((maxY + 1) * yGap + 200, 1200);
+  const svgHeight = Math.max((maxLevel - minLevel + 2) * levelGap + 100, 600);
 
   const handleMouseDown = (e) => {
     setIsDragging(true);
@@ -126,14 +134,31 @@ export default function FamilyTree() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="font-display text-4xl text-parchment mb-2">Family Tree</h1>
-            <p className="text-parchment/50 text-sm">Click any ancestor to explore their stories. Drag to pan, use buttons to zoom.</p>
+            <p className="text-parchment/50 text-sm">Most senior members appear at the top. Drag to pan, or use arrows to scroll across the extended tree.</p>
           </div>
           <div className="flex gap-2">
+            <button onClick={() => setPan(p => ({ ...p, x: p.x + 250 }))} className="w-10 h-10 rounded-lg aged-card flex items-center justify-center text-gold hover:border-[rgba(201,145,58,0.4)]" title="Scroll left">
+              <ChevronLeft size={18} />
+            </button>
+            <button onClick={() => setPan(p => ({ ...p, x: p.x - 250 }))} className="w-10 h-10 rounded-lg aged-card flex items-center justify-center text-gold hover:border-[rgba(201,145,58,0.4)]" title="Scroll right">
+              <ChevronRight size={18} />
+            </button>
+            <button onClick={() => setPan(p => ({ ...p, y: p.y + 200 }))} className="w-10 h-10 rounded-lg aged-card flex items-center justify-center text-gold hover:border-[rgba(201,145,58,0.4)]" title="Scroll up">
+              <ChevronUp size={18} />
+            </button>
+            <button onClick={() => setPan(p => ({ ...p, y: p.y - 200 }))} className="w-10 h-10 rounded-lg aged-card flex items-center justify-center text-gold hover:border-[rgba(201,145,58,0.4)]" title="Scroll down">
+              <ChevronDown size={18} />
+            </button>
+            <div className="w-px h-10 bg-[rgba(201,145,58,0.2)]" />
             <button onClick={() => setZoom(z => Math.max(0.3, z - 0.2))} className="w-10 h-10 rounded-lg aged-card flex items-center justify-center text-gold hover:border-[rgba(201,145,58,0.4)]">
               <ZoomOut size={18} />
             </button>
             <button onClick={() => setZoom(z => Math.min(2.5, z + 0.2))} className="w-10 h-10 rounded-lg aged-card flex items-center justify-center text-gold hover:border-[rgba(201,145,58,0.4)]">
               <ZoomIn size={18} />
+            </button>
+            <div className="w-px h-10 bg-[rgba(201,145,58,0.2)]" />
+            <button onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }} className="w-10 h-10 rounded-lg aged-card flex items-center justify-center text-gold hover:border-[rgba(201,145,58,0.4)]" title="Reset view">
+              <Maximize2 size={18} />
             </button>
           </div>
         </div>
@@ -162,27 +187,27 @@ export default function FamilyTree() {
               transformOrigin: 'center center',
               transition: isDragging ? 'none' : 'transform 0.1s ease-out',
               position: 'absolute',
-              width: '100%',
-              height: '100%',
+              top: 0,
+              left: 0,
             }}
           >
-            <svg width="100%" height="100%" style={{ minWidth: '1000px', minHeight: '600px' }}>
-              {/* Connection lines */}
+            <svg width={svgWidth} height={svgHeight} style={{ minWidth: '1000px', minHeight: '600px' }}>
+              {/* Connection lines — parent above, child below */}
               {branchAncestors.map(a => {
                 const pos = positions.get(a.id);
                 if (!pos) return null;
-                const x = (pos.level + 1) * levelGap + 100;
-                const y = pos.y * yGap + 50;
+                const cx = pos.y * yGap + nodeWidth / 2;
+                const cy = (pos.level + 1) * levelGap;
                 const lines = [];
                 [a.mother_id, a.father_id].forEach(pid => {
                   if (pid && positions.has(pid)) {
                     const ppos = positions.get(pid);
-                    const px = (ppos.level + 1) * levelGap + 100;
-                    const py = ppos.y * yGap + 50;
+                    const px = ppos.y * yGap + nodeWidth / 2;
+                    const py = (ppos.level + 1) * levelGap;
                     lines.push(
                       <path
                         key={`${pid}-${a.id}`}
-                        d={`M ${px + 90} ${py + 40} C ${px + 90} ${py + 80}, ${x} ${py + 80}, ${x} ${y}`}
+                        d={`M ${px} ${py + nodeHeight} C ${px} ${py + nodeHeight + 50}, ${cx} ${cy - 50}, ${cx} ${cy}`}
                         stroke="#C9913A"
                         strokeWidth="2"
                         fill="none"
@@ -198,8 +223,8 @@ export default function FamilyTree() {
               {branchAncestors.map(a => {
                 const pos = positions.get(a.id);
                 if (!pos) return null;
-                const x = (pos.level + 1) * levelGap + 10;
-                const y = pos.y * yGap;
+                const x = pos.y * yGap;
+                const y = (pos.level + 1) * levelGap;
                 const isParent = parentAncestors?.some(p => p.id === a.id);
                 return (
                   <foreignObject key={a.id} x={x} y={y} width={nodeWidth} height={nodeHeight}>
