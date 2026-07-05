@@ -23,6 +23,33 @@ const goldIcon = L.divIcon({
 
 const routeColors = ['#C9913A', '#E8C97A', '#8B6914', '#D4A04C'];
 
+// Calls invalidateSize on mount + window resize — fixes grey tiles / glitching
+// when the sidebar toggles or the container dimensions change.
+function MapResizer() {
+  const map = useMap();
+  useEffect(() => {
+    const fix = () => map.invalidateSize();
+    const timer = setTimeout(fix, 100);
+    window.addEventListener('resize', fix);
+    return () => { clearTimeout(timer); window.removeEventListener('resize', fix); };
+  }, [map]);
+  return null;
+}
+
+// Auto-fits the map to show all markers, or falls back to a default view.
+function FitBounds({ positions }) {
+  const map = useMap();
+  useEffect(() => {
+    if (positions.length === 0) return;
+    if (positions.length === 1) {
+      map.setView(positions[0], 10);
+    } else {
+      map.fitBounds(positions, { padding: [60, 60], maxZoom: 12 });
+    }
+  }, [map, positions]);
+  return null;
+}
+
 export default function MapPage() {
   const [contentItems, setContentItems] = useState([]);
   const [routes, setRoutes] = useState([]);
@@ -54,6 +81,12 @@ export default function MapPage() {
     : ancestors;
   const itemsWithLocation = branchItems.filter(i => i.latitude && i.longitude);
 
+  // Collect all marker positions for auto-fit
+  const allPositions = [
+    ...itemsWithLocation.map(i => [i.latitude, i.longitude]),
+    ...branchRoutes.flatMap(r => (r.waypoints || []).filter(w => w.lat && w.lng).map(w => [w.lat, w.lng])),
+  ];
+
   return (
     <Layout>
       <div className="px-6 lg:px-12 py-8 max-w-7xl mx-auto">
@@ -77,6 +110,8 @@ export default function MapPage() {
               scrollWheelZoom
               style={{ height: '65vh', minHeight: '500px', borderRadius: '14px', background: '#0D0B0A' }}
             >
+              <MapResizer />
+              <FitBounds positions={allPositions} />
               <TileLayer
                 url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
                 attribution='&copy; OpenStreetMap &copy; CARTO'
