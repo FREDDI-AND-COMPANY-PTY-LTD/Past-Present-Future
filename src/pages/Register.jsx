@@ -60,17 +60,60 @@ export default function Register() {
       const result = await base44.auth.verifyOtp({ email, otpCode });
       if (result?.access_token) {
         base44.auth.setToken(result.access_token);
+        const capitalGiven = givenNames.trim().toUpperCase();
+        const capitalFamily = familyName.trim().toUpperCase();
+        const fullName = `${givenNames.trim()} ${capitalFamily}`.trim();
         // Persist the birth-certificate-style name: given names + CAPITALISED family name
         await base44.auth.updateMe({
-          given_names: givenNames.trim(),
-          family_name: familyName.trim().toUpperCase(),
+          given_names: capitalGiven,
+          family_name: capitalFamily,
         }).catch(() => {});
+
+        const userId = result.user_id || (await base44.auth.me())?.id;
+
         // If claiming an unclaimed ancestor placeholder, link this user to that profile
-        if (claimedAncestorId) {
-          await base44.entities.Ancestor.update(claimedAncestorId, {
-            user_account_id: result.user_id || (await base44.auth.me())?.id,
-            full_name: `${givenNames.trim()} ${familyName.trim().toUpperCase()}`.trim(),
+        let ancestorId = claimedAncestorId;
+        if (ancestorId) {
+          await base44.entities.Ancestor.update(ancestorId, {
+            user_account_id: userId,
+            full_name: fullName,
             living: true,
+          }).catch(() => {});
+        } else {
+          // Create a new ancestor profile for this user
+          const newAncestor = await base44.entities.Ancestor.create({
+            full_name: fullName,
+            living: true,
+          }).catch(() => {});
+          if (newAncestor?.id) ancestorId = newAncestor.id;
+        }
+
+        // Register hearsay sources for the name fields — subject to document validation
+        if (ancestorId) {
+          const me = await base44.auth.me().catch(() => null);
+          const providedByName = fullName;
+          const baseSource = {
+            entity_type: 'Ancestor',
+            entity_id: ancestorId,
+            source_type: 'hearsay',
+            validation_status: 'hearsay',
+            provided_by_id: userId,
+            provided_by_name: providedByName,
+          };
+          await base44.entities.Source.create({
+            ...baseSource,
+            field_name: 'full_name',
+            notes: `Self-registered name: ${fullName}`,
+          }).catch(() => {});
+          await base44.entities.Source.create({
+            ...baseSource,
+            field_name: 'given_names',
+            notes: `Self-registered given names: ${capitalGiven}`,
+          }).catch(() => {});
+          await base44.entities.Source.create({
+            ...baseSource,
+            field_name: 'family_name',
+            notes: `Self-registered family name: ${capitalFamily}`,
           }).catch(() => {});
         }
       }

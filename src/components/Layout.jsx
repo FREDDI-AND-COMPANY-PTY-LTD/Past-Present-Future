@@ -28,7 +28,15 @@ export default function Layout({ children }) {
   const navigate = useNavigate();
   const { rootAncestorId, rootAncestor } = useBranchRoot();
   const branchRootPath = rootAncestorId ? `/ancestor/${rootAncestorId}` : '/';
-  const sidebarTitle = rootAncestor?.full_name || 'Jason Lewis FREDDI';
+  // Capitalise the surname in the title (birth-certificate format)
+  const sidebarTitle = (() => {
+    const name = rootAncestor?.full_name || user?.full_name || 'Jason Lewis FREDDI';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return [...parts.slice(0, -1), parts[parts.length - 1].toUpperCase()].join(' ');
+    }
+    return name.toUpperCase();
+  })();
 
   useEffect(() => {
     base44.auth.me().then(setUser).catch(() => {});
