@@ -76,6 +76,24 @@
     "user_account_id": {
       "type": "string",
       "description": "If this ancestor is a registered user, their user ID"
+    },
+    "review_status": {
+      "type": "string",
+      "enum": [
+        "auto_approved",
+        "overwritten",
+        "admin_verified"
+      ],
+      "default": "auto_approved",
+      "description": "Review status \u2014 user-created ancestors are auto-approved; admin can overwrite or verify"
+    },
+    "created_by_id": {
+      "type": "string",
+      "description": "User ID of the family member who created this ancestor record (if user-created)"
+    },
+    "created_by_name": {
+      "type": "string",
+      "description": "Display name of the family member who created this ancestor record"
     }
   },
   "required": [

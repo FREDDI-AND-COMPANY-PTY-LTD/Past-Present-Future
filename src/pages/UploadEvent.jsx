@@ -943,6 +943,7 @@ Return JSON with this structure:
           ancestors={ancestors}
           onConfirm={handleMatchConfirm}
           onDismiss={() => setMatchDialog(null)}
+          onAncestorCreated={(newAncestor) => setAncestors(prev => [...prev, newAncestor])}
         />
       )}
 
