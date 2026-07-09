@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Activity, Flag, Upload, Edit, Trash2, GitBranch, UserPlus, CheckCircle, Clock, XCircle, Users, Loader2, Save, AlertCircle, ExternalLink } from 'lucide-react';
+import { Activity, Flag, Upload, Edit, Trash2, GitBranch, UserPlus, CheckCircle, Clock, XCircle, Users, Loader2, Save, AlertCircle, ExternalLink, Edit3 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
+import AdminEditRequests from '@/components/admin/AdminEditRequests';
 
 const actionIcons = {
   upload: Upload,
@@ -26,6 +27,7 @@ export default function AdminDashboard() {
   const [flags, setFlags] = useState([]);
   const [newAncestors, setNewAncestors] = useState([]);
   const [flaggedItems, setFlaggedItems] = useState([]);
+  const [editRequestCount, setEditRequestCount] = useState(0);
   const [tab, setTab] = useState('activity');
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState(null);
@@ -38,11 +40,13 @@ export default function AdminDashboard() {
       base44.entities.ConflictFlag.filter({ status: 'open' }),
       base44.entities.Ancestor.filter({ review_status: 'auto_approved' }),
       base44.entities.ContentItem.filter({ review_status: 'flagged' }),
-    ]).then(([lg, fl, na, fi]) => {
+      base44.entities.EditRequest.filter({ status: 'pending' }),
+    ]).then(([lg, fl, na, fi, er]) => {
       setLogs(lg || []);
       setFlags(fl || []);
       setNewAncestors(na || []);
       setFlaggedItems(fi || []);
+      setEditRequestCount((er || []).length);
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
@@ -128,6 +132,7 @@ export default function AdminDashboard() {
             { label: 'Uploads', value: logs.filter(l => l.action_type === 'upload').length, icon: Upload },
             { label: 'Open Flags', value: flags.length, icon: Flag },
             { label: 'Flagged Uploads', value: flaggedItems.length, icon: AlertCircle },
+            { label: 'Edit Requests', value: editRequestCount, icon: Edit3 },
             { label: 'New Ancestors', value: newAncestors.length, icon: Users },
             { label: 'Branches', value: logs.filter(l => l.action_type === 'branch_create').length, icon: GitBranch },
           ].map(stat => {
@@ -155,6 +160,10 @@ export default function AdminDashboard() {
           <button onClick={() => setTab('flagged')}
             className={`px-4 py-2 rounded-lg text-sm transition-all border ${tab === 'flagged' ? 'bg-[rgba(201,145,58,0.12)] text-gold border-[rgba(201,145,58,0.3)]' : 'text-parchment/50 border-[rgba(201,145,58,0.1)]'}`}>
             Flagged Uploads {flaggedItems.length > 0 && <span className="ml-1 px-1.5 py-0.5 rounded-full bg-[#8B6914] text-amber-light text-xs">{flaggedItems.length}</span>}
+          </button>
+          <button onClick={() => setTab('edits')}
+            className={`px-4 py-2 rounded-lg text-sm transition-all border ${tab === 'edits' ? 'bg-[rgba(201,145,58,0.12)] text-gold border-[rgba(201,145,58,0.3)]' : 'text-parchment/50 border-[rgba(201,145,58,0.1)]'}`}>
+            Edit Requests {editRequestCount > 0 && <span className="ml-1 px-1.5 py-0.5 rounded-full bg-[#8B6914] text-amber-light text-xs">{editRequestCount}</span>}
           </button>
           <button onClick={() => setTab('ancestors')}
             className={`px-4 py-2 rounded-lg text-sm transition-all border ${tab === 'ancestors' ? 'bg-[rgba(201,145,58,0.12)] text-gold border-[rgba(201,145,58,0.3)]' : 'text-parchment/50 border-[rgba(201,145,58,0.1)]'}`}>
@@ -237,6 +246,8 @@ export default function AdminDashboard() {
               </div>
             )}
           </div>
+        ) : tab === 'edits' ? (
+          <AdminEditRequests />
         ) : tab === 'ancestors' ? (
           <div className="space-y-4">
             {newAncestors.length > 0 ? (

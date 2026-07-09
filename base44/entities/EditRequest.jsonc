@@ -1,0 +1,119 @@
+{
+  "name": "EditRequest",
+  "type": "object",
+  "properties": {
+    "content_item_id": {
+      "type": "string",
+      "description": "ID of the ContentItem this edit request targets"
+    },
+    "content_item_title": {
+      "type": "string",
+      "description": "Title of the content item at the time of the edit request"
+    },
+    "proposed_changes": {
+      "type": "object",
+      "description": "Object of field:value pairs the user proposes to change on the content item",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "date": {
+          "type": "string"
+        },
+        "location_name": {
+          "type": "string"
+        },
+        "latitude": {
+          "type": "number"
+        },
+        "longitude": {
+          "type": "number"
+        },
+        "era": {
+          "type": "string"
+        },
+        "transcribed_text": {
+          "type": "string"
+        },
+        "extracted_fields": {
+          "type": "object"
+        }
+      }
+    },
+    "original_values": {
+      "type": "object",
+      "description": "Snapshot of the original field values before the proposed changes, for admin comparison",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "date": {
+          "type": "string"
+        },
+        "location_name": {
+          "type": "string"
+        },
+        "latitude": {
+          "type": "number"
+        },
+        "longitude": {
+          "type": "number"
+        },
+        "era": {
+          "type": "string"
+        },
+        "transcribed_text": {
+          "type": "string"
+        },
+        "extracted_fields": {
+          "type": "object"
+        }
+      }
+    },
+    "reason": {
+      "type": "string",
+      "description": "User's explanation for why these changes are needed"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "rejected"
+      ],
+      "default": "pending",
+      "description": "Review status of this edit request"
+    },
+    "requested_by_id": {
+      "type": "string",
+      "description": "User ID of the person requesting the edit"
+    },
+    "requested_by_name": {
+      "type": "string",
+      "description": "Display name of the person requesting the edit"
+    },
+    "reviewed_by_id": {
+      "type": "string",
+      "description": "User ID of the admin who reviewed this request"
+    },
+    "reviewed_by_name": {
+      "type": "string",
+      "description": "Display name of the admin who reviewed this request"
+    },
+    "review_note": {
+      "type": "string",
+      "description": "Admin's note on the review decision"
+    }
+  },
+  "required": [
+    "content_item_id",
+    "proposed_changes",
+    "status"
+  ]
+}

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { MapPin, Calendar, Flag, ChevronLeft, ExternalLink, FileText, Award } from 'lucide-react';
+import { MapPin, Calendar, Flag, ChevronLeft, ExternalLink, FileText, Award, Edit3 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import EngageButton from '@/components/EngageButton';
+import EditEventDialog from '@/components/EditEventDialog';
 
 export default function ContentDetail() {
   const { id } = useParams();
@@ -13,6 +14,7 @@ export default function ContentDetail() {
   const [showFlagForm, setShowFlagForm] = useState(false);
   const [flagText, setFlagText] = useState('');
   const [flagSubmitted, setFlagSubmitted] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const [user, setUser] = useState(null);
 
   useEffect(() => {
@@ -54,9 +56,17 @@ export default function ContentDetail() {
   return (
     <Layout>
       <div className="px-6 lg:px-12 py-12 max-w-4xl mx-auto">
-        <Link to="/timeline" className="inline-flex items-center gap-1 text-parchment/50 hover:text-gold transition-colors mb-6 text-sm">
-          <ChevronLeft size={16} /> Back
-        </Link>
+        <div className="flex items-center justify-between mb-6">
+          <Link to="/timeline" className="inline-flex items-center gap-1 text-parchment/50 hover:text-gold transition-colors text-sm">
+            <ChevronLeft size={16} /> Back
+          </Link>
+          <button
+            onClick={() => setShowEditDialog(true)}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[rgba(201,145,58,0.1)] border border-[rgba(201,145,58,0.2)] text-amber-light text-sm font-medium hover:bg-[rgba(201,145,58,0.15)] transition-colors"
+          >
+            <Edit3 size={16} /> Edit Event Details
+          </button>
+        </div>
 
         <div className="aged-card rounded-2xl overflow-hidden mb-8">
           {item.file_url && (item.content_type === 'photo' || item.content_type === 'uncategorized') && (
@@ -116,6 +126,14 @@ export default function ContentDetail() {
         <div className="aged-card rounded-xl p-6">
           <EngageButton item={item} user={user} />
         </div>
+
+        {showEditDialog && (
+          <EditEventDialog
+            item={item}
+            onClose={() => setShowEditDialog(false)}
+            onSubmitted={() => setShowEditDialog(false)}
+          />
+        )}
 
         {/* Flag conflict */}
         <div className="aged-card rounded-xl p-6">
