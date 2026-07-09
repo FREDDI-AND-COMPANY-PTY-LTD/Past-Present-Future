@@ -7,12 +7,25 @@ import SearchBar from '@/components/SearchBar';
 import ContentCard from '@/components/ContentCard';
 import UploadHelperBanner from '@/components/UploadHelperBanner';
 import { useBranchRoot } from '@/hooks/useBranchRoot';
+import { useArchivePhotos } from '@/hooks/useArchivePhotos';
+
+const FALLBACK_HERO = 'https://images.unsplash.com/photo-1599256871679-6d46a4ee676a?w=1920&q=80';
 
 export default function Home() {
   const [recentItems, setRecentItems] = useState([]);
   const [ancestors, setAncestors] = useState([]);
   const [loading, setLoading] = useState(true);
   const { rootAncestor, rootAncestorId } = useBranchRoot();
+  const photos = useArchivePhotos();
+  const [heroPhotoIdx, setHeroPhotoIdx] = useState(null);
+
+  useEffect(() => {
+    if (photos.length > 0 && heroPhotoIdx === null) {
+      setHeroPhotoIdx(Math.floor(Math.random() * photos.length));
+    }
+  }, [photos.length]);
+
+  const heroPhoto = heroPhotoIdx !== null ? photos[heroPhotoIdx] : null;
 
   useEffect(() => {
     Promise.all([
@@ -31,8 +44,8 @@ export default function Home() {
       <section className="relative h-[70vh] min-h-[500px] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0">
           <img
-            src="https://images.unsplash.com/photo-1599256871679-6d46a4ee676a?w=1920&q=80"
-            alt="Family archive"
+            src={heroPhoto?.file_url || FALLBACK_HERO}
+            alt={heroPhoto?.title || 'Family archive'}
             className="w-full h-full object-cover sepia-tint"
           />
           <div className="absolute inset-0 hero-overlay" />
