@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Camera, Upload, FileText, Image as ImageIcon, Award, Loader2, Check, Sparkles, Newspaper, Tag, Link2, Search, UserPlus, BookUser, IdCard, Mail, Heart, HelpCircle, Eye, MessageSquare, AlertCircle, MapPin, Calendar, RefreshCw, X, Video } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
-import UploadAssistant from '@/components/UploadAssistant';
+import { getMessages, subscribe } from '@/lib/assistantStore';
 import AncestorMatchDialog from '@/components/AncestorMatchDialog';
 import LocationPicker from '@/components/LocationPicker';
 
@@ -56,7 +56,7 @@ export default function UploadEvent() {
   const [showTagPicker, setShowTagPicker] = useState(false);
   const [matchDialog, setMatchDialog] = useState(null);
   const [locationPickerOpen, setLocationPickerOpen] = useState(false);
-  const [assistantMessages, setAssistantMessages] = useState([]);
+  const [assistantMessages, setAssistantMessages] = useState(getMessages());
   const [refreshing, setRefreshing] = useState(false);
   const [mediaUploading, setMediaUploading] = useState(false);
   const fileInputRef = useRef(null);
@@ -80,6 +80,8 @@ export default function UploadEvent() {
     base44.entities.User.list().then(setUsers).catch(() => {});
     base44.auth.me().then(setUser).catch(() => {});
   }, []);
+
+  useEffect(() => subscribe(setAssistantMessages), []);
 
   // ── Prompt visibility helpers ──
   // A prompt shows if AI flagged it as missing AND the user hasn't dismissed it.
@@ -323,7 +325,6 @@ Return JSON with this structure:
   };
 
   const resetForm = () => {
-    setAssistantMessages([]);
     setStep(STEPS.CAPTURE);
     setFile(null);
     setFileUrl(null);
@@ -1188,7 +1189,6 @@ Return JSON with this structure:
         initialLng={formData.longitude}
       />
 
-      <UploadAssistant messages={assistantMessages} setMessages={setAssistantMessages} />
     </Layout>
   );
 }

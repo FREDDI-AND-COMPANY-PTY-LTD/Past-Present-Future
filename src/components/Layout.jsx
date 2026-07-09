@@ -7,6 +7,7 @@ import NewsletterOptIn from '@/components/NewsletterOptIn';
 import NotificationPopup from '@/components/NotificationPopup';
 import BranchUpgradeForm from '@/components/BranchUpgradeForm';
 import LogoutButton from '@/components/LogoutButton';
+import UploadAssistant from '@/components/UploadAssistant';
 import PageHero from '@/components/PageHero';
 import { useBranchRoot } from '@/hooks/useBranchRoot';
 
@@ -183,6 +184,8 @@ export default function Layout({ children }) {
           </div>
         </footer>
       </div>
+
+      <UploadAssistant />
     </div>
   );
 }

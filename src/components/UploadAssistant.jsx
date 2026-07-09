@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Sparkles, X, Send, Loader2, MessageCircle } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import { getMessages, setMessages, subscribe } from '@/lib/assistantStore';
 
-const SYSTEM_CONTEXT = `You are the AI Help Assistant for the Jason Freddi Family History Archive — a private, federated family history platform. You are embedded in the "Upload an Event" page and your role is to help family members understand how to use the upload system and the broader archive.
+const SYSTEM_CONTEXT = `You are the AI Help Assistant for the Jason Freddi Family History Archive — a private, federated family history platform. You are available across all pages of the family history archive and your role is to help family members understand how to use the archive and its features.
 
 Here is what you know about the application:
 
@@ -54,7 +55,10 @@ const SUGGESTED_QUESTIONS = [
   "How does the searchable database work?",
 ];
 
-export default function UploadAssistant({ messages, setMessages }) {
+export default function UploadAssistant() {
+  const [messages, setLocalMessages] = useState(getMessages());
+  useEffect(() => subscribe(setLocalMessages), []);
+
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
