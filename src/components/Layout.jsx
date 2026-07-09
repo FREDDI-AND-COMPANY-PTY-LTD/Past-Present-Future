@@ -51,7 +51,7 @@ export default function Layout({ children }) {
     : navItems;
 
   return (
-    <div className="min-h-screen bg-charcoal flex flex-col">
+    <div className="min-h-screen bg-charcoal flex flex-col lg:flex-row">
       {/* Top bar - mobile */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-charcoal/95 backdrop-blur-md border-b border-[rgba(201,145,58,0.15)] px-4 h-16 flex items-center justify-between">
         <Link to={branchRootPath} className="font-display text-lg text-gold tracking-wide">{sidebarTitle}</Link>
@@ -158,7 +158,7 @@ export default function Layout({ children }) {
       )}
 
       {/* Main content */}
-      <div className="flex-1 lg:ml-64 pt-16 lg:pt-0">
+      <div className="flex-1 pt-16 lg:pt-0">
         {user && <NotificationPopup />}
         <main className="min-h-screen">
           {location.pathname !== '/' && <PageHero />}
