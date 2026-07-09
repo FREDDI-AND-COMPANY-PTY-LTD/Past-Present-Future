@@ -41,9 +41,9 @@ Deno.serve(async (req) => {
     }
 
     // Geocode using Google Maps Geocoding API
-    const apiKey = Deno.env.get('GOOGLE_MAPS_API_KEY');
+    const apiKey = Deno.env.get('APIKeyGoogleMaps');
     if (!apiKey) {
-      return Response.json({ error: 'GOOGLE_MAPS_API_KEY not set', location_query: locationQuery }, { status: 500 });
+      return Response.json({ error: 'APIKeyGoogleMaps not set', location_query: locationQuery }, { status: 500 });
     }
 
     const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(locationQuery)}&key=${apiKey}`;
