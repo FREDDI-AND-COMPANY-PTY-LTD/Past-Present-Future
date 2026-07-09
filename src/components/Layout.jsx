@@ -76,6 +76,24 @@ export default function Layout({ children }) {
           {navItemsWithAdmin.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
+            const isFeatured = item.path === '/upload';
+            if (isFeatured) {
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  onClick={() => setSidebarOpen(false)}
+                  className={`
+                    flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200
+                    bg-gradient-to-r from-[#C9913A] to-[#E8C97A] text-charcoal font-semibold border border-transparent
+                    ${isActive ? 'ring-2 ring-[#E8C97A] ring-offset-2 ring-offset-[#0D0B0A]' : 'hover:opacity-90'}
+                  `}
+                >
+                  <Icon size={18} />
+                  <span className="text-sm">{item.label}</span>
+                </Link>
+              );
+            }
             return (
               <Link
                 key={item.path}
