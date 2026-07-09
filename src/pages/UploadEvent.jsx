@@ -240,14 +240,20 @@ Return JSON with this structure:
       || result.visual_elements?.locations_visible?.[0]
       || '';
 
+    const eventDate = result.extracted_fields?.date_of_event || result.extracted_fields?.date_of_birth || '';
     setFormData(f => ({
       ...f,
       title: result.suggested_title || (selectedFile?.name ? selectedFile.name.replace(/\.[^.]+$/, '') : ''),
       description: result.suggested_description || '',
-      date: result.extracted_fields?.date_of_event || result.extracted_fields?.date_of_birth || '',
+      date: eventDate,
       location_name: eventLocation,
       ancestor_ids: autoTaggedIds,
     }));
+
+    // Show missing-data prompts only when the AI couldn't extract values.
+    // Once shown, they stay visible while typing (dismiss via × button).
+    setShowLocationPrompt(!eventLocation);
+    setShowDatePrompt(!eventDate);
 
     if (matchedAncestorId && (
       (result.type === 'certificate' && (result.document_subtype === 'birth_certificate' || result.document_subtype === 'marriage_certificate')) ||
@@ -540,7 +546,7 @@ Return JSON with this structure:
             </div>
 
             {/* Missing location prompt */}
-            {showLocationPrompt && !formData.location_name && (
+            {showLocationPrompt && (
               <div className="aged-card rounded-xl p-4 border-[rgba(201,145,58,0.25)]">
                 <div className="flex items-center gap-2 mb-2">
                   <MapPin size={18} className="text-gold" />
@@ -561,7 +567,7 @@ Return JSON with this structure:
             )}
 
             {/* Missing date prompt */}
-            {showDatePrompt && !formData.date && (
+            {showDatePrompt && (
               <div className="aged-card rounded-xl p-4 border-[rgba(201,145,58,0.25)]">
                 <div className="flex items-center gap-2 mb-2">
                   <Calendar size={18} className="text-gold" />
