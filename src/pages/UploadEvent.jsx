@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, Upload, FileText, Image as ImageIcon, Award, Loader2, Check, Sparkles, Newspaper, Tag, Link2, Search, UserPlus, BookUser, IdCard, Mail, Heart, HelpCircle, Eye, MessageSquare, AlertCircle, MapPin, Calendar, RefreshCw, X } from 'lucide-react';
+import { Camera, Upload, FileText, Image as ImageIcon, Award, Loader2, Check, Sparkles, Newspaper, Tag, Link2, Search, UserPlus, BookUser, IdCard, Mail, Heart, HelpCircle, Eye, MessageSquare, AlertCircle, MapPin, Calendar, RefreshCw, X, Video } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import UploadAssistant from '@/components/UploadAssistant';
@@ -58,9 +58,11 @@ export default function UploadEvent() {
   const [locationPickerOpen, setLocationPickerOpen] = useState(false);
   const [assistantMessages, setAssistantMessages] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [mediaUploading, setMediaUploading] = useState(false);
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
   const cameraInputRef = useRef(null);
+  const mediaInputRef = useRef(null);
 
   const filteredAncestors = ancestorSearch
     ? ancestors.filter(a => a.full_name.toLowerCase().includes(ancestorSearch.toLowerCase()))
@@ -458,6 +460,18 @@ Return JSON with this structure:
   };
 
   const hasAncestor = effectiveAncestorIds.length > 0;
+
+  const handleMediaUpload = async (selectedFile) => {
+    if (!selectedFile) return;
+    setMediaUploading(true);
+    try {
+      const uploadRes = await base44.integrations.Core.UploadFile({ file: selectedFile });
+      setFormData(f => ({ ...f, external_url: uploadRes.file_url }));
+    } catch (e) {
+      // error
+    }
+    setMediaUploading(false);
+  };
 
   const handleLocationPick = ({ location_name, latitude, longitude }) => {
     setFormData(f => ({
@@ -962,9 +976,34 @@ Return JSON with this structure:
                 </div>
               </div>
               <div>
-                <label className="text-sm text-parchment/60 mb-1 block">External Video URL (optional)</label>
-                <input value={formData.external_url} onChange={e => setFormData(f => ({ ...f, external_url: e.target.value }))}
-                  className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-parchment focus:outline-none focus:border-[#C9913A]" placeholder="YouTube or Vimeo link" />
+                <label className="text-sm text-parchment/60 mb-1 block">Audio / Video File (optional)</label>
+                {formData.external_url ? (
+                  <div className="space-y-2">
+                    {/\.(mp3|wav|ogg|oga|m4a|aac|flac|webm)$/i.test(formData.external_url) ? (
+                      <audio controls src={formData.external_url} className="w-full" />
+                    ) : (
+                      <video controls src={formData.external_url} className="w-full max-h-48 rounded-lg bg-[#0D0B0A]" />
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setFormData(f => ({ ...f, external_url: '' }))}
+                      className="flex items-center gap-1 text-xs text-parchment/40 hover:text-parchment transition-colors"
+                    >
+                      <X size={12} /> Remove media file
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => mediaInputRef.current?.click()}
+                    disabled={mediaUploading}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 border-dashed border-[rgba(201,145,58,0.25)] hover:border-[#C9913A] hover:bg-[rgba(201,145,58,0.05)] transition-all text-parchment/60 text-sm disabled:opacity-50"
+                  >
+                    {mediaUploading ? <Loader2 size={16} className="animate-spin" /> : <Video size={16} />}
+                    {mediaUploading ? 'Uploading...' : 'Upload audio or video file'}
+                  </button>
+                )}
+                <input ref={mediaInputRef} type="file" accept="audio/*,video/*" className="hidden" onChange={e => handleMediaUpload(e.target.files?.[0])} />
               </div>
 
               {/* Suggested tags */}
