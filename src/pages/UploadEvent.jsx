@@ -676,8 +676,12 @@ Return JSON with this structure:
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs text-parchment/50 mb-1 block">Exact date (if known)</label>
-                    <input type="date" value={formData.date} onChange={e => setFormData(f => ({ ...f, date: e.target.value }))}
-                      className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]" />
+                    <div className="flex gap-2">
+                      <input type="text" value={formData.date} onChange={e => setFormData(f => ({ ...f, date: e.target.value }))}
+                        className="flex-1 bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]" placeholder="DD/MM/YYYY" />
+                      <input type="date" value={/^\d{4}-\d{2}-\d{2}$/.test(formData.date) ? formData.date : ''} onChange={e => setFormData(f => ({ ...f, date: e.target.value }))} title="Pick from calendar"
+                        className="bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-2 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A] flex-shrink-0 cursor-pointer" style={{ colorScheme: 'dark' }} />
+                    </div>
                   </div>
                   <div>
                     <label className="text-xs text-parchment/50 mb-1 block">Approximate era</label>
@@ -937,8 +941,12 @@ Return JSON with this structure:
                     Date <span className="text-[#C9913A] text-xs">*</span>
                     {!requiredChecks.date && <span className="text-xs text-red-400/70 ml-1">required</span>}
                   </label>
-                  <input type="date" value={formData.date} onChange={e => setFormData(f => ({ ...f, date: e.target.value }))}
-                    className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-parchment focus:outline-none focus:border-[#C9913A]" />
+                  <div className="flex gap-2">
+                    <input type="text" value={formData.date} onChange={e => setFormData(f => ({ ...f, date: e.target.value }))}
+                      className="flex-1 bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-parchment focus:outline-none focus:border-[#C9913A]" placeholder="DD/MM/YYYY" />
+                    <input type="date" value={/^\d{4}-\d{2}-\d{2}$/.test(formData.date) ? formData.date : ''} onChange={e => setFormData(f => ({ ...f, date: e.target.value }))} title="Pick from calendar"
+                      className="bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-2 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A] flex-shrink-0 cursor-pointer" style={{ colorScheme: 'dark' }} />
+                  </div>
                 </div>
                 <div>
                   <label className="text-sm text-parchment/60 mb-1 block">Era (optional)</label>
