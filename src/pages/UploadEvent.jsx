@@ -27,6 +27,22 @@ const INITIAL_FORM = {
   tagged_user_ids: [],
 };
 
+function MissingFieldPrompt({ visible, onDismiss, icon: Icon, title, children }) {
+  if (!visible) return null;
+  return (
+    <div className="aged-card rounded-xl p-4 border-[rgba(201,145,58,0.25)]">
+      <div className="flex items-center gap-2 mb-2">
+        <Icon size={18} className="text-gold" />
+        <p className="text-sm text-parchment font-medium">{title}</p>
+        <button onClick={onDismiss} className="ml-auto text-parchment/30 hover:text-parchment transition-colors">
+          <X size={16} />
+        </button>
+      </div>
+      {children}
+    </div>
+  );
+}
+
 export default function UploadEvent() {
   const [step, setStep] = useState(STEPS.CAPTURE);
   const [file, setFile] = useState(null);
@@ -466,23 +482,6 @@ Return JSON with this structure:
     setMatchDialog(null);
   };
 
-  // Missing-field prompt component — stable, never hides due to typing
-  const MissingFieldPrompt = ({ field, icon: Icon, title, children }) => {
-    if (!isPromptVisible(field)) return null;
-    return (
-      <div className="aged-card rounded-xl p-4 border-[rgba(201,145,58,0.25)]">
-        <div className="flex items-center gap-2 mb-2">
-          <Icon size={18} className="text-gold" />
-          <p className="text-sm text-parchment font-medium">{title}</p>
-          <button onClick={() => dismissField(field)} className="ml-auto text-parchment/30 hover:text-parchment transition-colors">
-            <X size={16} />
-          </button>
-        </div>
-        {children}
-      </div>
-    );
-  };
-
   return (
     <Layout>
       <div className="px-6 lg:px-12 py-12 max-w-3xl mx-auto">
@@ -627,7 +626,7 @@ Return JSON with this structure:
             {/* These are controlled by missingFields + dismissedFields only. */}
             {/* Typing in any input NEVER causes these to disappear. */}
 
-            <MissingFieldPrompt field="location" icon={MapPin} title="Event location not identified">
+            <MissingFieldPrompt visible={isPromptVisible('location')} onDismiss={() => dismissField('location')} icon={MapPin} title="Event location not identified">
               <p className="text-xs text-parchment/40 mb-3">The AI couldn't determine where this event took place. Can you help? Enter the city, state, or address where the photo was taken or the event occurred — not your current location.</p>
               <input
                 value={formData.location_name}
@@ -637,7 +636,7 @@ Return JSON with this structure:
               />
             </MissingFieldPrompt>
 
-            <MissingFieldPrompt field="date" icon={Calendar} title="Event date not identified">
+            <MissingFieldPrompt visible={isPromptVisible('date')} onDismiss={() => dismissField('date')} icon={Calendar} title="Event date not identified">
               <p className="text-xs text-parchment/40 mb-3">The AI couldn't determine when this event took place. If you know the exact date, enter it below. If not sure, use the "Era" field for an approximation (e.g. "circa 1950").</p>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -653,7 +652,7 @@ Return JSON with this structure:
               </div>
             </MissingFieldPrompt>
 
-            <MissingFieldPrompt field="description" icon={HelpCircle} title="Event description not identified">
+            <MissingFieldPrompt visible={isPromptVisible('description')} onDismiss={() => dismissField('description')} icon={HelpCircle} title="Event description not identified">
               <p className="text-xs text-parchment/40 mb-3">The AI couldn't confidently describe what this event or item is. Please enter a title and description so the archive can categorise it properly.</p>
               <div className="space-y-3">
                 <div>
