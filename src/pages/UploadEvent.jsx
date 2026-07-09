@@ -4,6 +4,7 @@ import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import UploadAssistant from '@/components/UploadAssistant';
 import AncestorMatchDialog from '@/components/AncestorMatchDialog';
+import LocationPicker from '@/components/LocationPicker';
 
 const STEPS = {
   CAPTURE: 'capture',
@@ -54,6 +55,7 @@ export default function UploadEvent() {
   const [user, setUser] = useState(null);
   const [showTagPicker, setShowTagPicker] = useState(false);
   const [matchDialog, setMatchDialog] = useState(null);
+  const [locationPickerOpen, setLocationPickerOpen] = useState(false);
   const [assistantMessages, setAssistantMessages] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const fileInputRef = useRef(null);
@@ -457,6 +459,15 @@ Return JSON with this structure:
 
   const hasAncestor = effectiveAncestorIds.length > 0;
 
+  const handleLocationPick = ({ location_name, latitude, longitude }) => {
+    setFormData(f => ({
+      ...f,
+      location_name,
+      latitude,
+      longitude,
+    }));
+  };
+
   const handleMatchConfirm = (selectedIds) => {
     setFormData(f => ({
       ...f,
@@ -620,12 +631,21 @@ Return JSON with this structure:
                   </button>
                 </div>
                 <p className="text-xs text-parchment/40 mb-3">The AI couldn't determine where this event took place. Can you help? Enter the city, state, or address where the photo was taken or the event occurred — not your current location.</p>
-                <input
-                  value={formData.location_name}
-                  onChange={e => setFormData(f => ({ ...f, location_name: e.target.value }))}
-                  className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]"
-                  placeholder="e.g. Melbourne, Victoria, Australia"
-                />
+                <div className="flex gap-2">
+                  <input
+                    value={formData.location_name}
+                    onChange={e => setFormData(f => ({ ...f, location_name: e.target.value }))}
+                    className="flex-1 bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]"
+                    placeholder="e.g. Melbourne, Victoria, Australia"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setLocationPickerOpen(true)}
+                    className="flex items-center gap-1.5 px-3 rounded-lg bg-[rgba(201,145,58,0.1)] border border-[rgba(201,145,58,0.2)] text-amber-light text-sm font-medium hover:bg-[rgba(201,145,58,0.15)] transition-colors flex-shrink-0"
+                  >
+                    <MapPin size={14} /> Map
+                  </button>
+                </div>
               </div>
             )}
 
@@ -918,8 +938,17 @@ Return JSON with this structure:
                     Event Location <span className="text-[#C9913A] text-xs">*</span>
                     {!requiredChecks.location && <span className="text-xs text-red-400/70 ml-1">required</span>}
                   </label>
-                  <input value={formData.location_name} onChange={e => setFormData(f => ({ ...f, location_name: e.target.value }))}
-                    className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-parchment focus:outline-none focus:border-[#C9913A]" placeholder="Where the photo was taken or event occurred" />
+                  <div className="flex gap-2">
+                    <input value={formData.location_name} onChange={e => setFormData(f => ({ ...f, location_name: e.target.value }))}
+                      className="flex-1 bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-parchment focus:outline-none focus:border-[#C9913A]" placeholder="Where the photo was taken or event occurred" />
+                    <button
+                      type="button"
+                      onClick={() => setLocationPickerOpen(true)}
+                      className="flex items-center gap-1.5 px-3 rounded-lg bg-[rgba(201,145,58,0.1)] border border-[rgba(201,145,58,0.2)] text-amber-light text-sm font-medium hover:bg-[rgba(201,145,58,0.15)] transition-colors flex-shrink-0"
+                    >
+                      <MapPin size={14} /> Map
+                    </button>
+                  </div>
                 </div>
                 <div>
                   <label className="text-sm text-parchment/60 mb-1 block">Latitude</label>
@@ -1102,6 +1131,15 @@ Return JSON with this structure:
           onAncestorCreated={(newAncestor) => setAncestors(prev => [...prev, newAncestor])}
         />
       )}
+
+      <LocationPicker
+        open={locationPickerOpen}
+        onClose={() => setLocationPickerOpen(false)}
+        onPick={handleLocationPick}
+        initialLocation={formData.location_name}
+        initialLat={formData.latitude}
+        initialLng={formData.longitude}
+      />
 
       <UploadAssistant messages={assistantMessages} setMessages={setAssistantMessages} />
     </Layout>
