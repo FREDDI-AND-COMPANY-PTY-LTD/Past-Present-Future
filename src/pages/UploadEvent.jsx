@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, Upload, FileText, Image as ImageIcon, Award, Loader2, Check, Sparkles, Newspaper, Tag, Link2, Search, UserPlus, BookUser, IdCard, Mail, Heart, HelpCircle, Eye, MessageSquare, AlertCircle, MapPin, Calendar, RefreshCw } from 'lucide-react';
+import { Camera, Upload, FileText, Image as ImageIcon, Award, Loader2, Check, Sparkles, Newspaper, Tag, Link2, Search, UserPlus, BookUser, IdCard, Mail, Heart, HelpCircle, Eye, MessageSquare, AlertCircle, MapPin, Calendar, RefreshCw, X } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import UploadAssistant from '@/components/UploadAssistant';
@@ -604,14 +604,24 @@ Return JSON with this structure:
               <div className="aged-card rounded-xl p-4">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-xs text-parchment/40 uppercase tracking-wider">Preview</span>
-                  <button
-                    onClick={handleRefreshAnalysis}
-                    disabled={refreshing}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(201,145,58,0.1)] border border-[rgba(201,145,58,0.2)] text-amber-light text-xs font-medium hover:bg-[rgba(201,145,58,0.15)] transition-colors disabled:opacity-50"
-                  >
-                    {refreshing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
-                    Refresh AI Analysis
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleRefreshAnalysis}
+                      disabled={refreshing}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(201,145,58,0.1)] border border-[rgba(201,145,58,0.2)] text-amber-light text-xs font-medium hover:bg-[rgba(201,145,58,0.15)] transition-colors disabled:opacity-50"
+                    >
+                      {refreshing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+                      Refresh AI Analysis
+                    </button>
+                    <button
+                      onClick={() => { setStep(STEPS.CAPTURE); setFile(null); setFileUrl(null); setClassification(null); setDocumentSubtype(null); setExtractedData(null); setTranscribedText(''); setSuggestedTags([]); setSelectedAncestorId(''); setAttachToProfile(false); setAncestorSearch(''); setRawAiAnalysis(null); setAiConfidence(null); setCategorizationNotes(''); setVisualElements(null); setMatchDialog(null); setRefreshing(false); setFormData({title:'',description:'',date:'',location_name:'',latitude:'',longitude:'',ancestor_ids:[],era:'',external_url:'',comment:'',is_query:false,tagged_user_ids:[]}); }}
+                      disabled={refreshing}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(245,236,215,0.05)] border border-[rgba(245,236,215,0.15)] text-parchment/60 text-xs font-medium hover:bg-[rgba(245,236,215,0.1)] hover:text-parchment transition-colors disabled:opacity-50"
+                    >
+                      <X size={14} />
+                      Cancel Upload
+                    </button>
+                  </div>
                 </div>
                 {file.type.startsWith('image/') && (
                   <img src={fileUrl} alt="preview" className="max-h-64 mx-auto rounded-lg sepia-tint" />
