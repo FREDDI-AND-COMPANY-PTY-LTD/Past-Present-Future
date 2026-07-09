@@ -50,6 +50,8 @@ export default function UploadEvent() {
   const [matchDialog, setMatchDialog] = useState(null);
   const [assistantMessages, setAssistantMessages] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [showLocationPrompt, setShowLocationPrompt] = useState(true);
+  const [showDatePrompt, setShowDatePrompt] = useState(true);
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
   const cameraInputRef = useRef(null);
@@ -538,11 +540,14 @@ Return JSON with this structure:
             </div>
 
             {/* Missing location prompt */}
-            {!formData.location_name && (
+            {showLocationPrompt && !formData.location_name && (
               <div className="aged-card rounded-xl p-4 border-[rgba(201,145,58,0.25)]">
                 <div className="flex items-center gap-2 mb-2">
                   <MapPin size={18} className="text-gold" />
                   <p className="text-sm text-parchment font-medium">Event location not identified</p>
+                  <button onClick={() => setShowLocationPrompt(false)} className="ml-auto text-parchment/30 hover:text-parchment transition-colors">
+                    <X size={16} />
+                  </button>
                 </div>
                 <p className="text-xs text-parchment/40 mb-3">The AI couldn't determine where this event took place. Can you help? Enter the city, state, or address where the photo was taken or the event occurred.</p>
                 <input
@@ -556,11 +561,14 @@ Return JSON with this structure:
             )}
 
             {/* Missing date prompt */}
-            {!formData.date && (
+            {showDatePrompt && !formData.date && (
               <div className="aged-card rounded-xl p-4 border-[rgba(201,145,58,0.25)]">
                 <div className="flex items-center gap-2 mb-2">
                   <Calendar size={18} className="text-gold" />
                   <p className="text-sm text-parchment font-medium">Event date not identified</p>
+                  <button onClick={() => setShowDatePrompt(false)} className="ml-auto text-parchment/30 hover:text-parchment transition-colors">
+                    <X size={16} />
+                  </button>
                 </div>
                 <p className="text-xs text-parchment/40 mb-3">The AI couldn't determine when this event took place. If you know the exact date, enter it below. If not sure, use the "Era" field for an approximation (e.g. "circa 1950").</p>
                 <div className="grid grid-cols-2 gap-3">
@@ -614,7 +622,7 @@ Return JSON with this structure:
                       Refresh AI Analysis
                     </button>
                     <button
-                      onClick={() => { setStep(STEPS.CAPTURE); setFile(null); setFileUrl(null); setClassification(null); setDocumentSubtype(null); setExtractedData(null); setTranscribedText(''); setSuggestedTags([]); setSelectedAncestorId(''); setAttachToProfile(false); setAncestorSearch(''); setRawAiAnalysis(null); setAiConfidence(null); setCategorizationNotes(''); setVisualElements(null); setMatchDialog(null); setRefreshing(false); setFormData({title:'',description:'',date:'',location_name:'',latitude:'',longitude:'',ancestor_ids:[],era:'',external_url:'',comment:'',is_query:false,tagged_user_ids:[]}); }}
+                      onClick={() => { setStep(STEPS.CAPTURE); setFile(null); setFileUrl(null); setClassification(null); setDocumentSubtype(null); setExtractedData(null); setTranscribedText(''); setSuggestedTags([]); setSelectedAncestorId(''); setAttachToProfile(false); setAncestorSearch(''); setRawAiAnalysis(null); setAiConfidence(null); setCategorizationNotes(''); setVisualElements(null); setMatchDialog(null); setRefreshing(false); setShowLocationPrompt(true); setShowDatePrompt(true); setFormData({title:'',description:'',date:'',location_name:'',latitude:'',longitude:'',ancestor_ids:[],era:'',external_url:'',comment:'',is_query:false,tagged_user_ids:[]}); }}
                       disabled={refreshing}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(245,236,215,0.05)] border border-[rgba(245,236,215,0.15)] text-parchment/60 text-xs font-medium hover:bg-[rgba(245,236,215,0.1)] hover:text-parchment transition-colors disabled:opacity-50"
                     >
@@ -961,7 +969,7 @@ Return JSON with this structure:
             <h2 className="font-display text-2xl text-parchment mb-2">Saved to the Archive</h2>
             <p className="text-parchment/50 text-sm mb-6">Your piece of family history is now part of the Freddi archive.</p>
             <div className="flex gap-3 justify-center">
-              <button onClick={() => { setAssistantMessages([]); setStep(STEPS.CAPTURE); setFile(null); setFileUrl(null); setClassification(null); setDocumentSubtype(null); setExtractedData(null); setTranscribedText(''); setSuggestedTags([]); setSelectedAncestorId(''); setAttachToProfile(false); setAncestorSearch(''); setRawAiAnalysis(null); setAiConfidence(null); setCategorizationNotes(''); setVisualElements(null); setMatchDialog(null); setRefreshing(false); setFormData({title:'',description:'',date:'',location_name:'',latitude:'',longitude:'',ancestor_ids:[],era:'',external_url:'',comment:'',is_query:false,tagged_user_ids:[]}); }}
+              <button                 onClick={() => { setAssistantMessages([]); setStep(STEPS.CAPTURE); setFile(null); setFileUrl(null); setClassification(null); setDocumentSubtype(null); setExtractedData(null); setTranscribedText(''); setSuggestedTags([]); setSelectedAncestorId(''); setAttachToProfile(false); setAncestorSearch(''); setRawAiAnalysis(null); setAiConfidence(null); setCategorizationNotes(''); setVisualElements(null); setMatchDialog(null); setRefreshing(false); setShowLocationPrompt(true); setShowDatePrompt(true); setFormData({title:'',description:'',date:'',location_name:'',latitude:'',longitude:'',ancestor_ids:[],era:'',external_url:'',comment:'',is_query:false,tagged_user_ids:[]}); }}
                 className="px-5 py-2.5 rounded-lg border border-[rgba(201,145,58,0.3)] text-amber-light text-sm hover:bg-[rgba(201,145,58,0.08)] transition-colors">
                 Upload Another
               </button>
