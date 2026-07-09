@@ -27,7 +27,7 @@ export default function PageHero() {
         alt={photo.title || 'Archive photo'}
         className="w-full h-full object-cover sepia-tint"
       />
-      <div className="absolute inset-0 hero-overlay" />
+      <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(13,11,10,0.1) 0%, rgba(13,11,10,0.5) 100%)' }} />
       {photo.title && (
         <p className="absolute bottom-3 right-4 text-xs text-amber-light/40 italic">
           From the archive: {photo.title}
