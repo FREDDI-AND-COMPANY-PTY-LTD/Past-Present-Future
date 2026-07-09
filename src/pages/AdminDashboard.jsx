@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Activity, Flag, Upload, Edit, Trash2, GitBranch, UserPlus, CheckCircle, Clock, XCircle, Users, Loader2, Save } from 'lucide-react';
+import { Activity, Flag, Upload, Edit, Trash2, GitBranch, UserPlus, CheckCircle, Clock, XCircle, Users, Loader2, Save, AlertCircle, ExternalLink } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 
@@ -25,6 +25,7 @@ export default function AdminDashboard() {
   const [logs, setLogs] = useState([]);
   const [flags, setFlags] = useState([]);
   const [newAncestors, setNewAncestors] = useState([]);
+  const [flaggedItems, setFlaggedItems] = useState([]);
   const [tab, setTab] = useState('activity');
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState(null);
@@ -36,10 +37,12 @@ export default function AdminDashboard() {
       base44.entities.ActivityLog.list('-created_date', 50),
       base44.entities.ConflictFlag.filter({ status: 'open' }),
       base44.entities.Ancestor.filter({ review_status: 'auto_approved' }),
-    ]).then(([lg, fl, na]) => {
+      base44.entities.ContentItem.filter({ review_status: 'flagged' }),
+    ]).then(([lg, fl, na, fi]) => {
       setLogs(lg || []);
       setFlags(fl || []);
       setNewAncestors(na || []);
+      setFlaggedItems(fi || []);
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
@@ -88,6 +91,13 @@ export default function AdminDashboard() {
     } catch (e) {}
   };
 
+  const resolveFlaggedItem = async (itemId) => {
+    try {
+      await base44.entities.ContentItem.update(itemId, { review_status: 'reviewed' });
+      setFlaggedItems(prev => prev.filter(i => i.id !== itemId));
+    } catch (e) {}
+  };
+
   const resolveFlag = async (flagId, resolution) => {
     try {
       await base44.entities.ConflictFlag.update(flagId, {
@@ -117,6 +127,7 @@ export default function AdminDashboard() {
             { label: 'Total Actions', value: logs.length, icon: Activity },
             { label: 'Uploads', value: logs.filter(l => l.action_type === 'upload').length, icon: Upload },
             { label: 'Open Flags', value: flags.length, icon: Flag },
+            { label: 'Flagged Uploads', value: flaggedItems.length, icon: AlertCircle },
             { label: 'New Ancestors', value: newAncestors.length, icon: Users },
             { label: 'Branches', value: logs.filter(l => l.action_type === 'branch_create').length, icon: GitBranch },
           ].map(stat => {
@@ -140,6 +151,10 @@ export default function AdminDashboard() {
           <button onClick={() => setTab('flags')}
             className={`px-4 py-2 rounded-lg text-sm transition-all border ${tab === 'flags' ? 'bg-[rgba(201,145,58,0.12)] text-gold border-[rgba(201,145,58,0.3)]' : 'text-parchment/50 border-[rgba(201,145,58,0.1)]'}`}>
             Conflict Flags {flags.length > 0 && <span className="ml-1 px-1.5 py-0.5 rounded-full bg-[#8B6914] text-amber-light text-xs">{flags.length}</span>}
+          </button>
+          <button onClick={() => setTab('flagged')}
+            className={`px-4 py-2 rounded-lg text-sm transition-all border ${tab === 'flagged' ? 'bg-[rgba(201,145,58,0.12)] text-gold border-[rgba(201,145,58,0.3)]' : 'text-parchment/50 border-[rgba(201,145,58,0.1)]'}`}>
+            Flagged Uploads {flaggedItems.length > 0 && <span className="ml-1 px-1.5 py-0.5 rounded-full bg-[#8B6914] text-amber-light text-xs">{flaggedItems.length}</span>}
           </button>
           <button onClick={() => setTab('ancestors')}
             className={`px-4 py-2 rounded-lg text-sm transition-all border ${tab === 'ancestors' ? 'bg-[rgba(201,145,58,0.12)] text-gold border-[rgba(201,145,58,0.3)]' : 'text-parchment/50 border-[rgba(201,145,58,0.1)]'}`}>
@@ -174,6 +189,52 @@ export default function AdminDashboard() {
               </div>
             ) : (
               <p className="p-8 text-center text-parchment/50 text-sm">No activity recorded yet.</p>
+            )}
+          </div>
+        ) : tab === 'flagged' ? (
+          <div className="space-y-4">
+            {flaggedItems.length > 0 ? (
+              flaggedItems.map(item => (
+                <div key={item.id} className="aged-card rounded-xl p-5">
+                  <div className="flex items-start justify-between gap-4 mb-3">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle size={18} className="text-amber-light" />
+                      <span className="text-xs px-2 py-0.5 rounded-full border bg-[#8B6914]/30 text-amber-light border-[rgba(201,145,58,0.3)]">
+                        Flagged — Incomplete Data
+                      </span>
+                    </div>
+                    <span className="text-xs text-parchment/40">{item.created_date ? new Date(item.created_date).toLocaleString('en-AU') : ''}</span>
+                  </div>
+                  <h3 className="font-display text-lg text-parchment mb-1">{item.title || 'Untitled'}</h3>
+                  <p className="text-sm text-parchment/50 mb-3">Type: {item.content_type?.replace(/_/g, ' ') || 'uncategorized'}</p>
+
+                  {/* Show what's missing */}
+                  <div className="space-y-1 mb-3">
+                    {!item.ancestor_ids?.length && <p className="text-xs text-red-400/70 flex items-center gap-1.5"><AlertCircle size={12} /> No ancestor tagged</p>}
+                    {!item.location_name?.trim() && <p className="text-xs text-red-400/70 flex items-center gap-1.5"><AlertCircle size={12} /> No event location provided</p>}
+                    {!item.date && <p className="text-xs text-red-400/70 flex items-center gap-1.5"><AlertCircle size={12} /> No event date provided</p>}
+                    {!item.title?.trim() && <p className="text-xs text-red-400/70 flex items-center gap-1.5"><AlertCircle size={12} /> No title/description provided</p>}
+                  </div>
+
+                  {item.categorization_notes && (
+                    <p className="text-xs text-parchment/40 mb-3 whitespace-pre-line">{item.categorization_notes}</p>
+                  )}
+
+                  <div className="flex gap-2">
+                    <Link to={`/content/${item.id}`} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(201,145,58,0.1)] border border-[rgba(201,145,58,0.2)] text-amber-light text-xs font-medium hover:bg-[rgba(201,145,58,0.15)] transition-colors">
+                      <ExternalLink size={14} /> View & Edit
+                    </Link>
+                    <button onClick={() => resolveFlaggedItem(item.id)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-900/20 text-green-400 text-xs border border-green-800/30 hover:bg-green-900/30 transition-colors">
+                      <CheckCircle size={14} /> Mark Reviewed
+                    </button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="aged-card rounded-xl p-12 text-center">
+                <AlertCircle size={32} className="text-gold/30 mx-auto mb-3" />
+                <p className="text-parchment/50">No flagged uploads awaiting review.</p>
+              </div>
             )}
           </div>
         ) : tab === 'ancestors' ? (

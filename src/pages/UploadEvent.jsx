@@ -12,6 +12,21 @@ const STEPS = {
   SAVED: 'saved',
 };
 
+const INITIAL_FORM = {
+  title: '',
+  description: '',
+  date: '',
+  location_name: '',
+  latitude: '',
+  longitude: '',
+  ancestor_ids: [],
+  era: '',
+  external_url: '',
+  comment: '',
+  is_query: false,
+  tagged_user_ids: [],
+};
+
 export default function UploadEvent() {
   const [step, setStep] = useState(STEPS.CAPTURE);
   const [file, setFile] = useState(null);
@@ -25,20 +40,11 @@ export default function UploadEvent() {
   const [aiConfidence, setAiConfidence] = useState(null);
   const [categorizationNotes, setCategorizationNotes] = useState('');
   const [visualElements, setVisualElements] = useState(null);
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    date: '',
-    location_name: '',
-    latitude: '',
-    longitude: '',
-    ancestor_ids: [],
-    era: '',
-    external_url: '',
-    comment: '',
-    is_query: false,
-    tagged_user_ids: [],
-  });
+  const [formData, setFormData] = useState(INITIAL_FORM);
+  // ── STABLE missing-field tracking ──
+  // Set ONLY during runAnalysis and explicit × dismiss. NEVER affected by typing.
+  const [missingFields, setMissingFields] = useState({});
+  const [dismissedFields, setDismissedFields] = useState({});
   const [ancestors, setAncestors] = useState([]);
   const [saving, setSaving] = useState(false);
   const [selectedAncestorId, setSelectedAncestorId] = useState('');
@@ -50,8 +56,6 @@ export default function UploadEvent() {
   const [matchDialog, setMatchDialog] = useState(null);
   const [assistantMessages, setAssistantMessages] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
-  const [showLocationPrompt, setShowLocationPrompt] = useState(true);
-  const [showDatePrompt, setShowDatePrompt] = useState(true);
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
   const cameraInputRef = useRef(null);
@@ -72,6 +76,12 @@ export default function UploadEvent() {
     base44.entities.User.list().then(setUsers).catch(() => {});
     base44.auth.me().then(setUser).catch(() => {});
   }, []);
+
+  // ── Prompt visibility helpers ──
+  // A prompt shows if AI flagged it as missing AND the user hasn't dismissed it.
+  // This is completely independent of field values — typing NEVER hides a prompt.
+  const isPromptVisible = (field) => missingFields[field] && !dismissedFields[field];
+  const dismissField = (field) => setDismissedFields(prev => ({ ...prev, [field]: true }));
 
   const runAnalysis = async (url, selectedFile, feedback) => {
     const feedbackSection = feedback
@@ -148,8 +158,7 @@ Return JSON with this structure:
   },
   "suggested_title": "a short descriptive title for this item, including the type and primary person/place if known (e.g. 'Birth Certificate — Giuseppe Freddi (1898)', 'Group Photo at Beach — circa 1950', 'Concert Ticket — Melbourne Town Hall')",
   "suggested_description": "a brief description of what this item is and its potential significance to family history",
-  "suggested_tags": ["array", "of", "relevant", "tags", "e.g. 'immigration', 'Victoria', '1890s', 'Freddi bloodline', 'concert', 'poster']"
-}${feedbackSection}`,
+  "suggested_tags": ["array", "of", "relevant", "tags", "e.g. 'immigration', 'Victoria', '1890s', 'Freddi bloodline', 'concert', 'poster']" + feedbackSection}`,
       file_urls: [url],
       response_json_schema: {
         type: 'object',
@@ -241,19 +250,26 @@ Return JSON with this structure:
       || '';
 
     const eventDate = result.extracted_fields?.date_of_event || result.extracted_fields?.date_of_birth || '';
+    const eventDescription = result.suggested_description || '';
+
+    // ── STABLE missing-field tracking ──
+    // Set once during analysis based on what AI found.
+    // These flags do NOT change when the user types — only on re-analysis or explicit × dismiss.
+    setMissingFields({
+      location: !eventLocation,
+      date: !eventDate,
+      description: !eventDescription || result.type === 'uncategorized',
+    });
+    setDismissedFields({});
+
     setFormData(f => ({
       ...f,
       title: result.suggested_title || (selectedFile?.name ? selectedFile.name.replace(/\.[^.]+$/, '') : ''),
-      description: result.suggested_description || '',
+      description: eventDescription,
       date: eventDate,
       location_name: eventLocation,
       ancestor_ids: autoTaggedIds,
     }));
-
-    // Show missing-data prompts only when the AI couldn't extract values.
-    // Once shown, they stay visible while typing (dismiss via × button).
-    setShowLocationPrompt(!eventLocation);
-    setShowDatePrompt(!eventDate);
 
     if (matchedAncestorId && (
       (result.type === 'certificate' && (result.document_subtype === 'birth_certificate' || result.document_subtype === 'marriage_certificate')) ||
@@ -295,7 +311,6 @@ Return JSON with this structure:
       const uploadRes = await base44.integrations.Core.UploadFile({ file: selectedFile });
       const url = uploadRes.file_url;
       setFileUrl(url);
-
       await runAnalysis(url, selectedFile);
     } catch (e) {
       setClassification('uncategorized');
@@ -303,12 +318,59 @@ Return JSON with this structure:
     }
   };
 
+  const resetForm = () => {
+    setAssistantMessages([]);
+    setStep(STEPS.CAPTURE);
+    setFile(null);
+    setFileUrl(null);
+    setClassification(null);
+    setDocumentSubtype(null);
+    setExtractedData(null);
+    setTranscribedText('');
+    setSuggestedTags([]);
+    setSelectedAncestorId('');
+    setAttachToProfile(false);
+    setAncestorSearch('');
+    setRawAiAnalysis(null);
+    setAiConfidence(null);
+    setCategorizationNotes('');
+    setVisualElements(null);
+    setMatchDialog(null);
+    setRefreshing(false);
+    setMissingFields({});
+    setDismissedFields({});
+    setFormData(INITIAL_FORM);
+  };
+
+  // ── Required field checks at save time ──
+  const effectiveAncestorIds = selectedAncestorId
+    ? [...new Set([...formData.ancestor_ids, selectedAncestorId])]
+    : formData.ancestor_ids;
+
+  const requiredChecks = {
+    ancestor: effectiveAncestorIds.length > 0,
+    location: !!formData.location_name?.trim(),
+    date: !!formData.date,
+    description: !!formData.title?.trim(),
+  };
+
+  const missingRequired = Object.entries(requiredChecks).filter(([, v]) => !v).map(([k]) => k);
+
   const handleSave = async () => {
     setSaving(true);
     try {
       const contentType = classification;
+      const currentUser = await base44.auth.me().catch(() => null);
 
-      const user = await base44.auth.me().catch(() => null);
+      // Build notes about what's missing for admin review
+      const missingLabels = {
+        ancestor: 'No ancestor tagged',
+        location: 'No event location provided',
+        date: 'No event date provided',
+        description: 'No title/description provided',
+      };
+      const missingNotes = missingRequired.map(k => missingLabels[k]).filter(Boolean);
+      const needsReview = missingRequired.length > 0;
 
       const itemData = {
         title: formData.title,
@@ -328,11 +390,14 @@ Return JSON with this structure:
         extracted_fields: { ...extractedData, document_subtype: documentSubtype } || null,
         raw_ai_analysis: rawAiAnalysis || null,
         ai_confidence: aiConfidence,
-        categorization_notes: categorizationNotes || null,
+        categorization_notes: needsReview
+          ? `${categorizationNotes || ''}\n\n⚠ FLAGGED FOR ADMIN REVIEW — Missing data:\n${missingNotes.join('\n')}`.trim()
+          : categorizationNotes || null,
         visual_elements: visualElements || null,
-        uploaded_by_id: user?.id || null,
+        uploaded_by_id: currentUser?.id || null,
         conflict_flag_status: 'none',
-        tags: suggestedTags || [],
+        review_status: needsReview ? 'flagged' : 'pending',
+        tags: [...(suggestedTags || []), ...(needsReview ? ['admin_review_required'] : [])],
       };
 
       const createdItem = await base44.entities.ContentItem.create(itemData);
@@ -344,8 +409,8 @@ Return JSON with this structure:
           entity_id: createdItem.id,
           field_name: 'general_discussion',
           content: formData.comment.trim(),
-          author_id: user?.id || null,
-          author_name: user?.full_name || user?.email || 'Family Member',
+          author_id: currentUser?.id || null,
+          author_name: currentUser?.full_name || currentUser?.email || 'Family Member',
           parent_comment_id: null,
           tagged_user_ids: formData.tagged_user_ids.length > 0 ? formData.tagged_user_ids : null,
           is_query: formData.is_query,
@@ -364,13 +429,13 @@ Return JSON with this structure:
         }
       }
 
-      if (user) {
+      if (currentUser) {
         await base44.entities.ActivityLog.create({
           action_type: 'upload',
-          user_id: user.id,
-          user_name: user.full_name,
+          user_id: currentUser.id,
+          user_name: currentUser.full_name,
           content_item_title: formData.title,
-          description: `Uploaded "${formData.title}" (${contentType})`,
+          description: `Uploaded "${formData.title}" (${contentType})${needsReview ? ' — flagged for admin review (incomplete data)' : ''}`,
         }).catch(() => {});
       }
 
@@ -390,10 +455,6 @@ Return JSON with this structure:
     }));
   };
 
-  // Combined ancestor IDs (selectedAncestorId + tagged ancestors)
-  const effectiveAncestorIds = selectedAncestorId
-    ? [...new Set([...formData.ancestor_ids, selectedAncestorId])]
-    : formData.ancestor_ids;
   const hasAncestor = effectiveAncestorIds.length > 0;
 
   const handleMatchConfirm = (selectedIds) => {
@@ -403,6 +464,23 @@ Return JSON with this structure:
     }));
     if (selectedIds[0] && !selectedAncestorId) setSelectedAncestorId(selectedIds[0]);
     setMatchDialog(null);
+  };
+
+  // Missing-field prompt component — stable, never hides due to typing
+  const MissingFieldPrompt = ({ field, icon: Icon, title, children }) => {
+    if (!isPromptVisible(field)) return null;
+    return (
+      <div className="aged-card rounded-xl p-4 border-[rgba(201,145,58,0.25)]">
+        <div className="flex items-center gap-2 mb-2">
+          <Icon size={18} className="text-gold" />
+          <p className="text-sm text-parchment font-medium">{title}</p>
+          <button onClick={() => dismissField(field)} className="ml-auto text-parchment/30 hover:text-parchment transition-colors">
+            <X size={16} />
+          </button>
+        </div>
+        {children}
+      </div>
+    );
   };
 
   return (
@@ -545,52 +623,60 @@ Return JSON with this structure:
               </div>
             </div>
 
-            {/* Missing location prompt */}
-            {showLocationPrompt && (
-              <div className="aged-card rounded-xl p-4 border-[rgba(201,145,58,0.25)]">
-                <div className="flex items-center gap-2 mb-2">
-                  <MapPin size={18} className="text-gold" />
-                  <p className="text-sm text-parchment font-medium">Event location not identified</p>
-                  <button onClick={() => setShowLocationPrompt(false)} className="ml-auto text-parchment/30 hover:text-parchment transition-colors">
-                    <X size={16} />
-                  </button>
-                </div>
-                <p className="text-xs text-parchment/40 mb-3">The AI couldn't determine where this event took place. Can you help? Enter the city, state, or address where the photo was taken or the event occurred.</p>
-                <input
-                  value={formData.location_name}
-                  onChange={e => setFormData({ ...formData, location_name: e.target.value })}
-                  className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]"
-                  placeholder="e.g. Melbourne, Victoria, Australia"
-                  autoFocus
-                />
-              </div>
-            )}
+            {/* ── MISSING FIELD PROMPTS ── */}
+            {/* These are controlled by missingFields + dismissedFields only. */}
+            {/* Typing in any input NEVER causes these to disappear. */}
 
-            {/* Missing date prompt */}
-            {showDatePrompt && (
-              <div className="aged-card rounded-xl p-4 border-[rgba(201,145,58,0.25)]">
-                <div className="flex items-center gap-2 mb-2">
-                  <Calendar size={18} className="text-gold" />
-                  <p className="text-sm text-parchment font-medium">Event date not identified</p>
-                  <button onClick={() => setShowDatePrompt(false)} className="ml-auto text-parchment/30 hover:text-parchment transition-colors">
-                    <X size={16} />
-                  </button>
+            <MissingFieldPrompt field="location" icon={MapPin} title="Event location not identified">
+              <p className="text-xs text-parchment/40 mb-3">The AI couldn't determine where this event took place. Can you help? Enter the city, state, or address where the photo was taken or the event occurred — not your current location.</p>
+              <input
+                value={formData.location_name}
+                onChange={e => setFormData(f => ({ ...f, location_name: e.target.value }))}
+                className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]"
+                placeholder="e.g. Melbourne, Victoria, Australia"
+              />
+            </MissingFieldPrompt>
+
+            <MissingFieldPrompt field="date" icon={Calendar} title="Event date not identified">
+              <p className="text-xs text-parchment/40 mb-3">The AI couldn't determine when this event took place. If you know the exact date, enter it below. If not sure, use the "Era" field for an approximation (e.g. "circa 1950").</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-parchment/50 mb-1 block">Exact date (if known)</label>
+                  <input type="date" value={formData.date} onChange={e => setFormData(f => ({ ...f, date: e.target.value }))}
+                    className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]" />
                 </div>
-                <p className="text-xs text-parchment/40 mb-3">The AI couldn't determine when this event took place. If you know the exact date, enter it below. If not sure, use the "Era" field for an approximation (e.g. "circa 1950").</p>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs text-parchment/50 mb-1 block">Exact date (if known)</label>
-                    <input type="date" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })}
-                      className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-parchment/50 mb-1 block">Approximate era</label>
-                    <input value={formData.era} onChange={e => setFormData({ ...formData, era: e.target.value })}
-                      className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]" placeholder="e.g. circa 1950" />
-                  </div>
+                <div>
+                  <label className="text-xs text-parchment/50 mb-1 block">Approximate era</label>
+                  <input value={formData.era} onChange={e => setFormData(f => ({ ...f, era: e.target.value }))}
+                    className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]" placeholder="e.g. circa 1950" />
                 </div>
               </div>
-            )}
+            </MissingFieldPrompt>
+
+            <MissingFieldPrompt field="description" icon={HelpCircle} title="Event description not identified">
+              <p className="text-xs text-parchment/40 mb-3">The AI couldn't confidently describe what this event or item is. Please enter a title and description so the archive can categorise it properly.</p>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs text-parchment/50 mb-1 block">Title</label>
+                  <input
+                    value={formData.title}
+                    onChange={e => setFormData(f => ({ ...f, title: e.target.value }))}
+                    className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]"
+                    placeholder="e.g. Birth Certificate — Giuseppe Freddi (1898)"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-parchment/50 mb-1 block">Description</label>
+                  <textarea
+                    value={formData.description}
+                    onChange={e => setFormData(f => ({ ...f, description: e.target.value }))}
+                    rows={2}
+                    className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]"
+                    placeholder="What is this item? (e.g. A photograph of the family home in Venice, circa 1920)"
+                  />
+                </div>
+              </div>
+            </MissingFieldPrompt>
 
             {/* Attach certificate to profile */}
             {canAttachToProfile && (
@@ -628,7 +714,7 @@ Return JSON with this structure:
                       Refresh AI Analysis
                     </button>
                     <button
-                      onClick={() => { setStep(STEPS.CAPTURE); setFile(null); setFileUrl(null); setClassification(null); setDocumentSubtype(null); setExtractedData(null); setTranscribedText(''); setSuggestedTags([]); setSelectedAncestorId(''); setAttachToProfile(false); setAncestorSearch(''); setRawAiAnalysis(null); setAiConfidence(null); setCategorizationNotes(''); setVisualElements(null); setMatchDialog(null); setRefreshing(false); setShowLocationPrompt(true); setShowDatePrompt(true); setFormData({title:'',description:'',date:'',location_name:'',latitude:'',longitude:'',ancestor_ids:[],era:'',external_url:'',comment:'',is_query:false,tagged_user_ids:[]}); }}
+                      onClick={resetForm}
                       disabled={refreshing}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(245,236,215,0.05)] border border-[rgba(245,236,215,0.15)] text-parchment/60 text-xs font-medium hover:bg-[rgba(245,236,215,0.1)] hover:text-parchment transition-colors disabled:opacity-50"
                     >
@@ -789,51 +875,58 @@ Return JSON with this structure:
             <div className="aged-card rounded-xl p-6 space-y-4">
               <h3 className="font-display text-lg text-parchment">Event Details</h3>
               <div>
-                <label className="text-sm text-parchment/60 mb-1 block">Title</label>
-                <input value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})}
+                <label className="text-sm text-parchment/60 mb-1 block flex items-center gap-1">
+                  Title <span className="text-[#C9913A] text-xs">*</span>
+                  {!requiredChecks.description && <span className="text-xs text-red-400/70 ml-1">required</span>}
+                </label>
+                <input value={formData.title} onChange={e => setFormData(f => ({ ...f, title: e.target.value }))}
                   className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-parchment focus:outline-none focus:border-[#C9913A]" />
               </div>
               <div>
                 <label className="text-sm text-parchment/60 mb-1 block">Description</label>
-                <textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} rows={3}
+                <textarea value={formData.description} onChange={e => setFormData(f => ({ ...f, description: e.target.value }))} rows={3}
                   className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-parchment focus:outline-none focus:border-[#C9913A]" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm text-parchment/60 mb-1 block">Date</label>
-                  <input type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})}
+                  <label className="text-sm text-parchment/60 mb-1 block flex items-center gap-1">
+                    Date <span className="text-[#C9913A] text-xs">*</span>
+                    {!requiredChecks.date && <span className="text-xs text-red-400/70 ml-1">required</span>}
+                  </label>
+                  <input type="date" value={formData.date} onChange={e => setFormData(f => ({ ...f, date: e.target.value }))}
                     className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-parchment focus:outline-none focus:border-[#C9913A]" />
                 </div>
                 <div>
                   <label className="text-sm text-parchment/60 mb-1 block">Era (optional)</label>
-                  <input value={formData.era} onChange={e => setFormData({...formData, era: e.target.value})}
+                  <input value={formData.era} onChange={e => setFormData(f => ({ ...f, era: e.target.value }))}
                     className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-parchment focus:outline-none focus:border-[#C9913A]" placeholder="e.g. Early 1900s" />
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div className="col-span-1">
-                  <label className="text-sm text-parchment/60 mb-1 block">Event Location <span className="text-parchment/30 text-xs">(where the event took place)</span></label>
-                  <input value={formData.location_name} onChange={e => setFormData({...formData, location_name: e.target.value})}
+                  <label className="text-sm text-parchment/60 mb-1 block flex items-center gap-1">
+                    Event Location <span className="text-[#C9913A] text-xs">*</span>
+                    {!requiredChecks.location && <span className="text-xs text-red-400/70 ml-1">required</span>}
+                  </label>
+                  <input value={formData.location_name} onChange={e => setFormData(f => ({ ...f, location_name: e.target.value }))}
                     className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-parchment focus:outline-none focus:border-[#C9913A]" placeholder="Where the photo was taken or event occurred" />
                 </div>
                 <div>
                   <label className="text-sm text-parchment/60 mb-1 block">Latitude</label>
-                  <input type="number" step="any" value={formData.latitude} onChange={e => setFormData({...formData, latitude: e.target.value})}
+                  <input type="number" step="any" value={formData.latitude} onChange={e => setFormData(f => ({ ...f, latitude: e.target.value }))}
                     className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-parchment focus:outline-none focus:border-[#C9913A]" placeholder="-37.81" />
                 </div>
                 <div>
                   <label className="text-sm text-parchment/60 mb-1 block">Longitude</label>
-                  <input type="number" step="any" value={formData.longitude} onChange={e => setFormData({...formData, longitude: e.target.value})}
+                  <input type="number" step="any" value={formData.longitude} onChange={e => setFormData(f => ({ ...f, longitude: e.target.value }))}
                     className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-parchment focus:outline-none focus:border-[#C9913A]" placeholder="144.96" />
                 </div>
               </div>
-              {classification === 'video' || true ? (
-                <div>
-                  <label className="text-sm text-parchment/60 mb-1 block">External Video URL (optional)</label>
-                  <input value={formData.external_url} onChange={e => setFormData({...formData, external_url: e.target.value})}
-                    className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-parchment focus:outline-none focus:border-[#C9913A]" placeholder="YouTube or Vimeo link" />
-                </div>
-              ) : null}
+              <div>
+                <label className="text-sm text-parchment/60 mb-1 block">External Video URL (optional)</label>
+                <input value={formData.external_url} onChange={e => setFormData(f => ({ ...f, external_url: e.target.value }))}
+                  className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-parchment focus:outline-none focus:border-[#C9913A]" placeholder="YouTube or Vimeo link" />
+              </div>
 
               {/* Suggested tags */}
               {suggestedTags.length > 0 && (
@@ -864,14 +957,14 @@ Return JSON with this structure:
                 </div>
                 <textarea
                   value={formData.comment}
-                  onChange={e => setFormData({...formData, comment: e.target.value})}
+                  onChange={e => setFormData(f => ({ ...f, comment: e.target.value }))}
                   rows={3}
                   className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-parchment focus:outline-none focus:border-[#C9913A] placeholder:text-parchment/30"
                   placeholder="Add a comment or raise a query about this event..."
                 />
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <button
-                    onClick={() => setFormData({...formData, is_query: !formData.is_query})}
+                    onClick={() => setFormData(f => ({ ...f, is_query: !f.is_query }))}
                     className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs border transition-colors ${formData.is_query ? 'border-[#C9913A] text-gold bg-[rgba(201,145,58,0.08)]' : 'border-[rgba(201,145,58,0.2)] text-amber-light/70 hover:border-[rgba(201,145,58,0.4)]'}`}
                   >
                     <HelpCircle size={12} /> {formData.is_query ? 'Query' : 'Comment'}
@@ -885,7 +978,7 @@ Return JSON with this structure:
                   {users.filter(u => u.id !== user?.id && formData.tagged_user_ids.includes(u.id)).map(u => (
                     <span key={u.id} className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-[rgba(201,145,58,0.08)] text-amber-light/80 border border-[rgba(201,145,58,0.15)]">
                       {u.full_name || u.email}
-                      <button onClick={() => setFormData({...formData, tagged_user_ids: formData.tagged_user_ids.filter(id => id !== u.id)})} className="text-parchment/30 hover:text-parchment">✕</button>
+                      <button onClick={() => setFormData(f => ({ ...f, tagged_user_ids: f.tagged_user_ids.filter(id => id !== u.id) }))} className="text-parchment/30 hover:text-parchment">✕</button>
                     </span>
                   ))}
                 </div>
@@ -921,7 +1014,10 @@ Return JSON with this structure:
 
               {/* Ancestor tagging */}
               <div>
-                <label className="text-sm text-parchment/60 mb-2 block">Tag Ancestors</label>
+                <label className="text-sm text-parchment/60 mb-2 block flex items-center gap-1">
+                  Tag Ancestors <span className="text-[#C9913A] text-xs">*</span>
+                  {!requiredChecks.ancestor && <span className="text-xs text-red-400/70 ml-1">at least one required</span>}
+                </label>
                 <div className="flex flex-wrap gap-2">
                   {ancestors.map(a => (
                     <button
@@ -940,29 +1036,26 @@ Return JSON with this structure:
               </div>
             </div>
 
-            {/* Ancestor requirement warning */}
-            {!hasAncestor && (
-              <div className="aged-card rounded-xl p-4 flex items-center gap-3 border-[rgba(201,145,58,0.3)]">
-                <AlertCircle size={20} className="text-gold flex-shrink-0" />
+            {/* Incomplete data warning — shows what will be flagged for admin review */}
+            {missingRequired.length > 0 && (
+              <div className="aged-card rounded-xl p-4 flex items-start gap-3 border-[rgba(201,145,58,0.3)]">
+                <AlertCircle size={20} className="text-gold flex-shrink-0 mt-0.5" />
                 <div className="flex-1">
-                  <p className="text-sm text-parchment font-medium">An ancestor is required</p>
-                  <p className="text-xs text-parchment/40">Every event in the archive must be associated with at least one ancestor. Please tag one below.</p>
+                  <p className="text-sm text-parchment font-medium">Incomplete event data</p>
+                  <p className="text-xs text-parchment/40 mt-1">
+                    The following required data is missing: <span className="text-amber-light/70">{missingRequired.map(m => ({ ancestor: 'Ancestor', location: 'Event Location', date: 'Event Date', description: 'Title/Description' })[m]).join(', ')}</span>.
+                    You can still save this upload — it will be flagged for admin review so the missing information can be completed later.
+                  </p>
                 </div>
-                <button
-                  onClick={() => setMatchDialog({ mode: 'prompt' })}
-                  className="px-3 py-1.5 rounded-lg bg-[#C9913A] text-charcoal text-xs font-semibold hover:opacity-90 transition-opacity flex-shrink-0"
-                >
-                  Select
-                </button>
               </div>
             )}
 
             <button
               onClick={handleSave}
-              disabled={saving || !formData.title || !hasAncestor}
+              disabled={saving}
               className="w-full py-3 rounded-lg bg-gradient-to-r from-[#C9913A] to-[#E8C97A] text-charcoal font-semibold disabled:opacity-50 hover:opacity-90 transition-opacity gold-glow"
             >
-              {saving ? <Loader2 size={20} className="animate-spin mx-auto" /> : 'Save to Archive'}
+              {saving ? <Loader2 size={20} className="animate-spin mx-auto" /> : missingRequired.length > 0 ? 'Save to Archive (flagged for review)' : 'Save to Archive'}
             </button>
           </div>
         )}
@@ -975,8 +1068,10 @@ Return JSON with this structure:
             <h2 className="font-display text-2xl text-parchment mb-2">Saved to the Archive</h2>
             <p className="text-parchment/50 text-sm mb-6">Your piece of family history is now part of the Freddi archive.</p>
             <div className="flex gap-3 justify-center">
-              <button                 onClick={() => { setAssistantMessages([]); setStep(STEPS.CAPTURE); setFile(null); setFileUrl(null); setClassification(null); setDocumentSubtype(null); setExtractedData(null); setTranscribedText(''); setSuggestedTags([]); setSelectedAncestorId(''); setAttachToProfile(false); setAncestorSearch(''); setRawAiAnalysis(null); setAiConfidence(null); setCategorizationNotes(''); setVisualElements(null); setMatchDialog(null); setRefreshing(false); setShowLocationPrompt(true); setShowDatePrompt(true); setFormData({title:'',description:'',date:'',location_name:'',latitude:'',longitude:'',ancestor_ids:[],era:'',external_url:'',comment:'',is_query:false,tagged_user_ids:[]}); }}
-                className="px-5 py-2.5 rounded-lg border border-[rgba(201,145,58,0.3)] text-amber-light text-sm hover:bg-[rgba(201,145,58,0.08)] transition-colors">
+              <button
+                onClick={resetForm}
+                className="px-5 py-2.5 rounded-lg border border-[rgba(201,145,58,0.3)] text-amber-light text-sm hover:bg-[rgba(201,145,58,0.08)] transition-colors"
+              >
                 Upload Another
               </button>
               <a href="/" className="px-5 py-2.5 rounded-lg bg-[#C9913A] text-charcoal text-sm font-semibold hover:opacity-90 transition-opacity inline-block">
