@@ -27,22 +27,6 @@ const INITIAL_FORM = {
   tagged_user_ids: [],
 };
 
-function MissingFieldPrompt({ visible, onDismiss, icon: Icon, title, children }) {
-  if (!visible) return null;
-  return (
-    <div className="aged-card rounded-xl p-4 border-[rgba(201,145,58,0.25)]">
-      <div className="flex items-center gap-2 mb-2">
-        <Icon size={18} className="text-gold" />
-        <p className="text-sm text-parchment font-medium">{title}</p>
-        <button onClick={onDismiss} className="ml-auto text-parchment/30 hover:text-parchment transition-colors">
-          <X size={16} />
-        </button>
-      </div>
-      {children}
-    </div>
-  );
-}
-
 export default function UploadEvent() {
   const [step, setStep] = useState(STEPS.CAPTURE);
   const [file, setFile] = useState(null);
@@ -626,56 +610,83 @@ Return JSON with this structure:
             {/* These are controlled by missingFields + dismissedFields only. */}
             {/* Typing in any input NEVER causes these to disappear. */}
 
-            <MissingFieldPrompt visible={isPromptVisible('location')} onDismiss={() => dismissField('location')} icon={MapPin} title="Event location not identified">
-              <p className="text-xs text-parchment/40 mb-3">The AI couldn't determine where this event took place. Can you help? Enter the city, state, or address where the photo was taken or the event occurred — not your current location.</p>
-              <input
-                value={formData.location_name}
-                onChange={e => setFormData(f => ({ ...f, location_name: e.target.value }))}
-                className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]"
-                placeholder="e.g. Melbourne, Victoria, Australia"
-              />
-            </MissingFieldPrompt>
-
-            <MissingFieldPrompt visible={isPromptVisible('date')} onDismiss={() => dismissField('date')} icon={Calendar} title="Event date not identified">
-              <p className="text-xs text-parchment/40 mb-3">The AI couldn't determine when this event took place. If you know the exact date, enter it below. If not sure, use the "Era" field for an approximation (e.g. "circa 1950").</p>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-parchment/50 mb-1 block">Exact date (if known)</label>
-                  <input type="date" value={formData.date} onChange={e => setFormData(f => ({ ...f, date: e.target.value }))}
-                    className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]" />
+            {isPromptVisible('location') && (
+              <div className="aged-card rounded-xl p-4 border-[rgba(201,145,58,0.25)]">
+                <div className="flex items-center gap-2 mb-2">
+                  <MapPin size={18} className="text-gold" />
+                  <p className="text-sm text-parchment font-medium">Event location not identified</p>
+                  <button onClick={() => dismissField('location')} className="ml-auto text-parchment/30 hover:text-parchment transition-colors">
+                    <X size={16} />
+                  </button>
                 </div>
-                <div>
-                  <label className="text-xs text-parchment/50 mb-1 block">Approximate era</label>
-                  <input value={formData.era} onChange={e => setFormData(f => ({ ...f, era: e.target.value }))}
-                    className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]" placeholder="e.g. circa 1950" />
+                <p className="text-xs text-parchment/40 mb-3">The AI couldn't determine where this event took place. Can you help? Enter the city, state, or address where the photo was taken or the event occurred — not your current location.</p>
+                <input
+                  value={formData.location_name}
+                  onChange={e => setFormData(f => ({ ...f, location_name: e.target.value }))}
+                  className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]"
+                  placeholder="e.g. Melbourne, Victoria, Australia"
+                />
+              </div>
+            )}
+
+            {isPromptVisible('date') && (
+              <div className="aged-card rounded-xl p-4 border-[rgba(201,145,58,0.25)]">
+                <div className="flex items-center gap-2 mb-2">
+                  <Calendar size={18} className="text-gold" />
+                  <p className="text-sm text-parchment font-medium">Event date not identified</p>
+                  <button onClick={() => dismissField('date')} className="ml-auto text-parchment/30 hover:text-parchment transition-colors">
+                    <X size={16} />
+                  </button>
+                </div>
+                <p className="text-xs text-parchment/40 mb-3">The AI couldn't determine when this event took place. If you know the exact date, enter it below. If not sure, use the "Era" field for an approximation (e.g. "circa 1950").</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-parchment/50 mb-1 block">Exact date (if known)</label>
+                    <input type="date" value={formData.date} onChange={e => setFormData(f => ({ ...f, date: e.target.value }))}
+                      className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-parchment/50 mb-1 block">Approximate era</label>
+                    <input value={formData.era} onChange={e => setFormData(f => ({ ...f, era: e.target.value }))}
+                      className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]" placeholder="e.g. circa 1950" />
+                  </div>
                 </div>
               </div>
-            </MissingFieldPrompt>
+            )}
 
-            <MissingFieldPrompt visible={isPromptVisible('description')} onDismiss={() => dismissField('description')} icon={HelpCircle} title="Event description not identified">
-              <p className="text-xs text-parchment/40 mb-3">The AI couldn't confidently describe what this event or item is. Please enter a title and description so the archive can categorise it properly.</p>
-              <div className="space-y-3">
-                <div>
-                  <label className="text-xs text-parchment/50 mb-1 block">Title</label>
-                  <input
-                    value={formData.title}
-                    onChange={e => setFormData(f => ({ ...f, title: e.target.value }))}
-                    className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]"
-                    placeholder="e.g. Birth Certificate — Giuseppe Freddi (1898)"
-                  />
+            {isPromptVisible('description') && (
+              <div className="aged-card rounded-xl p-4 border-[rgba(201,145,58,0.25)]">
+                <div className="flex items-center gap-2 mb-2">
+                  <HelpCircle size={18} className="text-gold" />
+                  <p className="text-sm text-parchment font-medium">Event description not identified</p>
+                  <button onClick={() => dismissField('description')} className="ml-auto text-parchment/30 hover:text-parchment transition-colors">
+                    <X size={16} />
+                  </button>
                 </div>
-                <div>
-                  <label className="text-xs text-parchment/50 mb-1 block">Description</label>
-                  <textarea
-                    value={formData.description}
-                    onChange={e => setFormData(f => ({ ...f, description: e.target.value }))}
-                    rows={2}
-                    className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]"
-                    placeholder="What is this item? (e.g. A photograph of the family home in Venice, circa 1920)"
-                  />
+                <p className="text-xs text-parchment/40 mb-3">The AI couldn't confidently describe what this event or item is. Please enter a title and description so the archive can categorise it properly.</p>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs text-parchment/50 mb-1 block">Title</label>
+                    <input
+                      value={formData.title}
+                      onChange={e => setFormData(f => ({ ...f, title: e.target.value }))}
+                      className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]"
+                      placeholder="e.g. Birth Certificate — Giuseppe Freddi (1898)"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-parchment/50 mb-1 block">Description</label>
+                    <textarea
+                      value={formData.description}
+                      onChange={e => setFormData(f => ({ ...f, description: e.target.value }))}
+                      rows={2}
+                      className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]"
+                      placeholder="What is this item? (e.g. A photograph of the family home in Venice, circa 1920)"
+                    />
+                  </div>
                 </div>
               </div>
-            </MissingFieldPrompt>
+            )}
 
             {/* Attach certificate to profile */}
             {canAttachToProfile && (
