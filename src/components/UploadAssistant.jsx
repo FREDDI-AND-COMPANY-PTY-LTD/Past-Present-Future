@@ -15,6 +15,7 @@ UPLOAD EVENT PAGE:
 - Users can verify and edit all AI-extracted data before saving.
 - Event Location should reflect WHERE THE EVENT DEPICTED took place (where the photo was taken, where the certificate was issued, where the letter was written) — NOT where the user is currently located.
 - Latitude and longitude can be manually entered for map pin placement.
+- A "Refresh AI Analysis" button near the preview lets you re-process the file incorporating any guidance or corrections discussed in this chat.
 
 COMMENT & QUERY SYSTEM:
 - Users can add a comment or raise a query about their upload.
@@ -53,9 +54,8 @@ const SUGGESTED_QUESTIONS = [
   "How does the searchable database work?",
 ];
 
-export default function UploadAssistant() {
+export default function UploadAssistant({ messages, setMessages }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);

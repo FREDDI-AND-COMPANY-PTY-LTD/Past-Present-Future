@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, Upload, FileText, Image as ImageIcon, Award, Loader2, Check, Sparkles, Newspaper, Tag, Link2, Search, UserPlus, BookUser, IdCard, Mail, Heart, HelpCircle, Eye, MessageSquare, AlertCircle, MapPin, Calendar } from 'lucide-react';
+import { Camera, Upload, FileText, Image as ImageIcon, Award, Loader2, Check, Sparkles, Newspaper, Tag, Link2, Search, UserPlus, BookUser, IdCard, Mail, Heart, HelpCircle, Eye, MessageSquare, AlertCircle, MapPin, Calendar, RefreshCw } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import UploadAssistant from '@/components/UploadAssistant';
@@ -48,6 +48,8 @@ export default function UploadEvent() {
   const [user, setUser] = useState(null);
   const [showTagPicker, setShowTagPicker] = useState(false);
   const [matchDialog, setMatchDialog] = useState(null);
+  const [assistantMessages, setAssistantMessages] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
   const cameraInputRef = useRef(null);
@@ -69,17 +71,13 @@ export default function UploadEvent() {
     base44.auth.me().then(setUser).catch(() => {});
   }, []);
 
-  const handleFile = async (selectedFile) => {
-    if (!selectedFile) return;
-    setFile(selectedFile);
-    setStep(STEPS.ANALYSING);
-    try {
-      const uploadRes = await base44.integrations.Core.UploadFile({ file: selectedFile });
-      const url = uploadRes.file_url;
-      setFileUrl(url);
+  const runAnalysis = async (url, selectedFile, feedback) => {
+    const feedbackSection = feedback
+      ? `\n\n--- USER FEEDBACK / CORRECTIONS ---\nThe user has provided the following guidance after reviewing the initial analysis. Please incorporate these corrections and re-analyse the image accordingly, adjusting classification, extracted fields, transcription, title, description, tags, and any other relevant data:\n${feedback}\n--- END USER FEEDBACK ---\n`
+      : '';
 
-      const result = await base44.integrations.Core.InvokeLLM({
-        prompt: `You are a sophisticated genealogical and historical document analyst working on a family history archive. You are analysing an image that could be ANYTHING — a photograph (portrait, landscape, group photo), a document (certificate, letter, passport, newspaper), a poster, a concert ticket, a postcard, a drawing, a map, a receipt, or any other type of visual artifact from a family's history.
+    const result = await base44.integrations.Core.InvokeLLM({
+      prompt: `You are a sophisticated genealogical and historical document analyst working on a family history archive. You are analysing an image that could be ANYTHING — a photograph (portrait, landscape, group photo), a document (certificate, letter, passport, newspaper), a poster, a concert ticket, a postcard, a drawing, a map, a receipt, or any other type of visual artifact from a family's history.
 
 Your job is to:
 1. Identify what the image IS — but be honest about uncertainty
@@ -149,135 +147,148 @@ Return JSON with this structure:
   "suggested_title": "a short descriptive title for this item, including the type and primary person/place if known (e.g. 'Birth Certificate — Giuseppe Freddi (1898)', 'Group Photo at Beach — circa 1950', 'Concert Ticket — Melbourne Town Hall')",
   "suggested_description": "a brief description of what this item is and its potential significance to family history",
   "suggested_tags": ["array", "of", "relevant", "tags", "e.g. 'immigration', 'Victoria', '1890s', 'Freddi bloodline', 'concert', 'poster']"
-}`,
-  file_urls: [url],
-  response_json_schema: {
-    type: 'object',
-    properties: {
-      type: { type: 'string', enum: ['photo', 'narrative', 'correspondence', 'press_clipping', 'passport', 'identity_document', 'certificate', 'memorial', 'uncategorized'] },
-      document_subtype: { type: 'string' },
-      ai_confidence: { type: 'number' },
-      categorization_notes: { type: 'string' },
-      transcription: { type: 'string' },
-      extracted_fields: { type: 'object' },
-      visual_elements: { type: 'object' },
-      suggested_title: { type: 'string' },
-      suggested_description: { type: 'string' },
-      suggested_tags: { type: 'array', items: { type: 'string' } },
-    },
-  },
-      });
+}${feedbackSection}`,
+      file_urls: [url],
+      response_json_schema: {
+        type: 'object',
+        properties: {
+          type: { type: 'string', enum: ['photo', 'narrative', 'correspondence', 'press_clipping', 'passport', 'identity_document', 'certificate', 'memorial', 'uncategorized'] },
+          document_subtype: { type: 'string' },
+          ai_confidence: { type: 'number' },
+          categorization_notes: { type: 'string' },
+          transcription: { type: 'string' },
+          extracted_fields: { type: 'object' },
+          visual_elements: { type: 'object' },
+          suggested_title: { type: 'string' },
+          suggested_description: { type: 'string' },
+          suggested_tags: { type: 'array', items: { type: 'string' } },
+        },
+      },
+    });
 
-      setClassification(result.type);
-      if (result.document_subtype) setDocumentSubtype(result.document_subtype);
-      if (result.transcription) setTranscribedText(result.transcription);
-      if (result.extracted_fields) setExtractedData(result.extracted_fields);
-      if (result.suggested_tags) setSuggestedTags(result.suggested_tags);
-      if (result.visual_elements) setVisualElements(result.visual_elements);
-      if (result.ai_confidence !== undefined) setAiConfidence(result.ai_confidence);
-      if (result.categorization_notes) setCategorizationNotes(result.categorization_notes);
-      setRawAiAnalysis(result);
+    setClassification(result.type);
+    if (result.document_subtype) setDocumentSubtype(result.document_subtype);
+    if (result.transcription) setTranscribedText(result.transcription);
+    if (result.extracted_fields) setExtractedData(result.extracted_fields);
+    if (result.suggested_tags) setSuggestedTags(result.suggested_tags);
+    if (result.visual_elements) setVisualElements(result.visual_elements);
+    if (result.ai_confidence !== undefined) setAiConfidence(result.ai_confidence);
+    if (result.categorization_notes) setCategorizationNotes(result.categorization_notes);
+    setRawAiAnalysis(result);
 
-      // ── Ancestor name matching ──
-      // Collect ALL text from the AI result to search for ancestor names
-      const allTextSources = [
-        result.extracted_fields?.full_name,
-        result.extracted_fields?.mother_name,
-        result.extracted_fields?.father_name,
-        result.extracted_fields?.spouse_name,
-        result.extracted_fields?.witnesses,
-        result.extracted_fields?.given_names,
-        result.extracted_fields?.surname,
-        result.suggested_title,
-        result.suggested_description,
-        result.transcription,
-        ...(result.visual_elements?.people || []),
-        ...(result.visual_elements?.text_elements || []),
-        ...(result.visual_elements?.locations_visible || []),
-      ].filter(Boolean).join(' ');
+    // ── Ancestor name matching ──
+    const allTextSources = [
+      result.extracted_fields?.full_name,
+      result.extracted_fields?.mother_name,
+      result.extracted_fields?.father_name,
+      result.extracted_fields?.spouse_name,
+      result.extracted_fields?.witnesses,
+      result.extracted_fields?.given_names,
+      result.extracted_fields?.surname,
+      result.suggested_title,
+      result.suggested_description,
+      result.transcription,
+      ...(result.visual_elements?.people || []),
+      ...(result.visual_elements?.text_elements || []),
+      ...(result.visual_elements?.locations_visible || []),
+    ].filter(Boolean).join(' ');
 
-      const lowerText = allTextSources.toLowerCase();
+    const lowerText = allTextSources.toLowerCase();
+    const exactMatches = [];
+    const nearMatches = [];
 
-      const exactMatches = [];
-      const nearMatches = [];
+    if (ancestors.length > 0 && allTextSources.trim()) {
+      for (const ancestor of ancestors) {
+        const fullName = (ancestor.full_name || '').toLowerCase().trim();
+        if (!fullName) continue;
+        const parts = fullName.split(/\s+/);
+        const givenName = parts[0];
+        const surname = parts.length > 1 ? parts[parts.length - 1] : '';
 
-      if (ancestors.length > 0 && allTextSources.trim()) {
-        for (const ancestor of ancestors) {
-          const fullName = (ancestor.full_name || '').toLowerCase().trim();
-          if (!fullName) continue;
-          const parts = fullName.split(/\s+/);
-          const givenName = parts[0];
-          const surname = parts.length > 1 ? parts[parts.length - 1] : '';
-
-          // Exact: full name string appears in text
-          if (lowerText.includes(fullName)) {
-            exactMatches.push({ ancestor, reason: 'Full name found in extracted data' });
-          }
-          // Near: given name + surname both appear (but not as the full name string)
-          else if (surname && givenName.length > 2 && lowerText.includes(surname) && lowerText.includes(givenName)) {
-            nearMatches.push({ ancestor, reason: `First name "${givenName}" and surname "${surname}" found separately` });
-          }
-          // Near: given name appears, and only one ancestor has this given name
-          else if (givenName.length > 2 && lowerText.includes(givenName)) {
-            const sameGivenName = ancestors.filter(a =>
-              (a.full_name || '').toLowerCase().split(/\s+/)[0] === givenName
-            );
-            if (sameGivenName.length === 1) {
-              nearMatches.push({ ancestor, reason: `First name "${givenName}" found (unique match)` });
-            }
+        if (lowerText.includes(fullName)) {
+          exactMatches.push({ ancestor, reason: 'Full name found in extracted data' });
+        } else if (surname && givenName.length > 2 && lowerText.includes(surname) && lowerText.includes(givenName)) {
+          nearMatches.push({ ancestor, reason: `First name "${givenName}" and surname "${surname}" found separately` });
+        } else if (givenName.length > 2 && lowerText.includes(givenName)) {
+          const sameGivenName = ancestors.filter(a =>
+            (a.full_name || '').toLowerCase().split(/\s+/)[0] === givenName
+          );
+          if (sameGivenName.length === 1) {
+            nearMatches.push({ ancestor, reason: `First name "${givenName}" found (unique match)` });
           }
         }
       }
+    }
 
-      // Auto-tag exact matches silently
-      const exactMatchIds = exactMatches.map(m => m.ancestor.id);
-      let autoTaggedIds = [...exactMatchIds];
+    const exactMatchIds = exactMatches.map(m => m.ancestor.id);
+    let autoTaggedIds = [...exactMatchIds];
+    if (selectedAncestorId) autoTaggedIds.push(selectedAncestorId);
+    autoTaggedIds = [...new Set(autoTaggedIds)];
 
-      // If the user pre-selected an ancestor, keep it
-      if (selectedAncestorId) autoTaggedIds.push(selectedAncestorId);
-      // Deduplicate
-      autoTaggedIds = [...new Set(autoTaggedIds)];
+    const matchedAncestorId = exactMatchIds[0] || selectedAncestorId || '';
+    if (matchedAncestorId) setSelectedAncestorId(matchedAncestorId);
 
-      const matchedAncestorId = exactMatchIds[0] || selectedAncestorId || '';
-      if (matchedAncestorId) setSelectedAncestorId(matchedAncestorId);
+    const eventLocation = result.event_location
+      || result.extracted_fields?.place_of_event
+      || result.extracted_fields?.place_of_birth
+      || result.extracted_fields?.place_of_death
+      || result.extracted_fields?.place_of_issue
+      || result.extracted_fields?.residence_address
+      || result.extracted_fields?.port_of_arrival
+      || result.visual_elements?.locations_visible?.[0]
+      || '';
 
-      const eventLocation = result.event_location
-        || result.extracted_fields?.place_of_event
-        || result.extracted_fields?.place_of_birth
-        || result.extracted_fields?.place_of_death
-        || result.extracted_fields?.place_of_issue
-        || result.extracted_fields?.residence_address
-        || result.extracted_fields?.port_of_arrival
-        || result.visual_elements?.locations_visible?.[0]
-        || '';
+    setFormData(f => ({
+      ...f,
+      title: result.suggested_title || (selectedFile?.name ? selectedFile.name.replace(/\.[^.]+$/, '') : ''),
+      description: result.suggested_description || '',
+      date: result.extracted_fields?.date_of_event || result.extracted_fields?.date_of_birth || '',
+      location_name: eventLocation,
+      ancestor_ids: autoTaggedIds,
+    }));
 
-      setFormData(f => ({
-        ...f,
-        title: result.suggested_title || (selectedFile?.name ? selectedFile.name.replace(/\.[^.]+$/, '') : ''),
-        description: result.suggested_description || '',
-        date: result.extracted_fields?.date_of_event || result.extracted_fields?.date_of_birth || '',
-        location_name: eventLocation,
-        ancestor_ids: autoTaggedIds,
-      }));
+    if (matchedAncestorId && (
+      (result.type === 'certificate' && (result.document_subtype === 'birth_certificate' || result.document_subtype === 'marriage_certificate')) ||
+      result.type === 'passport'
+    )) {
+      setAttachToProfile(true);
+    }
 
-      // Auto-suggest attaching certificate to ancestor profile
-      if (matchedAncestorId && (
-        (result.type === 'certificate' && (result.document_subtype === 'birth_certificate' || result.document_subtype === 'marriage_certificate')) ||
-        result.type === 'passport'
-      )) {
-        setAttachToProfile(true);
-      }
+    setStep(STEPS.FORM);
 
+    if (exactMatches.length === 0 && nearMatches.length > 0) {
+      setMatchDialog({ mode: 'confirm', matches: nearMatches });
+    } else if (exactMatches.length === 0 && nearMatches.length === 0 && !selectedAncestorId) {
+      setMatchDialog({ mode: 'prompt' });
+    }
+  };
+
+  const handleRefreshAnalysis = async () => {
+    if (!fileUrl || !file || refreshing) return;
+    setRefreshing(true);
+    setStep(STEPS.ANALYSING);
+    try {
+      const feedback = assistantMessages.length > 0
+        ? assistantMessages.map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`).join('\n')
+        : '';
+      await runAnalysis(fileUrl, file, feedback);
+    } catch (e) {
+      setClassification('uncategorized');
       setStep(STEPS.FORM);
+    }
+    setRefreshing(false);
+  };
 
-      // If near matches found (but no exact), ask user to confirm
-      if (exactMatches.length === 0 && nearMatches.length > 0) {
-        setMatchDialog({ mode: 'confirm', matches: nearMatches });
-      }
-      // If no matches at all and no ancestor was pre-selected, prompt user
-      else if (exactMatches.length === 0 && nearMatches.length === 0 && !selectedAncestorId) {
-        setMatchDialog({ mode: 'prompt' });
-      }
+  const handleFile = async (selectedFile) => {
+    if (!selectedFile) return;
+    setFile(selectedFile);
+    setStep(STEPS.ANALYSING);
+    try {
+      const uploadRes = await base44.integrations.Core.UploadFile({ file: selectedFile });
+      const url = uploadRes.file_url;
+      setFileUrl(url);
+
+      await runAnalysis(url, selectedFile);
     } catch (e) {
       setClassification('uncategorized');
       setStep(STEPS.FORM);
@@ -588,15 +599,31 @@ Return JSON with this structure:
               </div>
             )}
 
-            {/* Preview */}
-            {fileUrl && file && file.type.startsWith('image/') && (
+            {/* Preview + Refresh AI Analysis */}
+            {fileUrl && file && (
               <div className="aged-card rounded-xl p-4">
-                <img src={fileUrl} alt="preview" className="max-h-64 mx-auto rounded-lg sepia-tint" />
-              </div>
-            )}
-            {fileUrl && file && file.type === 'application/pdf' && (
-              <div className="aged-card rounded-xl p-4">
-                <iframe src={fileUrl} title="preview" className="w-full h-80 rounded-lg bg-parchment" />
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs text-parchment/40 uppercase tracking-wider">Preview</span>
+                  <button
+                    onClick={handleRefreshAnalysis}
+                    disabled={refreshing}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(201,145,58,0.1)] border border-[rgba(201,145,58,0.2)] text-amber-light text-xs font-medium hover:bg-[rgba(201,145,58,0.15)] transition-colors disabled:opacity-50"
+                  >
+                    {refreshing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+                    Refresh AI Analysis
+                  </button>
+                </div>
+                {file.type.startsWith('image/') && (
+                  <img src={fileUrl} alt="preview" className="max-h-64 mx-auto rounded-lg sepia-tint" />
+                )}
+                {file.type === 'application/pdf' && (
+                  <iframe src={fileUrl} title="preview" className="w-full h-80 rounded-lg bg-parchment" />
+                )}
+                {assistantMessages.length > 0 && (
+                  <p className="text-xs text-parchment/40 mt-2 text-center">
+                    Re-analysis will incorporate {assistantMessages.length} message{assistantMessages.length !== 1 ? 's' : ''} from the AI assistant chat
+                  </p>
+                )}
               </div>
             )}
 
@@ -924,7 +951,7 @@ Return JSON with this structure:
             <h2 className="font-display text-2xl text-parchment mb-2">Saved to the Archive</h2>
             <p className="text-parchment/50 text-sm mb-6">Your piece of family history is now part of the Freddi archive.</p>
             <div className="flex gap-3 justify-center">
-              <button onClick={() => { setStep(STEPS.CAPTURE); setFile(null); setFileUrl(null); setClassification(null); setDocumentSubtype(null); setExtractedData(null); setTranscribedText('');                 setSuggestedTags([]); setSelectedAncestorId(''); setAttachToProfile(false); setAncestorSearch(''); setRawAiAnalysis(null); setAiConfidence(null); setCategorizationNotes(''); setVisualElements(null); setMatchDialog(null); setFormData({title:'',description:'',date:'',location_name:'',latitude:'',longitude:'',ancestor_ids:[],era:'',external_url:'',comment:'',is_query:false,tagged_user_ids:[]}); }}
+              <button onClick={() => { setAssistantMessages([]); setStep(STEPS.CAPTURE); setFile(null); setFileUrl(null); setClassification(null); setDocumentSubtype(null); setExtractedData(null); setTranscribedText(''); setSuggestedTags([]); setSelectedAncestorId(''); setAttachToProfile(false); setAncestorSearch(''); setRawAiAnalysis(null); setAiConfidence(null); setCategorizationNotes(''); setVisualElements(null); setMatchDialog(null); setRefreshing(false); setFormData({title:'',description:'',date:'',location_name:'',latitude:'',longitude:'',ancestor_ids:[],era:'',external_url:'',comment:'',is_query:false,tagged_user_ids:[]}); }}
                 className="px-5 py-2.5 rounded-lg border border-[rgba(201,145,58,0.3)] text-amber-light text-sm hover:bg-[rgba(201,145,58,0.08)] transition-colors">
                 Upload Another
               </button>
@@ -947,7 +974,7 @@ Return JSON with this structure:
         />
       )}
 
-      <UploadAssistant />
+      <UploadAssistant messages={assistantMessages} setMessages={setAssistantMessages} />
     </Layout>
   );
 }
