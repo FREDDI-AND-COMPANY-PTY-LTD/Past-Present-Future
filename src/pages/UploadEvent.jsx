@@ -61,6 +61,8 @@ export default function UploadEvent() {
   const [refreshing, setRefreshing] = useState(false);
 
   const [bulkMode, setBulkMode] = useState(false);
+  const [activeTags, setActiveTags] = useState([]);
+  const [tagInput, setTagInput] = useState('');
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
   const cameraInputRef = useRef(null);
@@ -353,6 +355,8 @@ Return JSON with this structure:
     setRefreshing(false);
     setMissingFields({});
     setDismissedFields({});
+    setActiveTags([]);
+    setTagInput('');
     setFormData(INITIAL_FORM);
   };
 
@@ -411,7 +415,7 @@ Return JSON with this structure:
         uploaded_by_id: currentUser?.id || null,
         conflict_flag_status: 'none',
         review_status: needsReview ? 'flagged' : 'pending',
-        tags: [...(suggestedTags || []), ...(needsReview ? ['admin_review_required'] : [])],
+        tags: [...activeTags, ...(needsReview ? ['admin_review_required'] : [])],
       };
 
       const createdItem = await base44.entities.ContentItem.create(itemData);
@@ -999,19 +1003,59 @@ Return JSON with this structure:
                     className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-parchment focus:outline-none focus:border-[#C9913A]" placeholder="144.96" />
                 </div>
               </div>
-              {/* Suggested tags */}
-              {suggestedTags.length > 0 && (
-                <div>
-                  <label className="text-sm text-parchment/60 mb-2 flex items-center gap-1.5"><Tag size={14} /> Suggested Tags</label>
-                  <div className="flex flex-wrap gap-2">
-                    {suggestedTags.map((tag, i) => (
-                      <span key={i} className="px-2.5 py-1 rounded-full text-xs bg-[rgba(201,145,58,0.08)] text-amber-light/80 border border-[rgba(201,145,58,0.15)]">
+              {/* Tags */}
+              <div>
+                <label className="text-sm text-parchment/60 mb-2 flex items-center gap-1.5"><Tag size={14} /> Tags</label>
+                {activeTags.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {activeTags.map((tag, i) => (
+                      <span key={i} className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-[rgba(201,145,58,0.08)] text-amber-light/80 border border-[rgba(201,145,58,0.15)]">
                         {tag}
+                        <button onClick={() => setActiveTags(prev => prev.filter((_, idx) => idx !== i))} className="text-parchment/30 hover:text-parchment ml-0.5">✕</button>
                       </span>
                     ))}
                   </div>
+                )}
+                {suggestedTags.length > 0 && (
+                  <div className="mb-2">
+                    <p className="text-xs text-parchment/40 mb-1">AI-suggested — click to add</p>
+                    <div className="flex flex-wrap gap-2">
+                      {suggestedTags.filter(t => !activeTags.includes(t)).map((tag, i) => (
+                        <button key={i} onClick={() => setActiveTags(prev => [...prev, tag])} className="px-2.5 py-1 rounded-full text-xs bg-transparent text-amber-light/60 border border-dashed border-[rgba(201,145,58,0.2)] hover:border-[#C9913A] hover:text-gold transition-colors">
+                          + {tag}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <input
+                    value={tagInput}
+                    onChange={e => setTagInput(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && tagInput.trim()) {
+                        e.preventDefault();
+                        const val = tagInput.trim();
+                        if (!activeTags.includes(val)) setActiveTags(prev => [...prev, val]);
+                        setTagInput('');
+                      }
+                    }}
+                    className="flex-1 bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2 text-sm text-parchment focus:outline-none focus:border-[#C9913A] placeholder:text-parchment/30"
+                    placeholder="Type a new tag and press Enter..."
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const val = tagInput.trim();
+                      if (val && !activeTags.includes(val)) setActiveTags(prev => [...prev, val]);
+                      setTagInput('');
+                    }}
+                    className="flex items-center gap-1.5 px-4 rounded-lg bg-[rgba(201,145,58,0.1)] border border-[rgba(201,145,58,0.2)] text-amber-light text-sm font-medium hover:bg-[rgba(201,145,58,0.15)] transition-colors flex-shrink-0"
+                  >
+                    <Tag size={14} /> Add
+                  </button>
                 </div>
-              )}
+              </div>
 
               {/* Comment section with hover tooltip */}
               <div>
