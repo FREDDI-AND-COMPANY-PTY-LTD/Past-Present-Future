@@ -46,6 +46,7 @@ export default function LocationPicker({ open, onClose, onPick, initialLocation,
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [picked, setPicked] = useState(null);
+  const [searching, setSearching] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -167,6 +168,42 @@ export default function LocationPicker({ open, onClose, onPick, initialLocation,
     }
   };
 
+  const handleSearch = () => {
+    const query = searchInputRef.current?.value?.trim();
+    if (!query) return;
+    const gmaps = gmapsRef.current;
+    if (!gmaps) return;
+    setSearching(true);
+    try {
+      const geocoder = new gmaps.Geocoder();
+      geocoder.geocode({ address: query }, (results, status) => {
+        if (status === 'OK' && results && results.length > 0) {
+          const loc = results[0].geometry.location;
+          const lat = loc.lat();
+          const lng = loc.lng();
+          mapRef.current?.setCenter({ lat, lng });
+          mapRef.current?.setZoom(14);
+          placeMarker(lat, lng);
+          const name = results[0].formatted_address || query;
+          setPicked({ lat, lng, name });
+          if (searchInputRef.current) searchInputRef.current.value = name;
+        } else {
+          setError('No results found for that address. Try a different search, or click on the map.');
+        }
+        setSearching(false);
+      });
+    } catch {
+      setSearching(false);
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSearch();
+    }
+  };
+
   const handleConfirm = () => {
     if (picked) {
       onPick({
@@ -196,17 +233,28 @@ export default function LocationPicker({ open, onClose, onPick, initialLocation,
 
         {/* Search bar */}
         <div className="px-5 py-3 border-b border-[rgba(201,145,58,0.1)]">
-          <div className="relative">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-parchment/30" />
-            <input
-              ref={searchInputRef}
-              type="text"
-              autoComplete="off"
-              className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg pl-10 pr-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A] placeholder:text-parchment/30"
-              placeholder="Search for a place, address, or city..."
-            />
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-parchment/30" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                autoComplete="off"
+                onKeyDown={handleKeyDown}
+                className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg pl-10 pr-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A] placeholder:text-parchment/30"
+                placeholder="Search for a place, address, or city..."
+              />
+            </div>
+            <button
+              onClick={handleSearch}
+              disabled={searching || loading}
+              className="flex items-center gap-1.5 px-4 rounded-lg bg-[#C9913A] text-charcoal text-sm font-semibold disabled:opacity-50 hover:opacity-90 transition-opacity flex-shrink-0"
+            >
+              {searching ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
+              Search
+            </button>
           </div>
-          <p className="text-xs text-parchment/30 mt-2">Search above, or click directly on the map to drop a pin.</p>
+          <p className="text-xs text-parchment/30 mt-2">Type an address and press Search (or Enter), or click directly on the map to drop a pin.</p>
         </div>
 
         {/* Map */}
