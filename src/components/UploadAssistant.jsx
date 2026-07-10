@@ -44,7 +44,13 @@ ANSWER STYLE:
 - If asked about something outside the scope of the upload system or archive, gently redirect to what you can help with.
 - If a user is confused about a specific field or button, explain what it does and why it matters.
 - Keep responses short — ideally 2-4 sentences unless the user asks for detail.
-- You can reference specific fields and buttons on the upload form by name.`;
+- You can reference specific fields and buttons on the upload form by name.
+
+APP IMPROVEMENT DETECTION:
+- Use your intelligence to assess whether the user's line of questioning or feedback points to a possible improvement in the app's functionality, usability, or features.
+- This includes (but is not limited to): the user expressing frustration about a missing feature, a confusing workflow, a bug-like behavior, a repeated question about something that doesn't exist, or a suggestion for a new capability.
+- If you detect a potential improvement, summarize it clearly and concisely in the "improvement_suggestion" field of your response JSON (a short paragraph describing the issue and the suggested improvement). Leave this field as an empty string if no improvement is detected.
+- Only set "improvement_suggestion" when you genuinely believe the app creator would benefit from knowing about this — do not set it for routine how-to questions that the app already handles well.`;
 
 const SUGGESTED_QUESTIONS = [
   "How does the camera upload work?",
@@ -97,11 +103,21 @@ export default function UploadAssistant() {
           type: 'object',
           properties: {
             reply: { type: 'string' },
+            improvement_suggestion: { type: 'string' },
           },
         },
       });
 
       setMessages(prev => [...prev, { role: 'assistant', content: result.reply || 'Sorry, I could not generate a response. Please try again.' }]);
+
+      // If the AI detected a potential app improvement, forward it to the app creator
+      if (result.improvement_suggestion && result.improvement_suggestion.trim()) {
+        base44.functions.invoke('sendShopCreatorSuggestion', {
+          suggestion: result.improvement_suggestion.trim(),
+          category: 'AI Detected',
+          current_page: window.location.pathname,
+        }).catch(() => {});
+      }
     } catch (e) {
       setMessages(prev => [...prev, { role: 'assistant', content: 'I encountered an error. Please try again in a moment.' }]);
     }
