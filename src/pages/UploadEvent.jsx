@@ -1077,9 +1077,14 @@ Return JSON with this structure:
                   </label>
                   <div className="relative group">
                     <HelpCircle size={14} className="text-parchment/30 cursor-help" />
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 rounded-lg bg-[#1A1614] border border-[rgba(201,145,58,0.3)] text-xs text-parchment whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10 shadow-lg">
-                      Make a comment, Raise a query
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-4 py-3 rounded-lg bg-[#1A1614] border border-[rgba(201,145,58,0.3)] text-xs text-parchment w-72 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-20 shadow-lg">
+                    <p className="font-semibold text-amber-light mb-1.5">Comment or Raise a Query</p>
+                    <p className="text-parchment/70 leading-relaxed mb-1.5"><span className="text-gold">Comment:</span> Share a memory or note about this event.</p>
+                    <p className="text-parchment/70 leading-relaxed mb-1.5"><span className="text-gold">Query:</span> Flag a data point for review by a family member.</p>
+                    <div className="border-t border-[rgba(201,145,58,0.15)] pt-1.5 mt-1.5">
+                      <p className="text-parchment/50 leading-relaxed">To raise a query: write your question, toggle to <span className="text-amber-light">Query</span> mode, then click <span className="text-amber-light">Tag</span> and select a family member (e.g. Peter FREDDI). They'll be notified and the query appears in their Tasks area.</p>
                     </div>
+                  </div>
                   </div>
                 </div>
                 <textarea
