@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Edit3, X, Save, Loader2, MessageSquare } from 'lucide-react';
+import { Edit3, X, Save, Loader2, MessageSquare, MapPin } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import LocationPicker from '@/components/LocationPicker';
 
 export default function EditEventDialog({ item, onClose, onSubmitted }) {
   const [form, setForm] = useState({
@@ -8,6 +9,8 @@ export default function EditEventDialog({ item, onClose, onSubmitted }) {
     description: item.description || '',
     date: item.date || '',
     location_name: item.location_name || '',
+    latitude: item.latitude ? String(item.latitude) : '',
+    longitude: item.longitude ? String(item.longitude) : '',
     era: item.era || '',
     transcribed_text: item.transcribed_text || '',
   });
@@ -15,6 +18,7 @@ export default function EditEventDialog({ item, onClose, onSubmitted }) {
   const [reason, setReason] = useState('');
   const [saving, setSaving] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [locationPickerOpen, setLocationPickerOpen] = useState(false);
 
   const handleFieldChange = (key, value) => {
     setForm(prev => ({ ...prev, [key]: value }));
@@ -38,9 +42,21 @@ export default function EditEventDialog({ item, onClose, onSubmitted }) {
         { key: 'description', original: item.description },
         { key: 'date', original: item.date },
         { key: 'location_name', original: item.location_name },
+        { key: 'latitude', original: item.latitude ? String(item.latitude) : '' },
+        { key: 'longitude', original: item.longitude ? String(item.longitude) : '' },
         { key: 'era', original: item.era },
         { key: 'transcribed_text', original: item.transcribed_text },
       ];
+
+      // Convert lat/lng to numbers before saving
+      if (proposed.latitude !== undefined) {
+        proposed.latitude = proposed.latitude ? parseFloat(proposed.latitude) : null;
+        original.latitude = original.latitude || null;
+      }
+      if (proposed.longitude !== undefined) {
+        proposed.longitude = proposed.longitude ? parseFloat(proposed.longitude) : null;
+        original.longitude = original.longitude || null;
+      }
 
       for (const f of fieldMap) {
         const newVal = (form[f.key] ?? '').toString();
@@ -96,6 +112,8 @@ export default function EditEventDialog({ item, onClose, onSubmitted }) {
     if ((form.description ?? '') !== (item.description ?? '')) return true;
     if ((form.date ?? '') !== (item.date ?? '')) return true;
     if ((form.location_name ?? '') !== (item.location_name ?? '')) return true;
+    if ((form.latitude ?? '') !== (item.latitude ? String(item.latitude) : '')) return true;
+    if ((form.longitude ?? '') !== (item.longitude ? String(item.longitude) : '')) return true;
     if ((form.era ?? '') !== (item.era ?? '')) return true;
     if ((form.transcribed_text ?? '') !== (item.transcribed_text ?? '')) return true;
     const originalExtracted = item.extracted_fields || {};
@@ -180,12 +198,35 @@ export default function EditEventDialog({ item, onClose, onSubmitted }) {
 
               <div>
                 <label className="text-xs text-parchment/50 mb-1 block">Location</label>
-                <input
-                  value={form.location_name}
-                  onChange={e => handleFieldChange('location_name', e.target.value)}
-                  className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]"
-                  placeholder="Event location"
-                />
+                <div className="flex gap-2">
+                  <input
+                    value={form.location_name}
+                    onChange={e => handleFieldChange('location_name', e.target.value)}
+                    className="flex-1 bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]"
+                    placeholder="Event location"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setLocationPickerOpen(true)}
+                    className="flex items-center gap-1.5 px-3 rounded-lg bg-[rgba(201,145,58,0.1)] border border-[rgba(201,145,58,0.2)] text-amber-light text-sm font-medium hover:bg-[rgba(201,145,58,0.15)] transition-colors flex-shrink-0"
+                  >
+                    <MapPin size={14} /> Map
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-3 mt-2">
+                  <input
+                    value={form.latitude}
+                    onChange={e => handleFieldChange('latitude', e.target.value)}
+                    className="bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2 text-xs text-parchment focus:outline-none focus:border-[#C9913A]"
+                    placeholder="Latitude"
+                  />
+                  <input
+                    value={form.longitude}
+                    onChange={e => handleFieldChange('longitude', e.target.value)}
+                    className="bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2 text-xs text-parchment focus:outline-none focus:border-[#C9913A]"
+                    placeholder="Longitude"
+                  />
+                </div>
               </div>
 
               {form.transcribed_text !== undefined && item.transcribed_text && (
@@ -250,6 +291,16 @@ export default function EditEventDialog({ item, onClose, onSubmitted }) {
             </div>
           </>
         )}
+        <LocationPicker
+          open={locationPickerOpen}
+          onClose={() => setLocationPickerOpen(false)}
+          onPick={({ location_name, latitude, longitude }) => {
+            setForm(prev => ({ ...prev, location_name, latitude, longitude }));
+          }}
+          initialLocation={form.location_name}
+          initialLat={form.latitude}
+          initialLng={form.longitude}
+        />
       </div>
     </div>
   );
