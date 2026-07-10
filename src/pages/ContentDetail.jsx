@@ -115,7 +115,12 @@ export default function ContentDetail() {
               <div className="mb-6 p-6 bg-[#0D0B0A] rounded-xl border border-[rgba(201,145,58,0.1)]">
                 <div className="flex items-center gap-2 mb-3"><FileText size={16} className="text-gold" /><h3 className="font-display text-lg text-parchment">Transcribed Text</h3><ContestedFieldBadge flags={flagsForField('transcribed_text')} /></div>
                 <p className="text-parchment/60 leading-relaxed whitespace-pre-wrap text-sm">{item.transcribed_text}</p>
-                <TranslatedText text={item.transcribed_text} />
+                <TranslatedText
+                  text={item.transcribed_text}
+                  itemId={item.id}
+                  savedTranslation={item.english_translation}
+                  savedLanguage={item.translation_language}
+                />
               </div>
             )}
 

@@ -66,6 +66,14 @@
       "type": "string",
       "description": "OCR transcription of narrative documents"
     },
+    "english_translation": {
+      "type": "string",
+      "description": "AI-generated English translation of transcribed_text \u2014 persisted so it displays permanently in event details"
+    },
+    "translation_language": {
+      "type": "string",
+      "description": "Detected source language of the transcribed text"
+    },
     "extracted_fields": {
       "type": "object",
       "description": "Fields extracted from certificates by AI"
