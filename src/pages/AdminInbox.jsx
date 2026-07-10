@@ -69,7 +69,7 @@ export default function AdminInbox() {
 
   return (
     <Layout>
-      <div className="px-6 lg:px-12 py-10 max-w-4xl mx-auto">
+      <div className="px-6 lg:px-12 py-10 max-w-6xl mx-auto">
         <div className="flex items-center gap-3 mb-2">
           <Inbox size={28} className="text-gold" />
           <h1 className="font-display text-3xl text-parchment">Admin Inbox</h1>
@@ -77,7 +77,7 @@ export default function AdminInbox() {
         <p className="text-parchment/50 text-sm mb-8">Collated administrative tasks awaiting your attention.</p>
 
         {/* Summary cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
           {TABS.map(t => {
             const Icon = t.icon;
             const count = counts[t.key] || 0;
@@ -86,20 +86,20 @@ export default function AdminInbox() {
               <button
                 key={t.key}
                 onClick={() => setTab(t.key)}
-                className={`aged-card rounded-xl p-5 text-left transition-all ${isActive ? 'border-[rgba(201,145,58,0.5)] gold-glow' : 'hover:border-[rgba(201,145,58,0.3)]'}`}
+                className={`aged-card rounded-xl p-4 text-left transition-all ${isActive ? 'border-[rgba(201,145,58,0.5)] gold-glow' : 'hover:border-[rgba(201,145,58,0.3)]'}`}
               >
                 <div className="flex items-center justify-between mb-2">
-                  <Icon size={20} className="text-gold" />
-                  <span className="font-display text-2xl text-parchment">{count}</span>
+                  <Icon size={18} className="text-gold flex-shrink-0" />
+                  <span className="font-display text-2xl text-parchment leading-none">{count}</span>
                 </div>
-                <p className="text-sm text-parchment/60">{t.label}</p>
+                <p className="text-xs text-parchment/60 leading-tight">{t.label}</p>
               </button>
             );
           })}
         </div>
 
         {/* Tab bar */}
-        <div className="flex gap-1 mb-6 border-b border-[rgba(201,145,58,0.15)]">
+        <div className="flex flex-wrap gap-1 mb-6 border-b border-[rgba(201,145,58,0.15)]">
           {TABS.map(t => {
             const Icon = t.icon;
             const isActive = tab === t.key;
@@ -107,13 +107,13 @@ export default function AdminInbox() {
               <button
                 key={t.key}
                 onClick={() => setTab(t.key)}
-                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors border-b-2 -mb-px ${
+                className={`flex items-center gap-1.5 px-3 py-2.5 text-xs sm:text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap ${
                   isActive
                     ? 'text-gold border-[#C9913A]'
                     : 'text-parchment/50 border-transparent hover:text-parchment'
                 }`}
               >
-                <Icon size={16} />
+                <Icon size={14} className="flex-shrink-0" />
                 {t.label}
               </button>
             );
