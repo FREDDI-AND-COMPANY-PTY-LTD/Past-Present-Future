@@ -235,26 +235,18 @@ export default function GoogleMap({ markers = [], routes = [], loading = false }
       markersRef.current.forEach(m => m.setMap(map));
     }
 
-    // Only auto-fit to show all pins when geolocation was NOT obtained.
-    // If we have the user's location, keep them centred so they can pan
-    // around to discover ancestor events from their starting point.
-    if (geoResolved && !userCenter && !bounds.isEmpty()) {
-      if (markers.length === 1 && routes.length === 0) {
-        map.setCenter(markers[0].position);
-        map.setZoom(10);
-      } else {
-        map.fitBounds(bounds, 60);
-      }
+    // Always fit bounds to show all pins (+ user location once known).
+    if (!bounds.isEmpty()) {
+      if (userCenter) bounds.extend(userCenter);
+      map.fitBounds(bounds, 60);
     }
-  }, [markers, routes, mapsReady, geoResolved, userCenter]);
+  }, [markers, routes, mapsReady, userCenter]);
 
-  // Centre on the user's current location and drop a "you are here" marker
+  // Drop a "you are here" marker at the user's current location
   useEffect(() => {
     const gmaps = gmapsRef.current;
     const map = mapRef.current;
     if (!gmaps || !map || !mapsReady || !userCenter) return;
-    map.setCenter(userCenter);
-    map.setZoom(6);
     if (userMarkerRef.current) userMarkerRef.current.setMap(null);
     const blueDotSvg = encodeURIComponent(
       '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">' +
