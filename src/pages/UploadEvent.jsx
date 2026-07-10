@@ -6,6 +6,7 @@ import { getMessages, subscribe } from '@/lib/assistantStore';
 import AncestorMatchDialog from '@/components/AncestorMatchDialog';
 import LocationPicker from '@/components/LocationPicker';
 import BulkUpload from '@/components/BulkUpload';
+import MentionTextarea from '@/components/MentionTextarea';
 
 const STEPS = {
   CAPTURE: 'capture',
@@ -1082,17 +1083,21 @@ Return JSON with this structure:
                     <p className="text-parchment/70 leading-relaxed mb-1.5"><span className="text-gold">Comment:</span> Share a memory or note about this event.</p>
                     <p className="text-parchment/70 leading-relaxed mb-1.5"><span className="text-gold">Query:</span> Flag a data point for review by a family member.</p>
                     <div className="border-t border-[rgba(201,145,58,0.15)] pt-1.5 mt-1.5">
-                      <p className="text-parchment/50 leading-relaxed">To raise a query: write your question, toggle to <span className="text-amber-light">Query</span> mode, then click <span className="text-amber-light">Tag</span> and select a family member (e.g. Peter FREDDI). They'll be notified and the query appears in their Tasks area.</p>
+                      <p className="text-parchment/50 leading-relaxed">To raise a query: write your question, toggle to <span className="text-amber-light">Query</span> mode, then type <span className="text-amber-light">@Peter FREDDI</span> in the comment box to tag a family member. They'll be notified and the query appears in their Tasks area.</p>
                     </div>
                   </div>
                   </div>
                 </div>
-                <textarea
+                <MentionTextarea
                   value={formData.comment}
-                  onChange={e => setFormData(f => ({ ...f, comment: e.target.value }))}
+                  onChange={(val) => setFormData(f => ({ ...f, comment: val }))}
+                  onTaggedUsersChange={(ids) => setFormData(f => ({ ...f, tagged_user_ids: ids }))}
+                  taggedUserIds={formData.tagged_user_ids}
+                  users={users}
+                  currentUser={user}
                   rows={3}
                   className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-parchment focus:outline-none focus:border-[#C9913A] placeholder:text-parchment/30"
-                  placeholder="Add a comment or raise a query about this event..."
+                  placeholder="Add a comment or raise a query about this event... (type @ to tag someone)"
                 />
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <button
