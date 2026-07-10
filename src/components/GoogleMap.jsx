@@ -3,20 +3,31 @@ import { base44 } from '@/api/base44Client';
 
 const routeColors = ['#C9913A', '#E8C97A', '#8B6914', '#D4A04C'];
 
-const darkMapStyles = [
-  { elementType: 'geometry', stylers: [{ color: '#1A1614' }] },
-  { elementType: 'labels.text.stroke', stylers: [{ color: '#1A1614' }] },
-  { elementType: 'labels.text.fill', stylers: [{ color: '#8B7355' }] },
-  { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#C9913A' }] },
-  { featureType: 'administrative.country', elementType: 'labels.text.fill', stylers: [{ color: '#C9913A' }] },
-  { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#8B7355' }] },
-  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#2A2218' }] },
-  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#2A2218' }] },
-  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#3A3020' }] },
-  { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#2A2218' }] },
-  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0D0B0A' }] },
-  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#5A4A30' }] },
-  { featureType: 'landscape', elementType: 'geometry', stylers: [{ color: '#151210' }] },
+// Light, high-contrast styling readable outdoors in bright sunlight,
+// while keeping warm gold accents consistent with the archive theme.
+const outdoorMapStyles = [
+  { elementType: 'geometry', stylers: [{ color: '#F5EFE2' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#FFFFFF' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#5A4A30' }] },
+  { elementType: 'labels.text', stylers: [{ weight: 0.5 }] },
+  { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#8B6914' }] },
+  { featureType: 'administrative.country', elementType: 'labels.text.fill', stylers: [{ color: '#8B6914' }], stylers: [{ visibility: 'on' }] },
+  { featureType: 'administrative.country', elementType: 'geometry.stroke', stylers: [{ color: '#C9913A', weight: 1.5 }] },
+  { featureType: 'administrative.province', elementType: 'geometry.stroke', stylers: [{ color: '#D4C4A0', weight: 1 }] },
+  { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#7A6A4A' }] },
+  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#D8E8C8' }] },
+  { featureType: 'poi.park', elementType: 'labels.text.fill', stylers: [{ color: '#5A7A3A' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#FFFFFF' }] },
+  { featureType: 'road.arterial', elementType: 'geometry', stylers: [{ color: '#F0E8D4' }] },
+  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#E8C97A' }] },
+  { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#C9913A', weight: 1 }] },
+  { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#5A4A30' }] },
+  { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#E8E0CC' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#A8C8D8' }] },
+  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#3A5A7A' }] },
+  { featureType: 'landscape', elementType: 'geometry', stylers: [{ color: '#EDE4CE' }] },
+  { featureType: 'landscape.natural', elementType: 'geometry', stylers: [{ color: '#DDE8C8' }] },
+  { featureType: 'landscape.man_made', elementType: 'geometry', stylers: [{ color: '#E8E0CC' }] },
 ];
 
 let scriptPromise = null;
@@ -80,8 +91,11 @@ export default function GoogleMap({ markers = [], routes = [], loading = false }
   const markersRef = useRef([]);
   const polylinesRef = useRef([]);
   const clustererRef = useRef(null);
+  const userMarkerRef = useRef(null);
   const [error, setError] = useState(null);
   const [mapsReady, setMapsReady] = useState(false);
+  const [userCenter, setUserCenter] = useState(null);  // {lat, lng} once geolocation resolves
+  const [geoResolved, setGeoResolved] = useState(false);
 
   // SPA link handler — intercepts clicks on data-spa-link attributes (inside info windows)
   useEffect(() => {
@@ -112,8 +126,8 @@ export default function GoogleMap({ markers = [], routes = [], loading = false }
         mapRef.current = new gmaps.Map(containerRef.current, {
           center: { lat: -25, lng: 135 },
           zoom: 4,
-          styles: darkMapStyles,
-          mapTypeControl: false,
+          styles: outdoorMapStyles,
+          mapTypeControl: true,
           streetViewControl: true,
           fullscreenControl: true,
           zoomControl: true,
@@ -122,6 +136,21 @@ export default function GoogleMap({ markers = [], routes = [], loading = false }
           await loadMarkerClusterer();
         } catch (e) { /* clustering optional */ }
         setMapsReady(true);
+
+        // Try to open the map at the user's current location so they can
+        // begin exploring the migration routes from where they are.
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              setUserCenter({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+              setGeoResolved(true);
+            },
+            () => { setGeoResolved(true); },  // denied or unavailable — fall back to auto-fit
+            { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+          );
+        } else {
+          setGeoResolved(true);
+        }
       } catch (e) {
         setError(e.message || 'Failed to load map');
       }
@@ -206,8 +235,10 @@ export default function GoogleMap({ markers = [], routes = [], loading = false }
       markersRef.current.forEach(m => m.setMap(map));
     }
 
-    // Auto-fit bounds to show all pins
-    if (!bounds.isEmpty()) {
+    // Only auto-fit to show all pins when geolocation was NOT obtained.
+    // If we have the user's location, keep them centred so they can pan
+    // around to discover ancestor events from their starting point.
+    if (geoResolved && !userCenter && !bounds.isEmpty()) {
       if (markers.length === 1 && routes.length === 0) {
         map.setCenter(markers[0].position);
         map.setZoom(10);
@@ -215,7 +246,33 @@ export default function GoogleMap({ markers = [], routes = [], loading = false }
         map.fitBounds(bounds, 60);
       }
     }
-  }, [markers, routes, mapsReady]);
+  }, [markers, routes, mapsReady, geoResolved, userCenter]);
+
+  // Centre on the user's current location and drop a "you are here" marker
+  useEffect(() => {
+    const gmaps = gmapsRef.current;
+    const map = mapRef.current;
+    if (!gmaps || !map || !mapsReady || !userCenter) return;
+    map.setCenter(userCenter);
+    map.setZoom(6);
+    if (userMarkerRef.current) userMarkerRef.current.setMap(null);
+    const blueDotSvg = encodeURIComponent(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">' +
+      '<circle cx="12" cy="12" r="8" fill="#3B82F6" stroke="#FFFFFF" stroke-width="3" opacity="0.9"/>' +
+      '<circle cx="12" cy="12" r="4" fill="#1D4ED8"/></svg>'
+    );
+    userMarkerRef.current = new gmaps.Marker({
+      position: userCenter,
+      map,
+      icon: {
+        url: `data:image/svg+xml;utf8,${blueDotSvg}`,
+        scaledSize: new gmaps.Size(24, 24),
+        anchor: new gmaps.Point(12, 12),
+      },
+      title: 'You are here',
+      zIndex: 9999,
+    });
+  }, [userCenter, mapsReady]);
 
   if (error) {
     return (
