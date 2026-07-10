@@ -52,6 +52,10 @@
       "type": "string",
       "description": "Description or caption"
     },
+    "historical_context": {
+      "type": "string",
+      "description": "User-provided historical context and background information to help the AI understand the broader significance of this event to the tagged ancestor(s). Used by the AI during analysis and chronicle generation to enrich narrative with wider historical background."
+    },
     "transcribed_text": {
       "type": "string",
       "description": "OCR transcription of narrative documents"

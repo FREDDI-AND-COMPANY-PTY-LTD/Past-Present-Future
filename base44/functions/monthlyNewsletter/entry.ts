@@ -26,26 +26,84 @@ Deno.serve(async (req) => {
     let itemCount = monthlyItems.length;
 
     if (monthlyItems.length > 0) {
-      // Build a summary of items for the LLM
+      // Fetch ancestors so we can include biographical context
+      const ancestors = await base44.asServiceRole.entities.Ancestor.list();
+
+      // Fetch comments for each featured item so the AI can learn from
+      // family discussions, queries, and shared memories
+      const allComments = await base44.asServiceRole.entities.Comment.list('-created_date', 200);
+      const commentsByItem = {};
+      for (const c of (allComments || [])) {
+        if (c.entity_type === 'ContentItem' && c.entity_id) {
+          if (!commentsByItem[c.entity_id]) commentsByItem[c.entity_id] = [];
+          commentsByItem[c.entity_id].push({
+            author: c.author_name || 'Family Member',
+            content: c.content,
+            is_query: c.is_query,
+          });
+        }
+      }
+
+      // Build rich summaries including historical context, comments, and ancestor data
       const itemSummaries = monthlyItems.map((item, i) => {
         const date = new Date(item.created_date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
-        return `${i + 1}. [${item.content_type}] "${item.title}" — ${item.description || 'no description'} (added ${date}${item.location_name ? ', location: ' + item.location_name : ''})`;
-      }).join('\n');
+        const taggedAncestors = (item.ancestor_ids || [])
+          .map(aid => ancestors.find(a => a.id === aid))
+          .filter(Boolean)
+          .map(a => {
+            const bio = [];
+            if (a.full_name) bio.push(`Name: ${a.full_name}`);
+            if (a.birth_date) bio.push(`Born: ${a.birth_date}`);
+            if (a.birth_place) bio.push(`Birthplace: ${a.birth_place}`);
+            if (a.death_date) bio.push(`Died: ${a.death_date}`);
+            if (a.nationality) bio.push(`Nationality: ${a.nationality}`);
+            if (a.occupation) bio.push(`Occupation: ${a.occupation}`);
+            if (a.biography) bio.push(`Bio: ${a.biography}`);
+            return bio.join(', ');
+          })
+          .join(' | ');
 
-      // Use InvokeLLM to generate a news-story narrative
+        const comments = commentsByItem[item.id] || [];
+        const commentText = comments.length > 0
+          ? comments.map(c => `    - ${c.author}${c.is_query ? ' (query)' : ''}: "${c.content}"`).join('\n')
+          : '';
+
+        const parts = [
+          `${i + 1}. [${item.content_type}] "${item.title}"`,
+          `   Description: ${item.description || 'no description'}`,
+          `   Added: ${date}${item.location_name ? ', location: ' + item.location_name : ''}`,
+          `   Era: ${item.era || 'unknown'}`,
+        ];
+        if (taggedAncestors) parts.push(`   Tagged Ancestor(s): ${taggedAncestors}`);
+        if (item.historical_context) parts.push(`   ⚡ Uploader's Historical Context: ${item.historical_context}`);
+        if (item.transcribed_text) parts.push(`   Transcribed Text: ${item.transcribed_text.substring(0, 500)}`);
+        if (commentText) parts.push(`   Family Discussion:\n${commentText}`);
+        return parts.join('\n');
+      }).join('\n\n');
+
+      // Use Gemini with web search so the AI can research wider historical
+      // archives for relevant background on the events, places, and time periods
       story = await base44.asServiceRole.integrations.Core.InvokeLLM({
-        prompt: `You are the editor-in-chief of "The Freddi Family Chronicle," a monthly newsletter for the Freddi family. Write an engaging, warm, and enjoyable news story summarising the following discoveries and uploads from the past month. 
+        prompt: `You are the editor-in-chief of "The Freddi Family Chronicle," a monthly newsletter for the Freddi family. Write an engaging, warm, and deeply contextual news story summarising the following discoveries and uploads from the past month.
 
-Write it as if you are a journalist telling the story of what the family discovered this month — like a newspaper feature article. Use a warm, cinematic, archival tone. Address the reader as a family member. Include:
+CRITICAL INSTRUCTION: For each event, use the uploader's historical context, family comments, and the tagged ancestor's biographical data to understand the BROADER SIGNIFICANCE of the event. Research the historical period, migration patterns, social conditions, and world events that shaped this ancestor's experience. Weave this wider context into the narrative so family members understand not just WHAT was uploaded, but WHY it matters in the arc of their family's history.
 
+For example:
+- If a military discharge certificate from WWI Italy appears, explain the broader context of Italian military service, the Alpine campaigns, and post-war emigration to Australia.
+- If a passport from 1921 appears, discuss the post-WWI Italian emigration wave and what life was like for Italian migrants arriving in Australia in that era.
+- If a photograph from Venice appears, provide context about what Venice was like in that period.
+
+Write it as if you are a historian-journalist telling the story of what the family discovered this month — like a rich newspaper feature article that connects personal artifacts to the grand sweep of history. Use a warm, cinematic, archival tone. Address the reader as a family member.
+
+Include:
 1. A compelling headline
 2. An opening paragraph that hooks the reader with the theme of the month's discoveries
-3. 2-4 body sections, each covering a grouping of related items (e.g. certificates found, photographs shared, stories told), with section subheadings
-4. A closing paragraph reflecting on the growing archive and inviting members to contribute
+3. 2-4 body sections, each covering a grouping of related items (e.g. certificates found, photographs shared, stories told), with section subheadings. Each section should weave together the personal item with its broader historical context.
+4. A closing paragraph reflecting on the growing archive, the family's journey through history, and inviting members to contribute
 
-Reference specific items by name where it makes the story richer. Use evocative, storytelling language — not dry summaries.
+Reference specific items by name where it makes the story richer. Use the uploader's historical context and family comments as primary sources. Use evocative, storytelling language — not dry summaries. The goal is to help the family SEE their ancestors as real people living through real historical moments.
 
-Here are the items added this month:
+Here are the items added this month (with full context):
 ${itemSummaries}
 
 Return your response as JSON with this structure:
@@ -57,6 +115,8 @@ Return your response as JSON with this structure:
   ],
   "closing": "the closing paragraph"
 }`,
+        model: 'gemini_3_flash',
+        add_context_from_internet: true,
         response_json_schema: {
           type: 'object',
           properties: {

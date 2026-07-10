@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, Upload, FileText, Image as ImageIcon, Award, Loader2, Check, Sparkles, Newspaper, Tag, Link2, Search, UserPlus, BookUser, IdCard, Mail, Heart, HelpCircle, Eye, MessageSquare, AlertCircle, MapPin, Calendar, RefreshCw, X, Video } from 'lucide-react';
+import { Camera, Upload, FileText, Image as ImageIcon, Award, Loader2, Check, Sparkles, Newspaper, Tag, Link2, Search, UserPlus, BookUser, IdCard, Mail, Heart, HelpCircle, Eye, MessageSquare, AlertCircle, MapPin, Calendar, RefreshCw, X, Video, BookOpen } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import { getMessages, subscribe } from '@/lib/assistantStore';
@@ -25,6 +25,7 @@ const INITIAL_FORM = {
   era: '',
   external_url: '',
   comment: '',
+  historical_context: '',
   is_query: false,
   tagged_user_ids: [],
 };
@@ -92,6 +93,9 @@ export default function UploadEvent() {
   const dismissField = (field) => setDismissedFields(prev => ({ ...prev, [field]: true }));
 
   const runAnalysis = async (url, selectedFile, feedback) => {
+    const contextSection = formData.historical_context?.trim()
+      ? `\n\n--- UPLOADER'S HISTORICAL CONTEXT ---\nThe family member uploading this item has provided the following background context and coaching. Use this information to deepen your understanding of the event, the tagged ancestor(s), and the broader historical significance. Incorporate this context into your analysis, suggested description, tags, and any genealogical insights:\n${formData.historical_context}\n--- END HISTORICAL CONTEXT ---\n`
+      : '';
     const feedbackSection = feedback
       ? `\n\n--- USER FEEDBACK / CORRECTIONS ---\nThe user has provided the following guidance after reviewing the initial analysis. Please incorporate these corrections and re-analyse the image accordingly, adjusting classification, extracted fields, transcription, title, description, tags, and any other relevant data:\n${feedback}\n--- END USER FEEDBACK ---\n`
       : '';
@@ -166,7 +170,7 @@ Return JSON with this structure:
   },
   "suggested_title": "a short descriptive title for this item, including the type and primary person/place if known (e.g. 'Birth Certificate — Giuseppe Freddi (1898)', 'Group Photo at Beach — circa 1950', 'Concert Ticket — Melbourne Town Hall')",
   "suggested_description": "a brief description of what this item is and its potential significance to family history",
-  "suggested_tags": ["array", "of", "relevant", "tags", "e.g. 'immigration', 'Victoria', '1890s', 'Freddi bloodline', 'concert', 'poster']" + feedbackSection}`,
+  "suggested_tags": ["array", "of", "relevant", "tags", "e.g. 'immigration', 'Victoria', '1890s', 'Freddi bloodline', 'concert', 'poster']" + contextSection + feedbackSection}`,
       file_urls: [url],
       response_json_schema: {
         type: 'object',
@@ -383,6 +387,7 @@ Return JSON with this structure:
         title: formData.title,
         content_type: contentType,
         description: formData.description,
+        historical_context: formData.historical_context?.trim() || null,
         date: formData.date || null,
         location_name: formData.location_name,
         latitude: formData.latitude ? parseFloat(formData.latitude) : null,
@@ -1005,6 +1010,29 @@ Return JSON with this structure:
                   </div>
                 </div>
               )}
+
+              {/* Historical Context — user coaching for the AI */}
+              <div>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <label className="text-sm text-parchment/60 flex items-center gap-1.5">
+                    <BookOpen size={14} /> Historical Context
+                  </label>
+                  <div className="relative group">
+                    <HelpCircle size={14} className="text-parchment/30 cursor-help" />
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 rounded-lg bg-[#1A1614] border border-[rgba(201,145,58,0.3)] text-xs text-parchment whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10 shadow-lg">
+                      Coach the AI with background context
+                    </div>
+                  </div>
+                </div>
+                <p className="text-xs text-parchment/40 mb-2">Provide any background you know — the historical setting, why this event mattered, family stories, migration context, or broader significance to the tagged ancestor. The AI uses this to enrich the archive and weave richer chronicle narratives.</p>
+                <textarea
+                  value={formData.historical_context}
+                  onChange={e => setFormData(f => ({ ...f, historical_context: e.target.value }))}
+                  rows={4}
+                  className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-parchment focus:outline-none focus:border-[#C9913A] placeholder:text-parchment/30"
+                  placeholder="e.g. This certificate was issued during the mass emigration from northern Italy to Australia following WWI. Alfredo left Venice in 1921 aboard the SS Orsova, arriving in Melbourne before settling in regional Victoria. His military discharge records his rank as Sergeant in the Italian Alpine troops..."
+                />
+              </div>
 
               {/* Comment section with hover tooltip */}
               <div>
