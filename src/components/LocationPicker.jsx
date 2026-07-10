@@ -45,7 +45,6 @@ export default function LocationPicker({ open, onClose, onPick, initialLocation,
   const searchInputRef = useRef(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [searchText, setSearchText] = useState('');
   const [picked, setPicked] = useState(null);
 
   useEffect(() => {
@@ -108,7 +107,6 @@ export default function LocationPicker({ open, onClose, onPick, initialLocation,
             mapRef.current.setZoom(14);
             placeMarker(lat, lng);
             setPicked({ lat, lng, name: place.formatted_address || place.name || '' });
-            setSearchText(place.formatted_address || place.name || '');
           });
           autocompleteRef.current = ac;
         }
@@ -130,7 +128,7 @@ export default function LocationPicker({ open, onClose, onPick, initialLocation,
     }
     if (!open) {
       setPicked(null);
-      setSearchText('');
+      if (searchInputRef.current) searchInputRef.current.value = '';
       setError(null);
       setLoading(true);
     }
@@ -159,7 +157,7 @@ export default function LocationPicker({ open, onClose, onPick, initialLocation,
         if (status === 'OK' && results && results.length > 0) {
           const name = results[0].formatted_address || '';
           setPicked({ lat, lng, name });
-          setSearchText(name);
+          if (searchInputRef.current) searchInputRef.current.value = name;
         } else {
           setPicked({ lat, lng, name: '' });
         }
@@ -172,7 +170,7 @@ export default function LocationPicker({ open, onClose, onPick, initialLocation,
   const handleConfirm = () => {
     if (picked) {
       onPick({
-        location_name: picked.name || searchText || `${picked.lat.toFixed(4)}, ${picked.lng.toFixed(4)}`,
+        location_name: picked.name || searchInputRef.current?.value || `${picked.lat.toFixed(4)}, ${picked.lng.toFixed(4)}`,
         latitude: String(picked.lat),
         longitude: String(picked.lng),
       });
@@ -202,8 +200,8 @@ export default function LocationPicker({ open, onClose, onPick, initialLocation,
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-parchment/30" />
             <input
               ref={searchInputRef}
-              value={searchText}
-              onChange={e => setSearchText(e.target.value)}
+              type="text"
+              autoComplete="off"
               className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg pl-10 pr-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A] placeholder:text-parchment/30"
               placeholder="Search for a place, address, or city..."
             />
