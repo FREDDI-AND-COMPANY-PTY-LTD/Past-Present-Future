@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MapPin, Users, ChevronDown, ChevronUp, Check, Loader2, Image as ImageIcon, FileText, Award, BookUser, IdCard, Mail, Newspaper, HelpCircle, Calendar, Video, Music } from 'lucide-react';
+import { MapPin, Users, ChevronDown, ChevronUp, Check, Loader2, Image as ImageIcon, FileText, Award, BookUser, IdCard, Mail, Newspaper, HelpCircle, Calendar, Video, Music, Tag, Eye, MessageSquare } from 'lucide-react';
 import LocationPicker from '@/components/LocationPicker';
 
 const typeIcons = {
@@ -68,6 +68,12 @@ export default function BulkUploadItem({ item, ancestors, onFieldChange, onToggl
               className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-3 py-2 text-sm text-parchment focus:outline-none focus:border-[#C9913A]" />
           </div>
 
+          <div>
+            <label className="text-xs text-parchment/40 mb-1 block">Description</label>
+            <textarea value={form.description} onChange={e => onFieldChange(item.id, 'description', e.target.value)} rows={2}
+              className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-3 py-2 text-sm text-parchment focus:outline-none focus:border-[#C9913A]" />
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs text-parchment/40 mb-1 block">Date</label>
@@ -93,6 +99,19 @@ export default function BulkUploadItem({ item, ancestors, onFieldChange, onToggl
             </div>
           </div>
 
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-parchment/40 mb-1 block">Latitude</label>
+              <input value={form.latitude} onChange={e => onFieldChange(item.id, 'latitude', e.target.value)}
+                className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-3 py-2 text-sm text-parchment focus:outline-none focus:border-[#C9913A]" placeholder="-37.81" />
+            </div>
+            <div>
+              <label className="text-xs text-parchment/40 mb-1 block">Longitude</label>
+              <input value={form.longitude} onChange={e => onFieldChange(item.id, 'longitude', e.target.value)}
+                className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-3 py-2 text-sm text-parchment focus:outline-none focus:border-[#C9913A]" placeholder="144.96" />
+            </div>
+          </div>
+
           <div>
             <label className="text-xs text-parchment/40 mb-1 block flex items-center gap-1"><Users size={10} /> Tag Ancestors</label>
             <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
@@ -108,19 +127,160 @@ export default function BulkUploadItem({ item, ancestors, onFieldChange, onToggl
             </div>
           </div>
 
-          <div>
-            <label className="text-xs text-parchment/40 mb-1 block">Description</label>
-            <textarea value={form.description} onChange={e => onFieldChange(item.id, 'description', e.target.value)} rows={2}
-              className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-3 py-2 text-sm text-parchment focus:outline-none focus:border-[#C9913A]" />
-          </div>
-
-          {a.suggested_tags?.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {a.suggested_tags.map((t, i) => (
-                <span key={i} className="px-1.5 py-0.5 rounded-full text-xs bg-[rgba(201,145,58,0.06)] text-amber-light/60">{t}</span>
-              ))}
+          {a.extracted_fields && Object.keys(a.extracted_fields).filter(k => a.extracted_fields[k]).length > 0 && (
+            <div className="p-3 bg-[#0D0B0A] rounded-lg border border-[rgba(201,145,58,0.1)]">
+              <div className="flex items-center gap-1.5 mb-2">
+                <Award size={12} className="text-gold" />
+                <p className="text-xs text-parchment/50 font-medium">Extracted Data — verify and edit</p>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {Object.entries(a.extracted_fields).filter(([, v]) => v).map(([key, val]) => (
+                  <div key={key}>
+                    <label className="text-[10px] text-parchment/30 capitalize">{key.replace(/_/g, ' ')}</label>
+                    <input
+                      value={String(val)}
+                      onChange={e => {
+                        const updated = { ...a.extracted_fields, [key]: e.target.value };
+                        onFieldChange(item.id, '_extracted_fields', updated);
+                      }}
+                      className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.15)] rounded px-2 py-1 text-xs text-parchment focus:outline-none focus:border-[#C9913A]"
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
           )}
+
+          {a.transcription && (
+            <div className="p-3 bg-[#0D0B0A] rounded-lg border border-[rgba(201,145,58,0.1)]">
+              <div className="flex items-center gap-1.5 mb-2">
+                <FileText size={12} className="text-gold" />
+                <p className="text-xs text-parchment/50 font-medium">Transcribed Text — edit if needed</p>
+              </div>
+              <textarea
+                value={a.transcription}
+                onChange={e => onFieldChange(item.id, '_transcription', e.target.value)}
+                rows={4}
+                className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.15)] rounded px-2 py-2 text-xs text-parchment focus:outline-none focus:border-[#C9913A] leading-relaxed"
+              />
+            </div>
+          )}
+
+          {a.visual_elements && (
+            <div className="p-3 bg-[#0D0B0A] rounded-lg border border-[rgba(201,145,58,0.1)] space-y-2">
+              <div className="flex items-center gap-1.5">
+                <Eye size={12} className="text-gold" />
+                <p className="text-xs text-parchment/50 font-medium">Extracted Visual Elements</p>
+              </div>
+              {a.visual_elements.objects?.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {a.visual_elements.objects.map((o, i) => (
+                    <span key={i} className="text-[10px] text-amber-light/80 bg-[rgba(201,145,58,0.06)] px-1.5 py-0.5 rounded-full">{o}</span>
+                  ))}
+                </div>
+              )}
+              {a.visual_elements.people?.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {a.visual_elements.people.map((p, i) => (
+                    <span key={i} className="text-[10px] text-amber-light/80 bg-[rgba(201,145,58,0.06)] px-1.5 py-0.5 rounded-full">{p}</span>
+                  ))}
+                </div>
+              )}
+              {a.visual_elements.dates_visible?.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {a.visual_elements.dates_visible.map((d, i) => (
+                    <span key={i} className="text-[10px] text-amber-light/80 bg-[rgba(201,145,58,0.06)] px-1.5 py-0.5 rounded-full">{d}</span>
+                  ))}
+                </div>
+              )}
+              {a.visual_elements.locations_visible?.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {a.visual_elements.locations_visible.map((l, i) => (
+                    <span key={i} className="text-[10px] text-amber-light/80 bg-[rgba(201,145,58,0.06)] px-1.5 py-0.5 rounded-full">{l}</span>
+                  ))}
+                </div>
+              )}
+              {a.visual_elements.format_description && (
+                <p className="text-[10px] text-parchment/40">{a.visual_elements.format_description}</p>
+              )}
+            </div>
+          )}
+
+          {a.ai_confidence !== undefined && (
+            <div className="flex items-center gap-2">
+              <Eye size={12} className="text-gold" />
+              <span className="text-[10px] text-parchment/40">AI Confidence</span>
+              <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${a.ai_confidence >= 0.7 ? 'bg-green-500/10 text-green-300' : a.ai_confidence >= 0.4 ? 'bg-[rgba(201,145,58,0.1)] text-amber-light' : 'bg-red-500/10 text-red-300'}`}>
+                {Math.round(a.ai_confidence * 100)}%
+              </span>
+              {a.categorization_notes && (
+                <p className="text-[10px] text-parchment/30 truncate flex-1">{a.categorization_notes}</p>
+              )}
+            </div>
+          )}
+
+          <div>
+            <label className="text-xs text-parchment/40 mb-1 block flex items-center gap-1"><Tag size={10} /> Tags</label>
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {(item.form.tags || a.suggested_tags || []).map((t, i, arr) => (
+                <span key={i} className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-[rgba(201,145,58,0.08)] text-amber-light/80 border border-[rgba(201,145,58,0.15)]">
+                  {t}
+                  <button onClick={() => {
+                    const current = item.form.tags || a.suggested_tags || [];
+                    onFieldChange(item.id, 'tags', current.filter((_, idx) => idx !== i));
+                  }} className="text-parchment/30 hover:text-parchment">✕</button>
+                </span>
+              ))}
+            </div>
+            {a.suggested_tags?.length > 0 && (item.form.tags || a.suggested_tags).length < a.suggested_tags.length && (
+              <p className="text-[10px] text-parchment/30 mb-1">AI-suggested — click to add</p>
+            )}
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {a.suggested_tags?.filter(t => !(item.form.tags || a.suggested_tags || []).includes(t)).map((t, i) => (
+                <button key={i} onClick={() => {
+                  const current = item.form.tags || [...a.suggested_tags];
+                  onFieldChange(item.id, 'tags', [...current, t]);
+                }}
+                  className="px-2 py-0.5 rounded-full text-xs bg-transparent text-amber-light/60 border border-dashed border-[rgba(201,145,58,0.2)] hover:border-[#C9913A] hover:text-gold transition-colors">
+                  + {t}
+                </button>
+              ))}
+            </div>
+            <input
+              value={item.form._tagInput || ''}
+              onChange={e => onFieldChange(item.id, '_tagInput', e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && (item.form._tagInput || '').trim()) {
+                  e.preventDefault();
+                  const val = (item.form._tagInput || '').trim();
+                  const current = item.form.tags || [...(a.suggested_tags || [])];
+                  if (!current.includes(val)) onFieldChange(item.id, 'tags', [...current, val]);
+                  onFieldChange(item.id, '_tagInput', '');
+                }
+              }}
+              className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.15)] rounded px-2 py-1.5 text-xs text-parchment focus:outline-none focus:border-[#C9913A] placeholder:text-parchment/30"
+              placeholder="Type a new tag and press Enter..."
+            />
+          </div>
+
+          <div>
+            <label className="text-xs text-parchment/40 mb-1 block flex items-center gap-1"><MessageSquare size={10} /> Comment / Query</label>
+            <textarea
+              value={item.form.comment || ''}
+              onChange={e => onFieldChange(item.id, 'comment', e.target.value)}
+              rows={2}
+              className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.15)] rounded px-2 py-1.5 text-xs text-parchment focus:outline-none focus:border-[#C9913A] placeholder:text-parchment/30"
+              placeholder="Add a comment or raise a query about this event..."
+            />
+            <div className="mt-1.5 flex items-center gap-2">
+              <button
+                onClick={() => onFieldChange(item.id, 'is_query', !item.form.is_query)}
+                className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] border transition-colors ${item.form.is_query ? 'border-[#C9913A] text-gold bg-[rgba(201,145,58,0.08)]' : 'border-[rgba(201,145,58,0.2)] text-amber-light/70'}`}
+              >
+                <HelpCircle size={10} /> {item.form.is_query ? 'Query' : 'Comment'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

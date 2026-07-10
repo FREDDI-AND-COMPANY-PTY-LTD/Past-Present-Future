@@ -128,7 +128,20 @@ export default function BulkUpload({ ancestors, preselectedAncestorId, user }) {
   };
 
   const updateField = (itemId, field, value) => {
-    setItems(prev => prev.map(it => it.id === itemId ? { ...it, form: { ...it.form, [field]: value } } : it));
+    // Handle special prefixed fields that map to analysis object
+    if (field === '_extracted_fields') {
+      setItems(prev => prev.map(it => it.id === itemId ? {
+        ...it,
+        analysis: { ...it.analysis, extracted_fields: value },
+      } : it));
+    } else if (field === '_transcription') {
+      setItems(prev => prev.map(it => it.id === itemId ? {
+        ...it,
+        analysis: { ...it.analysis, transcription: value },
+      } : it));
+    } else {
+      setItems(prev => prev.map(it => it.id === itemId ? { ...it, form: { ...it.form, [field]: value } } : it));
+    }
   };
 
   const toggleAncestor = (itemId, ancestorId) => {
@@ -159,7 +172,10 @@ export default function BulkUpload({ ancestors, preselectedAncestorId, user }) {
 
         const needsReview = effectiveAncestorIds.length === 0 || !item.form.location_name?.trim() || !item.form.date || !item.form.title?.trim();
 
-        await base44.entities.ContentItem.create({
+        const isAdminUser = user?.role === 'admin';
+        const finalTags = item.form.tags || item.analysis?.suggested_tags || [];
+
+        const createdItem = await base44.entities.ContentItem.create({
           title: item.form.title,
           content_type: item.analysis?.type === 'video' ? 'video' : (item.analysis?.type || 'photo'),
           description: item.form.description,
@@ -177,10 +193,25 @@ export default function BulkUpload({ ancestors, preselectedAncestorId, user }) {
           categorization_notes: item.analysis?.categorization_notes || null,
           visual_elements: item.analysis?.visual_elements || null,
           uploaded_by_id: user?.id || null,
-          review_status: needsReview ? 'flagged' : 'pending',
+          review_status: isAdminUser ? 'reviewed' : (needsReview ? 'flagged' : 'pending'),
           conflict_flag_status: 'none',
-          tags: [...(item.analysis?.suggested_tags || []), ...(needsReview ? ['admin_review_required'] : [])],
+          tags: [...finalTags, ...(needsReview ? ['admin_review_required'] : [])],
         });
+
+        // Save comment/query if provided
+        if (item.form.comment?.trim() && createdItem?.id) {
+          await base44.entities.Comment.create({
+            entity_type: 'ContentItem',
+            entity_id: createdItem.id,
+            field_name: 'general_discussion',
+            content: item.form.comment.trim(),
+            author_id: user?.id || null,
+            author_name: user?.full_name || user?.email || 'Family Member',
+            parent_comment_id: null,
+            is_query: item.form.is_query || false,
+            acknowledged_by: [],
+          }).catch(() => {});
+        }
 
         if (user) {
           await base44.entities.ActivityLog.create({
