@@ -9,6 +9,7 @@ import BulkUpload from '@/components/BulkUpload';
 import MentionTextarea from '@/components/MentionTextarea';
 import NewAncestorDialog from '@/components/NewAncestorDialog';
 import DuplicateCheckDialog from '@/components/DuplicateCheckDialog';
+import FocalPointEditor from '@/components/FocalPointEditor';
 
 const STEPS = {
   CAPTURE: 'capture',
@@ -68,6 +69,8 @@ export default function UploadEvent() {
   const [tagInput, setTagInput] = useState('');
   const [newAncestorOpen, setNewAncestorOpen] = useState(false);
   const [duplicateCheck, setDuplicateCheck] = useState(null);
+  const [focalPointReview, setFocalPointReview] = useState(null);
+  const [analyzingFocalPoint, setAnalyzingFocalPoint] = useState(false);
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
   const cameraInputRef = useRef(null);
@@ -361,6 +364,8 @@ Return JSON with this structure:
     setMissingFields({});
     setDismissedFields({});
     setNewAncestorOpen(false);
+    setFocalPointReview(null);
+    setAnalyzingFocalPoint(false);
     setFormData(INITIAL_FORM);
   };
 
@@ -472,7 +477,20 @@ Return JSON with this structure:
 
       // Auto-analyse focal point for smart image cropping on cards/hero
       if (fileUrl && (contentType === 'photo' || contentType === 'uncategorized' || contentType === 'certificate' || contentType === 'passport' || contentType === 'press_clipping' || contentType === 'narrative' || contentType === 'correspondence' || contentType === 'memorial' || contentType === 'identity_document')) {
-        base44.functions.invoke('analyzeImageCrop', { content_item_id: createdItem.id }).catch(() => {});
+        setAnalyzingFocalPoint(true);
+        base44.functions.invoke('analyzeImageCrop', { content_item_id: createdItem.id })
+          .then(res => {
+            setFocalPointReview({
+              itemId: createdItem.id,
+              fileUrl,
+              title: formData.title,
+              focalX: res.data?.focal_point_x ?? 0.5,
+              focalY: res.data?.focal_point_y ?? 0.4,
+              reasoning: res.data?.reasoning,
+            });
+          })
+          .catch(() => {})
+          .finally(() => setAnalyzingFocalPoint(false));
       }
 
       // Check for potential duplicates against existing items for the same ancestor(s)
@@ -1111,6 +1129,12 @@ Return JSON with this structure:
                 Back to Home
               </a>
             </div>
+            {analyzingFocalPoint && (
+              <div className="mt-6 pt-4 border-t border-[rgba(201,145,58,0.1)] flex items-center justify-center gap-2 text-sm text-parchment/50">
+                <Loader2 size={16} className="animate-spin text-gold" />
+                Analyzing optimal image crop...
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -1145,6 +1169,19 @@ Return JSON with this structure:
         }}
         user={user}
       />
+
+      {focalPointReview && (
+        <FocalPointEditor
+          itemId={focalPointReview.itemId}
+          fileUrl={focalPointReview.fileUrl}
+          title={focalPointReview.title}
+          focalX={focalPointReview.focalX}
+          focalY={focalPointReview.focalY}
+          reasoning={focalPointReview.reasoning}
+          onApprove={() => setFocalPointReview(null)}
+          onClose={() => setFocalPointReview(null)}
+        />
+      )}
 
       {duplicateCheck && (
         <DuplicateCheckDialog
