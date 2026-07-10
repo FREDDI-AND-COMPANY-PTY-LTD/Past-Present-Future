@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { MapPin, Users, ChevronDown, ChevronUp, Check, Loader2, Image as ImageIcon, FileText, Award, BookUser, IdCard, Mail, Newspaper, HelpCircle, Calendar } from 'lucide-react';
+import { MapPin, Users, ChevronDown, ChevronUp, Check, Loader2, Image as ImageIcon, FileText, Award, BookUser, IdCard, Mail, Newspaper, HelpCircle, Calendar, Video, Music } from 'lucide-react';
 import LocationPicker from '@/components/LocationPicker';
 
 const typeIcons = {
   photo: ImageIcon, narrative: FileText, correspondence: Mail, press_clipping: Newspaper,
   certificate: Award, passport: BookUser, identity_document: IdCard, uncategorized: HelpCircle,
+  video: Video, audio: Music,
 };
 
 export default function BulkUploadItem({ item, ancestors, onFieldChange, onToggleAncestor, onLocationPick }) {
@@ -20,11 +21,15 @@ export default function BulkUploadItem({ item, ancestors, onFieldChange, onToggl
   return (
     <div className="aged-card rounded-xl overflow-hidden">
       <div className="flex items-center gap-3 p-3">
-        <div className="w-16 h-16 rounded-lg overflow-hidden bg-[#0D0B0A] flex-shrink-0">
-          {item.fileUrl ? (
+        <div className="w-16 h-16 rounded-lg overflow-hidden bg-[#0D0B0A] flex-shrink-0 flex items-center justify-center">
+          {item.file?.type?.startsWith('video/') ? (
+            <Video size={20} className="text-gold/50" />
+          ) : item.file?.type?.startsWith('audio/') ? (
+            <Music size={20} className="text-gold/50" />
+          ) : item.fileUrl ? (
             <img src={item.fileUrl} alt="" className="w-full h-full object-cover sepia-tint" />
           ) : (
-            <div className="w-full h-full flex items-center justify-center"><ImageIcon size={20} className="text-parchment/30" /></div>
+            <ImageIcon size={20} className="text-parchment/30" />
           )}
         </div>
 

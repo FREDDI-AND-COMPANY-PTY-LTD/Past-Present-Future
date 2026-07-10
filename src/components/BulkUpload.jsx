@@ -39,7 +39,9 @@ export default function BulkUpload({ ancestors, preselectedAncestorId, user }) {
   }, [ancestors, preselectedAncestorId]);
 
   const processFiles = useCallback(async (fileList) => {
-    const files = Array.from(fileList).filter(f => f.type.startsWith('image/'));
+    const files = Array.from(fileList).filter(f =>
+      f.type.startsWith('image/') || f.type.startsWith('audio/') || f.type.startsWith('video/')
+    );
     if (files.length === 0) return;
 
     const newItems = files.map(f => ({
@@ -65,6 +67,20 @@ export default function BulkUpload({ ancestors, preselectedAncestorId, user }) {
       try {
         const uploadRes = await base44.integrations.Core.UploadFile({ file: item.file });
         const url = uploadRes.file_url;
+
+        const isImage = item.file.type.startsWith('image/');
+
+        if (!isImage) {
+          // Audio/video — no AI analysis, go straight to ready for manual tagging
+          setItems(prev => prev.map(it => it.id === item.id ? {
+            ...it,
+            fileUrl: url,
+            status: 'ready',
+            analysis: { type: 'video', suggested_tags: [] },
+            form: { ...it.form },
+          } : it));
+          continue;
+        }
 
         setItems(prev => prev.map(it => it.id === item.id ? { ...it, fileUrl: url, status: 'analysing' } : it));
 
@@ -145,7 +161,7 @@ export default function BulkUpload({ ancestors, preselectedAncestorId, user }) {
 
         await base44.entities.ContentItem.create({
           title: item.form.title,
-          content_type: item.analysis?.type || 'photo',
+          content_type: item.analysis?.type === 'video' ? 'video' : (item.analysis?.type || 'photo'),
           description: item.form.description,
           date: item.form.date || null,
           location_name: item.form.location_name,
@@ -198,9 +214,9 @@ export default function BulkUpload({ ancestors, preselectedAncestorId, user }) {
         className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${dragging ? 'border-[#C9913A] bg-[rgba(201,145,58,0.05)]' : 'border-[rgba(201,145,58,0.25)] hover:border-[#C9913A] hover:bg-[rgba(201,145,58,0.03)]'}`}
       >
         <Upload size={32} className="text-gold mx-auto mb-3" />
-        <p className="text-parchment font-medium mb-1">Drag &amp; drop multiple photos here</p>
-        <p className="text-xs text-parchment/40">or click to browse — JPG, PNG, WebP</p>
-        <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileSelect} />
+        <p className="text-parchment font-medium mb-1">Drag &amp; drop multiple files here</p>
+        <p className="text-xs text-parchment/40">or click to browse — photos, audio, video</p>
+        <input ref={fileInputRef} type="file" accept="image/*,audio/*,video/*" multiple className="hidden" onChange={handleFileSelect} />
       </div>
 
       {items.length > 0 && (

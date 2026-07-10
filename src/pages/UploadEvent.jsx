@@ -558,7 +558,7 @@ Return JSON with this structure:
                 </button>
                 <button onClick={() => setBulkMode(true)}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${bulkMode ? 'bg-[rgba(201,145,58,0.12)] text-gold border border-[rgba(201,145,58,0.3)]' : 'text-parchment/50 border border-transparent'}`}>
-                  Bulk Upload
+                  Other Uploads
                 </button>
               </div>
 
