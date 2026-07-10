@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Users, Map, Clock, Network, GitBranch, Upload, Shield, Search, Menu, X, Sparkles, Database, Inbox, AlertCircle, Newspaper, CheckSquare, Lightbulb } from 'lucide-react';
+import { Home, Users, Map, Clock, Network, GitBranch, Upload, Shield, Search, Menu, X, Sparkles, Database, Inbox, AlertCircle, Newspaper, CheckSquare } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import ReportProblemDialog from '@/components/ReportProblemDialog';
-import SuggestImprovementDialog from '@/components/SuggestImprovementDialog';
 import NewsletterOptIn from '@/components/NewsletterOptIn';
 import NotificationPopup from '@/components/NotificationPopup';
 import BranchUpgradeForm from '@/components/BranchUpgradeForm';
@@ -181,12 +180,6 @@ export default function Layout({ children }) {
                   Contact Admin
                 </button>
               </ReportProblemDialog>
-              <SuggestImprovementDialog>
-                <button className="flex items-center gap-2 px-4 py-2 rounded-lg border border-[rgba(201,145,58,0.2)] text-parchment/60 text-sm hover:text-amber-light hover:border-[rgba(201,145,58,0.4)] transition-colors">
-                  <Lightbulb size={14} />
-                  Suggest Improvement
-                </button>
-              </SuggestImprovementDialog>
             </div>
           </div>
         </footer>
