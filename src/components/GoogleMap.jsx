@@ -96,6 +96,7 @@ export default function GoogleMap({ markers = [], routes = [], loading = false }
   const [mapsReady, setMapsReady] = useState(false);
   const [userCenter, setUserCenter] = useState(null);  // {lat, lng} once geolocation resolves
   const [geoResolved, setGeoResolved] = useState(false);
+  const initialViewSetRef = useRef(false);
 
   // SPA link handler — intercepts clicks on data-spa-link attributes (inside info windows)
   useEffect(() => {
@@ -235,12 +236,20 @@ export default function GoogleMap({ markers = [], routes = [], loading = false }
       markersRef.current.forEach(m => m.setMap(map));
     }
 
-    // Always fit bounds to show all pins (+ user location once known).
-    if (!bounds.isEmpty()) {
-      if (userCenter) bounds.extend(userCenter);
-      map.fitBounds(bounds, 60);
+    // Set the initial view once geolocation has resolved — center on the
+    // user's current location so they can explore migration routes from
+    // where they actually are. Fall back to fitting all pins if denied.
+    if (!initialViewSetRef.current && geoResolved) {
+      if (userCenter) {
+        map.setCenter(userCenter);
+        map.setZoom(6);
+        initialViewSetRef.current = true;
+      } else if (!bounds.isEmpty()) {
+        map.fitBounds(bounds, 60);
+        initialViewSetRef.current = true;
+      }
     }
-  }, [markers, routes, mapsReady, userCenter]);
+  }, [markers, routes, mapsReady, userCenter, geoResolved]);
 
   // Drop a "you are here" marker at the user's current location
   useEffect(() => {
