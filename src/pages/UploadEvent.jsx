@@ -1121,13 +1121,22 @@ Return JSON with this structure:
               </div>
             )}
 
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="w-full py-3 rounded-lg bg-gradient-to-r from-[#C9913A] to-[#E8C97A] text-charcoal font-semibold disabled:opacity-50 hover:opacity-90 transition-opacity gold-glow"
-            >
-              {saving ? <Loader2 size={20} className="animate-spin mx-auto" /> : missingRequired.length > 0 ? 'Save to Archive (flagged for review)' : 'Save to Archive'}
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="flex-1 py-3 rounded-lg bg-gradient-to-r from-[#C9913A] to-[#E8C97A] text-charcoal font-semibold disabled:opacity-50 hover:opacity-90 transition-opacity gold-glow"
+              >
+                {saving ? <Loader2 size={20} className="animate-spin mx-auto" /> : missingRequired.length > 0 ? 'Save to Archive (flagged for review)' : 'Save to Archive'}
+              </button>
+              <button
+                onClick={resetForm}
+                disabled={saving}
+                className="flex items-center justify-center gap-1.5 px-5 py-3 rounded-lg border border-[rgba(245,236,215,0.15)] text-parchment/70 font-medium hover:bg-[rgba(245,236,215,0.05)] hover:text-parchment transition-colors disabled:opacity-50"
+              >
+                <X size={16} /> Cancel
+              </button>
+            </div>
           </div>
         )}
 
