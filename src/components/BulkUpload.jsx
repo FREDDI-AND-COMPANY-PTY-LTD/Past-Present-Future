@@ -8,6 +8,7 @@ export default function BulkUpload({ ancestors, preselectedAncestorId, user }) {
   const [items, setItems] = useState([]);
   const [dragging, setDragging] = useState(false);
   const [savingAll, setSavingAll] = useState(false);
+  const [ancestorsList, setAncestorsList] = useState(ancestors);
   const fileInputRef = useRef(null);
 
   const matchAncestors = useCallback((analysis) => {
@@ -36,7 +37,7 @@ export default function BulkUpload({ ancestors, preselectedAncestorId, user }) {
     }
     if (preselectedAncestorId) matched.push(preselectedAncestorId);
     return [...new Set(matched)];
-  }, [ancestors, preselectedAncestorId]);
+  }, [ancestorsList, preselectedAncestorId]);
 
   const processFiles = useCallback(async (fileList) => {
     const files = Array.from(fileList).filter(f =>
@@ -160,6 +161,10 @@ export default function BulkUpload({ ancestors, preselectedAncestorId, user }) {
     } : it));
   };
 
+  const handleCreateAncestor = (ancestor) => {
+    setAncestorsList(prev => [...prev, ancestor]);
+  };
+
   const handleSaveAll = async () => {
     setSavingAll(true);
     const readyItems = items.filter(it => it.status === 'ready');
@@ -264,10 +269,12 @@ export default function BulkUpload({ ancestors, preselectedAncestorId, user }) {
           <BulkUploadItem
             key={item.id}
             item={item}
-            ancestors={ancestors}
+            ancestors={ancestorsList}
             onFieldChange={updateField}
             onToggleAncestor={toggleAncestor}
             onLocationPick={handleLocationPick}
+            onCreateAncestor={handleCreateAncestor}
+            user={user}
           />
         ))}
       </div>

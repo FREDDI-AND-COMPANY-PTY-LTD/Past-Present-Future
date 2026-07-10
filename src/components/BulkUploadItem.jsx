@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { MapPin, Users, ChevronDown, ChevronUp, Check, Loader2, Image as ImageIcon, FileText, Award, BookUser, IdCard, Mail, Newspaper, HelpCircle, Calendar, Video, Music, Tag, Eye, MessageSquare } from 'lucide-react';
+import { MapPin, Users, ChevronDown, ChevronUp, Check, Loader2, Image as ImageIcon, FileText, Award, BookUser, IdCard, Mail, Newspaper, HelpCircle, Calendar, Video, Music, Eye, MessageSquare, UserPlus } from 'lucide-react';
 import LocationPicker from '@/components/LocationPicker';
+import NewAncestorDialog from '@/components/NewAncestorDialog';
 
 const typeIcons = {
   photo: ImageIcon, narrative: FileText, correspondence: Mail, press_clipping: Newspaper,
@@ -8,9 +9,10 @@ const typeIcons = {
   video: Video, audio: Music,
 };
 
-export default function BulkUploadItem({ item, ancestors, onFieldChange, onToggleAncestor, onLocationPick }) {
+export default function BulkUploadItem({ item, ancestors, onFieldChange, onToggleAncestor, onLocationPick, onCreateAncestor, user }) {
   const [expanded, setExpanded] = useState(false);
   const [locationPickerOpen, setLocationPickerOpen] = useState(false);
+  const [newAncestorOpen, setNewAncestorOpen] = useState(false);
 
   const a = item.analysis || {};
   const form = item.form;
@@ -124,6 +126,12 @@ export default function BulkUploadItem({ item, ancestors, onFieldChange, onToggl
                   </button>
                 );
               })}
+              <button
+                onClick={() => setNewAncestorOpen(true)}
+                className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border border-dashed border-[rgba(201,145,58,0.3)] text-amber-light/70 hover:border-[#C9913A] hover:text-gold transition-colors"
+              >
+                <UserPlus size={10} /> Enter New Ancestor
+              </button>
             </div>
           </div>
 
@@ -180,50 +188,6 @@ export default function BulkUploadItem({ item, ancestors, onFieldChange, onToggl
           )}
 
           <div>
-            <label className="text-xs text-parchment/40 mb-1 block flex items-center gap-1"><Tag size={10} /> Tags</label>
-            <div className="flex flex-wrap gap-1.5 mb-2">
-              {(item.form.tags || a.suggested_tags || []).map((t, i, arr) => (
-                <span key={i} className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-[rgba(201,145,58,0.08)] text-amber-light/80 border border-[rgba(201,145,58,0.15)]">
-                  {t}
-                  <button onClick={() => {
-                    const current = item.form.tags || a.suggested_tags || [];
-                    onFieldChange(item.id, 'tags', current.filter((_, idx) => idx !== i));
-                  }} className="text-parchment/30 hover:text-parchment">✕</button>
-                </span>
-              ))}
-            </div>
-            {a.suggested_tags?.length > 0 && (item.form.tags || a.suggested_tags).length < a.suggested_tags.length && (
-              <p className="text-[10px] text-parchment/30 mb-1">AI-suggested — click to add</p>
-            )}
-            <div className="flex flex-wrap gap-1.5 mb-2">
-              {a.suggested_tags?.filter(t => !(item.form.tags || a.suggested_tags || []).includes(t)).map((t, i) => (
-                <button key={i} onClick={() => {
-                  const current = item.form.tags || [...a.suggested_tags];
-                  onFieldChange(item.id, 'tags', [...current, t]);
-                }}
-                  className="px-2 py-0.5 rounded-full text-xs bg-transparent text-amber-light/60 border border-dashed border-[rgba(201,145,58,0.2)] hover:border-[#C9913A] hover:text-gold transition-colors">
-                  + {t}
-                </button>
-              ))}
-            </div>
-            <input
-              value={item.form._tagInput || ''}
-              onChange={e => onFieldChange(item.id, '_tagInput', e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Enter' && (item.form._tagInput || '').trim()) {
-                  e.preventDefault();
-                  const val = (item.form._tagInput || '').trim();
-                  const current = item.form.tags || [...(a.suggested_tags || [])];
-                  if (!current.includes(val)) onFieldChange(item.id, 'tags', [...current, val]);
-                  onFieldChange(item.id, '_tagInput', '');
-                }
-              }}
-              className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.15)] rounded px-2 py-1.5 text-xs text-parchment focus:outline-none focus:border-[#C9913A] placeholder:text-parchment/30"
-              placeholder="Type a new tag and press Enter..."
-            />
-          </div>
-
-          <div>
             <label className="text-xs text-parchment/40 mb-1 block flex items-center gap-1"><MessageSquare size={10} /> Comment / Query</label>
             <textarea
               value={item.form.comment || ''}
@@ -251,6 +215,16 @@ export default function BulkUploadItem({ item, ancestors, onFieldChange, onToggl
         initialLocation={form.location_name}
         initialLat={form.latitude}
         initialLng={form.longitude}
+      />
+
+      <NewAncestorDialog
+        open={newAncestorOpen}
+        onClose={() => setNewAncestorOpen(false)}
+        onCreated={(newAncestor) => {
+          onCreateAncestor?.(newAncestor);
+          onToggleAncestor(item.id, newAncestor.id);
+        }}
+        user={user}
       />
     </div>
   );

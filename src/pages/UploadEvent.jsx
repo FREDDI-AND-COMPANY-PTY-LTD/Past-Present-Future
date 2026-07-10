@@ -7,6 +7,7 @@ import AncestorMatchDialog from '@/components/AncestorMatchDialog';
 import LocationPicker from '@/components/LocationPicker';
 import BulkUpload from '@/components/BulkUpload';
 import MentionTextarea from '@/components/MentionTextarea';
+import NewAncestorDialog from '@/components/NewAncestorDialog';
 
 const STEPS = {
   CAPTURE: 'capture',
@@ -64,9 +65,7 @@ export default function UploadEvent() {
   const [bulkMode, setBulkMode] = useState(false);
   const [activeTags, setActiveTags] = useState([]);
   const [tagInput, setTagInput] = useState('');
-  const [showNewAncestorForm, setShowNewAncestorForm] = useState(false);
-  const [newAncestor, setNewAncestor] = useState({ full_name: '', birth_date: '', birth_place: '', living: true });
-  const [creatingAncestor, setCreatingAncestor] = useState(false);
+  const [newAncestorOpen, setNewAncestorOpen] = useState(false);
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
   const cameraInputRef = useRef(null);
@@ -359,10 +358,7 @@ Return JSON with this structure:
     setRefreshing(false);
     setMissingFields({});
     setDismissedFields({});
-    setActiveTags([]);
-    setTagInput('');
-    setShowNewAncestorForm(false);
-    setNewAncestor({ full_name: '', birth_date: '', birth_place: '', living: true });
+    setNewAncestorOpen(false);
     setFormData(INITIAL_FORM);
   };
 
@@ -938,60 +934,6 @@ Return JSON with this structure:
                     className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-parchment focus:outline-none focus:border-[#C9913A]" placeholder="144.96" />
                 </div>
               </div>
-              {/* Tags */}
-              <div>
-                <label className="text-sm text-parchment/60 mb-2 flex items-center gap-1.5"><Tag size={14} /> Tags</label>
-                {activeTags.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    {activeTags.map((tag, i) => (
-                      <span key={i} className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-[rgba(201,145,58,0.08)] text-amber-light/80 border border-[rgba(201,145,58,0.15)]">
-                        {tag}
-                        <button onClick={() => setActiveTags(prev => prev.filter((_, idx) => idx !== i))} className="text-parchment/30 hover:text-parchment ml-0.5">✕</button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-                {suggestedTags.length > 0 && (
-                  <div className="mb-2">
-                    <p className="text-xs text-parchment/40 mb-1">AI-suggested — click to add</p>
-                    <div className="flex flex-wrap gap-2">
-                      {suggestedTags.filter(t => !activeTags.includes(t)).map((tag, i) => (
-                        <button key={i} onClick={() => setActiveTags(prev => [...prev, tag])} className="px-2.5 py-1 rounded-full text-xs bg-transparent text-amber-light/60 border border-dashed border-[rgba(201,145,58,0.2)] hover:border-[#C9913A] hover:text-gold transition-colors">
-                          + {tag}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                <div className="flex gap-2">
-                  <input
-                    value={tagInput}
-                    onChange={e => setTagInput(e.target.value)}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter' && tagInput.trim()) {
-                        e.preventDefault();
-                        const val = tagInput.trim();
-                        if (!activeTags.includes(val)) setActiveTags(prev => [...prev, val]);
-                        setTagInput('');
-                      }
-                    }}
-                    className="flex-1 bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2 text-sm text-parchment focus:outline-none focus:border-[#C9913A] placeholder:text-parchment/30"
-                    placeholder="Type a new tag and press Enter..."
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const val = tagInput.trim();
-                      if (val && !activeTags.includes(val)) setActiveTags(prev => [...prev, val]);
-                      setTagInput('');
-                    }}
-                    className="flex items-center gap-1.5 px-4 rounded-lg bg-[rgba(201,145,58,0.1)] border border-[rgba(201,145,58,0.2)] text-amber-light text-sm font-medium hover:bg-[rgba(201,145,58,0.15)] transition-colors flex-shrink-0"
-                  >
-                    <Tag size={14} /> Add
-                  </button>
-                </div>
-              </div>
-
               {/* Comment section with hover tooltip */}
               <div>
                 <div className="flex items-center gap-1.5 mb-1">
@@ -1092,95 +1034,12 @@ Return JSON with this structure:
                     </button>
                   ))}
                   <button
-                    onClick={() => setShowNewAncestorForm(!showNewAncestorForm)}
+                    onClick={() => setNewAncestorOpen(true)}
                     className="flex items-center gap-1 px-3 py-1.5 rounded-full text-sm border border-dashed border-[rgba(201,145,58,0.3)] text-amber-light/70 hover:border-[#C9913A] hover:text-gold transition-colors"
                   >
-                    <UserPlus size={14} /> Add New Ancestor
+                    <UserPlus size={14} /> Enter New Ancestor
                   </button>
                 </div>
-
-                {showNewAncestorForm && (
-                  <div className="mt-3 p-4 rounded-xl bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] space-y-3">
-                    <div>
-                      <label className="text-xs text-parchment/50 mb-1 block">Full Name <span className="text-[#C9913A]">*</span></label>
-                      <input
-                        value={newAncestor.full_name}
-                        onChange={e => setNewAncestor(prev => ({ ...prev, full_name: e.target.value }))}
-                        className="w-full bg-[#1A1614] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]"
-                        placeholder="e.g. Giuseppe Freddi"
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-xs text-parchment/50 mb-1 block">Birth Date</label>
-                        <input
-                          type="date"
-                          value={newAncestor.birth_date}
-                          onChange={e => setNewAncestor(prev => ({ ...prev, birth_date: e.target.value }))}
-                          className="w-full bg-[#1A1614] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]"
-                          style={{ colorScheme: 'dark' }}
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs text-parchment/50 mb-1 block">Birth Place</label>
-                        <input
-                          value={newAncestor.birth_place}
-                          onChange={e => setNewAncestor(prev => ({ ...prev, birth_place: e.target.value }))}
-                          className="w-full bg-[#1A1614] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]"
-                          placeholder="e.g. Venice, Italy"
-                        />
-                      </div>
-                    </div>
-                    <label className="flex items-center gap-2 text-sm text-parchment/60 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={newAncestor.living}
-                        onChange={e => setNewAncestor(prev => ({ ...prev, living: e.target.checked }))}
-                        className="accent-[#C9913A]"
-                      />
-                      Currently living
-                    </label>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={async () => {
-                          if (!newAncestor.full_name.trim()) return;
-                          setCreatingAncestor(true);
-                          try {
-                            const currentUser = await base44.auth.me().catch(() => null);
-                            const created = await base44.entities.Ancestor.create({
-                              full_name: newAncestor.full_name.trim(),
-                              birth_date: newAncestor.birth_date || null,
-                              birth_place: newAncestor.birth_place || null,
-                              living: newAncestor.living,
-                              review_status: 'auto_approved',
-                              created_by_id: currentUser?.id || null,
-                              created_by_name: currentUser?.full_name || currentUser?.email || null,
-                            });
-                            setAncestors(prev => [...prev, created]);
-                            setFormData(f => ({ ...f, ancestor_ids: [...new Set([...f.ancestor_ids, created.id])] }));
-                            if (!selectedAncestorId) setSelectedAncestorId(created.id);
-                            setNewAncestor({ full_name: '', birth_date: '', birth_place: '', living: true });
-                            setShowNewAncestorForm(false);
-                          } catch (e) {
-                            // error
-                          }
-                          setCreatingAncestor(false);
-                        }}
-                        disabled={!newAncestor.full_name.trim() || creatingAncestor}
-                        className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#C9913A] text-charcoal text-sm font-semibold disabled:opacity-50 hover:opacity-90 transition-opacity"
-                      >
-                        {creatingAncestor ? <Loader2 size={14} className="animate-spin" /> : <UserPlus size={14} />}
-                        Create & Tag
-                      </button>
-                      <button
-                        onClick={() => { setShowNewAncestorForm(false); setNewAncestor({ full_name: '', birth_date: '', birth_place: '', living: true }); }}
-                        className="px-4 py-2 rounded-lg border border-[rgba(245,236,215,0.15)] text-parchment/60 text-sm hover:bg-[rgba(245,236,215,0.05)] transition-colors"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
 
@@ -1257,6 +1116,17 @@ Return JSON with this structure:
         initialLocation={formData.location_name}
         initialLat={formData.latitude}
         initialLng={formData.longitude}
+      />
+
+      <NewAncestorDialog
+        open={newAncestorOpen}
+        onClose={() => setNewAncestorOpen(false)}
+        onCreated={(created) => {
+          setAncestors(prev => [...prev, created]);
+          setFormData(f => ({ ...f, ancestor_ids: [...new Set([...f.ancestor_ids, created.id])] }));
+          if (!selectedAncestorId) setSelectedAncestorId(created.id);
+        }}
+        user={user}
       />
 
     </Layout>
