@@ -6,6 +6,7 @@ import Layout from '@/components/Layout';
 import EngageButton from '@/components/EngageButton';
 import EditEventDialog from '@/components/EditEventDialog';
 import TranslatedText from '@/components/TranslatedText';
+import HistoricalBackground from '@/components/HistoricalBackground';
 
 export default function ContentDetail() {
   const { id } = useParams();
@@ -122,6 +123,11 @@ export default function ContentDetail() {
               </div>
             )}
           </div>
+        </div>
+
+        {/* Historical Background — AI-generated, researched via web search */}
+        <div className="mb-6">
+          <HistoricalBackground item={item} onUpdate={setItem} />
         </div>
 
         {/* Engage: comment or upload related event */}

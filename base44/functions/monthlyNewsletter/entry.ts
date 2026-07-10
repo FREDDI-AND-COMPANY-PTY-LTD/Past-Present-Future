@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
           `   Era: ${item.era || 'unknown'}`,
         ];
         if (taggedAncestors) parts.push(`   Tagged Ancestor(s): ${taggedAncestors}`);
-        if (item.historical_context) parts.push(`   ⚡ Uploader's Historical Context: ${item.historical_context}`);
+        if (item.historical_background) parts.push(`   ⚡ AI-Researched Historical Background: ${item.historical_background.substring(0, 600)}`);
         if (item.transcribed_text) parts.push(`   Transcribed Text: ${item.transcribed_text.substring(0, 500)}`);
         if (commentText) parts.push(`   Family Discussion:\n${commentText}`);
         return parts.join('\n');

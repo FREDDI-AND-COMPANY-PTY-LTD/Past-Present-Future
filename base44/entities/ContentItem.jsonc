@@ -52,9 +52,14 @@
       "type": "string",
       "description": "Description or caption"
     },
-    "historical_context": {
+    "historical_background": {
       "type": "string",
-      "description": "User-provided historical context and background information to help the AI understand the broader significance of this event to the tagged ancestor(s). Used by the AI during analysis and chronicle generation to enrich narrative with wider historical background."
+      "description": "AI-generated historical background narrative \u2014 researched via web search using extracted data (locations, institutions, dates, occupations, migration context). Written in the style of a ghost writer constructing a personal history biography for the tagged ancestor(s)."
+    },
+    "historical_background_generated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp of when the historical background was last generated"
     },
     "transcribed_text": {
       "type": "string",
