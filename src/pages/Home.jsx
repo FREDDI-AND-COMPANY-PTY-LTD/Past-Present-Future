@@ -47,6 +47,9 @@ export default function Home() {
             src={heroPhoto?.file_url || FALLBACK_HERO}
             alt={heroPhoto?.title || 'Family archive'}
             className="w-full h-full object-cover sepia-tint"
+            style={heroPhoto?.focal_point_x != null || heroPhoto?.focal_point_y != null
+              ? { objectPosition: `${(heroPhoto.focal_point_x ?? 0.5) * 100}% ${(heroPhoto.focal_point_y ?? 0.4) * 100}%` }
+              : undefined}
           />
           <div className="absolute inset-0 hero-overlay" />
         </div>

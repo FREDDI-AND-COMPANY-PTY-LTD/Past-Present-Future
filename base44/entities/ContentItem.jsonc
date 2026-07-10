@@ -132,6 +132,16 @@
         }
       }
     },
+    "focal_point_x": {
+      "type": "number",
+      "description": "AI-determined focal point X coordinate (0-1, 0=left, 0.5=center, 1=right). Used by CSS object-position to crop images perfectly on card thumbnails and hero displays.",
+      "default": 0.5
+    },
+    "focal_point_y": {
+      "type": "number",
+      "description": "AI-determined focal point Y coordinate (0-1, 0=top, 0.5=center, 1=bottom). Used by CSS object-position to crop images perfectly on card thumbnails and hero displays.",
+      "default": 0.5
+    },
     "file_url": {
       "type": "string",
       "description": "URL to uploaded media file"

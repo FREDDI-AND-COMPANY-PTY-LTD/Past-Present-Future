@@ -36,6 +36,10 @@ export default function ContentCard({ item, ancestors = [] }) {
     .map(id => ancestors.find(a => a.id === id))
     .filter(Boolean);
 
+  const focalStyle = (item.focal_point_x != null || item.focal_point_y != null)
+    ? { objectPosition: `${(item.focal_point_x ?? 0.5) * 100}% ${(item.focal_point_y ?? 0.4) * 100}%` }
+    : {};
+
   return (
     <Link to={`/content/${item.id}`} className="block aged-card rounded-xl overflow-hidden hover:border-[rgba(201,145,58,0.4)] transition-all duration-300 group">
       {item.file_url && (item.content_type === 'photo' || item.content_type === 'uncategorized') && (
@@ -44,6 +48,7 @@ export default function ContentCard({ item, ancestors = [] }) {
             src={item.file_url}
             alt={item.title}
             className="w-full h-full object-cover sepia-tint group-hover:scale-105 transition-transform duration-500"
+            style={focalStyle}
           />
           <div className="absolute top-3 right-3 bg-charcoal/80 backdrop-blur-sm px-2.5 py-1 rounded-full flex items-center gap-1.5 border border-[rgba(201,145,58,0.2)]">
             <Icon size={12} className="text-gold" />

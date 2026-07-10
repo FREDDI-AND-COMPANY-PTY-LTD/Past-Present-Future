@@ -230,6 +230,11 @@ export default function BulkUpload({ ancestors, preselectedAncestorId, user }) {
 
         setItems(prev => prev.map(it => it.id === item.id ? { ...it, status: 'saved', savedItemId: createdItem.id } : it));
 
+        // Auto-analyse focal point for smart image cropping on cards/hero
+        if (item.fileUrl) {
+          base44.functions.invoke('analyzeImageCrop', { content_item_id: createdItem.id }).catch(() => {});
+        }
+
         // Check for potential duplicates against existing items for the same ancestor(s)
         base44.functions.invoke('checkDuplicateUpload', { content_item_id: createdItem.id })
           .then(res => {

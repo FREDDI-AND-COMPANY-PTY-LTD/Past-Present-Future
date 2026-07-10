@@ -470,6 +470,11 @@ Return JSON with this structure:
 
       setStep(STEPS.SAVED);
 
+      // Auto-analyse focal point for smart image cropping on cards/hero
+      if (fileUrl && (contentType === 'photo' || contentType === 'uncategorized' || contentType === 'certificate' || contentType === 'passport' || contentType === 'press_clipping' || contentType === 'narrative' || contentType === 'correspondence' || contentType === 'memorial' || contentType === 'identity_document')) {
+        base44.functions.invoke('analyzeImageCrop', { content_item_id: createdItem.id }).catch(() => {});
+      }
+
       // Check for potential duplicates against existing items for the same ancestor(s)
       base44.functions.invoke('checkDuplicateUpload', { content_item_id: createdItem.id })
         .then(res => {
