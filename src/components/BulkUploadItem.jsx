@@ -166,46 +166,6 @@ export default function BulkUploadItem({ item, ancestors, onFieldChange, onToggl
             </div>
           )}
 
-          {a.visual_elements && (
-            <div className="p-3 bg-[#0D0B0A] rounded-lg border border-[rgba(201,145,58,0.1)] space-y-2">
-              <div className="flex items-center gap-1.5">
-                <Eye size={12} className="text-gold" />
-                <p className="text-xs text-parchment/50 font-medium">Extracted Visual Elements</p>
-              </div>
-              {a.visual_elements.objects?.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {a.visual_elements.objects.map((o, i) => (
-                    <span key={i} className="text-[10px] text-amber-light/80 bg-[rgba(201,145,58,0.06)] px-1.5 py-0.5 rounded-full">{o}</span>
-                  ))}
-                </div>
-              )}
-              {a.visual_elements.people?.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {a.visual_elements.people.map((p, i) => (
-                    <span key={i} className="text-[10px] text-amber-light/80 bg-[rgba(201,145,58,0.06)] px-1.5 py-0.5 rounded-full">{p}</span>
-                  ))}
-                </div>
-              )}
-              {a.visual_elements.dates_visible?.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {a.visual_elements.dates_visible.map((d, i) => (
-                    <span key={i} className="text-[10px] text-amber-light/80 bg-[rgba(201,145,58,0.06)] px-1.5 py-0.5 rounded-full">{d}</span>
-                  ))}
-                </div>
-              )}
-              {a.visual_elements.locations_visible?.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {a.visual_elements.locations_visible.map((l, i) => (
-                    <span key={i} className="text-[10px] text-amber-light/80 bg-[rgba(201,145,58,0.06)] px-1.5 py-0.5 rounded-full">{l}</span>
-                  ))}
-                </div>
-              )}
-              {a.visual_elements.format_description && (
-                <p className="text-[10px] text-parchment/40">{a.visual_elements.format_description}</p>
-              )}
-            </div>
-          )}
-
           {a.ai_confidence !== undefined && (
             <div className="flex items-center gap-2">
               <Eye size={12} className="text-gold" />
