@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, Check, MapPin, Tag, Award, FileText, Eye, Calendar, Image as ImageIcon, Newspaper, BookUser, IdCard, Mail, Heart, HelpCircle, X } from 'lucide-react';
+import { Loader2, Check, MapPin, Tag, Award, FileText, Eye, Calendar, Image as ImageIcon, Newspaper, BookUser, IdCard, Mail, Heart, HelpCircle, X, Network, User, Users } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import LocationPicker from '@/components/LocationPicker';
 
@@ -24,6 +24,7 @@ export default function AdminEventEditor({ item, onApproved }) {
   const [saving, setSaving] = useState(false);
   const [locationPickerOpen, setLocationPickerOpen] = useState(false);
   const [newTag, setNewTag] = useState('');
+  const [familyLink, setFamilyLink] = useState(null);
 
   useEffect(() => {
     setFormData({
@@ -40,6 +41,10 @@ export default function AdminEventEditor({ item, onApproved }) {
     setExtractedFields(item.extracted_fields || {});
     setTranscribedText(item.transcribed_text || '');
     setTags(item.tags || []);
+    // Load any family link extracted from this content item
+    base44.entities.FamilyLink.filter({ content_item_id: item.id }).then(links => {
+      setFamilyLink(links && links.length > 0 ? links[0] : null);
+    }).catch(() => setFamilyLink(null));
   }, [item.id]);
 
   useEffect(() => {
@@ -85,10 +90,16 @@ export default function AdminEventEditor({ item, onApproved }) {
         review_status: 'reviewed',
         categorization_notes: item.categorization_notes?.replace(/⚠ FLAGGED FOR ADMIN REVIEW.*$/s, '').trim() || null,
       });
+      // If a family link exists and is still pending, integrate it now
+      if (familyLink && familyLink.status === 'pending') {
+        await base44.functions.invoke('integrateFamilyLink', { family_link_id: familyLink.id }).catch(() => {});
+      }
       if (onApproved) onApproved(item.id);
     } catch (e) {}
     setSaving(false);
   };
+
+  const getAncestor = (id) => ancestors.find(a => a.id === id);
 
   const CurrentTypeIcon = typeOptions.find(t => t.value === formData.content_type)?.icon || HelpCircle;
 
@@ -271,6 +282,58 @@ export default function AdminEventEditor({ item, onApproved }) {
         </div>
       )}
 
+      {/* Family Links preview — shows extracted relationships from certificates */}
+      {familyLink && (
+        <div className="aged-card rounded-xl p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Network size={16} className="text-gold" />
+            <h3 className="font-display text-base text-parchment">Extracted Family Links</h3>
+            <span className={`ml-auto px-2 py-0.5 rounded-full text-xs ${
+              familyLink.status === 'integrated' ? 'bg-green-500/10 text-green-300' :
+              familyLink.status === 'rejected' ? 'bg-red-500/10 text-red-300' :
+              'bg-[rgba(201,145,58,0.1)] text-amber-light'
+            }`}>{familyLink.status}</span>
+          </div>
+          {familyLink.status === 'pending' && (
+            <p className="text-xs text-parchment/40 mb-3">Approving this upload will integrate these relationships into the family tree, migration map, and timeline.</p>
+          )}
+          <div className="space-y-2">
+            {familyLink.mother_ancestor_id && (
+              <div className="flex items-center gap-2 text-sm">
+                <Users size={14} className="text-parchment/30" />
+                <span className="text-parchment/40 w-16">Mother</span>
+                <span className="text-parchment">{getAncestor(familyLink.mother_ancestor_id)?.full_name || familyLink.mother_name}</span>
+                {familyLink.mother_is_new && <span className="text-xs text-amber-light/60">(new)</span>}
+              </div>
+            )}
+            {familyLink.father_ancestor_id && (
+              <div className="flex items-center gap-2 text-sm">
+                <Users size={14} className="text-parchment/30" />
+                <span className="text-parchment/40 w-16">Father</span>
+                <span className="text-parchment">{getAncestor(familyLink.father_ancestor_id)?.full_name || familyLink.father_name}</span>
+                {familyLink.father_is_new && <span className="text-xs text-amber-light/60">(new)</span>}
+              </div>
+            )}
+            {familyLink.partner_ancestor_id && (
+              <div className="flex items-center gap-2 text-sm">
+                <Heart size={14} className="text-parchment/30" />
+                <span className="text-parchment/40 w-16">Spouse</span>
+                <span className="text-parchment">{getAncestor(familyLink.partner_ancestor_id)?.full_name || familyLink.partner_name}</span>
+                {familyLink.partner_is_new && <span className="text-xs text-amber-light/60">(new)</span>}
+              </div>
+            )}
+            {familyLink.subject_is_new && (
+              <div className="flex items-center gap-2 text-sm">
+                <User size={14} className="text-parchment/30" />
+                <span className="text-parchment/40 w-16">Subject</span>
+                <span className="text-parchment">{getAncestor(familyLink.subject_ancestor_id)?.full_name || familyLink.subject_name}</span>
+                <span className="text-xs text-amber-light/60">(new)</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Approve button */}
       <button
         onClick={handleApprove}
@@ -278,7 +341,7 @@ export default function AdminEventEditor({ item, onApproved }) {
         className="w-full py-3 rounded-lg bg-gradient-to-r from-green-600 to-green-500 text-white font-semibold disabled:opacity-50 hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
       >
         {saving ? <Loader2 size={20} className="animate-spin" /> : <Check size={20} />}
-        {saving ? 'Saving...' : 'Approve & Save'}
+        {saving ? 'Saving...' : familyLink && familyLink.status === 'pending' ? 'Approve & Integrate Family Tree' : 'Approve & Save'}
       </button>
 
       <LocationPicker

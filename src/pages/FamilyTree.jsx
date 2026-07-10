@@ -26,10 +26,12 @@ export default function FamilyTree() {
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
-  // Filter to branch descendants when available
+  // Exclude staged (unapproved) placeholder ancestors — they only appear
+  // in the tree after an admin approves the family link that created them
+  const visibleAncestors = ancestors.filter(a => a.review_status !== 'staged');
   const branchAncestors = descendantIds.size > 0
-    ? ancestors.filter(a => descendantIds.has(a.id))
-    : ancestors;
+    ? visibleAncestors.filter(a => descendantIds.has(a.id))
+    : visibleAncestors;
 
   // Build tree structure
   const buildTree = useCallback(() => {

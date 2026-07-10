@@ -38,9 +38,11 @@ export default function TimelinePage() {
     base44.auth.me().then(setUser).catch(() => {});
   }, []);
 
+  // Only show admin-reviewed content on the public timeline
+  const reviewedItems = items.filter(i => i.review_status === 'reviewed');
   const branchItems = descendantIds.size > 0
-    ? items.filter(i => (i.ancestor_ids || []).some(aid => descendantIds.has(aid)))
-    : items;
+    ? reviewedItems.filter(i => (i.ancestor_ids || []).some(aid => descendantIds.has(aid)))
+    : reviewedItems;
 
   const branchAncestors = descendantIds.size > 0
     ? ancestors.filter(a => descendantIds.has(a.id))

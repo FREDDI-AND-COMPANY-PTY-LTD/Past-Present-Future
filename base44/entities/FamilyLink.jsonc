@@ -1,0 +1,109 @@
+{
+  "name": "FamilyLink",
+  "type": "object",
+  "properties": {
+    "content_item_id": {
+      "type": "string",
+      "description": "ID of the ContentItem (certificate) this link was extracted from"
+    },
+    "content_item_title": {
+      "type": "string",
+      "description": "Title of the source content item at time of extraction"
+    },
+    "document_subtype": {
+      "type": "string",
+      "description": "Certificate subtype (birth_certificate, marriage_certificate, death_certificate, etc.)"
+    },
+    "subject_ancestor_id": {
+      "type": "string",
+      "description": "ID of the main subject ancestor (matched to existing or newly created placeholder)"
+    },
+    "subject_name": {
+      "type": "string",
+      "description": "Subject's name as extracted from the document"
+    },
+    "subject_is_new": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the subject ancestor was newly created as a placeholder from this document"
+    },
+    "mother_ancestor_id": {
+      "type": "string",
+      "description": "ID of the mother ancestor (matched to existing or placeholder)"
+    },
+    "mother_name": {
+      "type": "string",
+      "description": "Mother's name as extracted from the document"
+    },
+    "mother_is_new": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the mother ancestor was newly created as a placeholder"
+    },
+    "father_ancestor_id": {
+      "type": "string",
+      "description": "ID of the father ancestor (matched to existing or placeholder)"
+    },
+    "father_name": {
+      "type": "string",
+      "description": "Father's name as extracted from the document"
+    },
+    "father_is_new": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the father ancestor was newly created as a placeholder"
+    },
+    "partner_ancestor_id": {
+      "type": "string",
+      "description": "ID of the partner/spouse ancestor (matched to existing or placeholder)"
+    },
+    "partner_name": {
+      "type": "string",
+      "description": "Partner/spouse's name as extracted from the document"
+    },
+    "partner_is_new": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the partner ancestor was newly created as a placeholder"
+    },
+    "extracted_data": {
+      "type": "object",
+      "description": "Full extracted_fields snapshot from the certificate for admin reference"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "rejected",
+        "integrated"
+      ],
+      "default": "pending",
+      "description": "pending = awaiting admin review; integrated = relationships applied to ancestor records and visible in the family tree/map/timeline"
+    },
+    "review_notes": {
+      "type": "string",
+      "description": "Admin's notes on the review decision"
+    },
+    "reviewed_by_id": {
+      "type": "string",
+      "description": "Admin user ID who reviewed this family link"
+    },
+    "reviewed_by_name": {
+      "type": "string",
+      "description": "Admin display name who reviewed this family link"
+    },
+    "created_by_id": {
+      "type": "string",
+      "description": "User ID of the uploader who triggered the extraction"
+    },
+    "created_by_name": {
+      "type": "string",
+      "description": "Display name of the uploader"
+    }
+  },
+  "required": [
+    "content_item_id",
+    "status"
+  ]
+}

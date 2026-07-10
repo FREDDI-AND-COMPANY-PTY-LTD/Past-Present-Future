@@ -82,10 +82,11 @@
       "enum": [
         "auto_approved",
         "overwritten",
-        "admin_verified"
+        "admin_verified",
+        "staged"
       ],
       "default": "auto_approved",
-      "description": "Review status \u2014 user-created ancestors are auto-approved; admin can overwrite or verify"
+      "description": "Review status \u2014 'staged' = auto-created placeholder from certificate extraction, hidden from family tree/map/timeline until admin-approved and integrated"
     },
     "created_by_id": {
       "type": "string",

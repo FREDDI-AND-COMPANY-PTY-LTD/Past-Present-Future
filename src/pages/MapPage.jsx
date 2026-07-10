@@ -51,9 +51,11 @@ export default function MapPage() {
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
+  // Only show admin-reviewed content on the public map
+  const reviewedItems = contentItems.filter(i => i.review_status === 'reviewed');
   const branchItems = descendantIds.size > 0
-    ? contentItems.filter(i => (i.ancestor_ids || []).some(aid => descendantIds.has(aid)))
-    : contentItems;
+    ? reviewedItems.filter(i => (i.ancestor_ids || []).some(aid => descendantIds.has(aid)))
+    : reviewedItems;
   const branchRoutes = descendantIds.size > 0
     ? routes.filter(r => !r.ancestor_id || descendantIds.has(r.ancestor_id))
     : routes;

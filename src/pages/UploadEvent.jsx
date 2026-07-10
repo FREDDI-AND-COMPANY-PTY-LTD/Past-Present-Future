@@ -462,6 +462,11 @@ Return JSON with this structure:
         }).catch(() => {});
       }
 
+      // Auto-extract family relationships from certificate-type documents
+      if (['certificate', 'passport', 'identity_document'].includes(contentType)) {
+        await base44.functions.invoke('generateFamilyLinks', { content_item_id: createdItem.id }).catch(() => {});
+      }
+
       setStep(STEPS.SAVED);
     } catch (e) {
       // error
