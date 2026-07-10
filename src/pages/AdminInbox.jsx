@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Inbox, AlertCircle, Flag, Upload, Loader2, ShieldAlert, Brain, Network } from 'lucide-react';
+import { Inbox, AlertCircle, Flag, Upload, Loader2, ShieldAlert, Brain, Network, Copy } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import AdminProblems from '@/components/admin/AdminProblems';
@@ -7,6 +7,7 @@ import AdminApprovals from '@/components/admin/AdminApprovals';
 import AdminUploads from '@/components/admin/AdminUploads';
 import AdminUncategorized from '@/components/admin/AdminUncategorized';
 import AdminFamilyLinks from '@/components/admin/AdminFamilyLinks';
+import AdminDuplicateReview from '@/components/admin/AdminDuplicateReview';
 
 const TABS = [
   { key: 'problems', label: 'Inbox Problems', icon: AlertCircle },
@@ -14,6 +15,7 @@ const TABS = [
   { key: 'uploads', label: 'Review Uploads', icon: Upload },
   { key: 'familyLinks', label: 'Family Links', icon: Network },
   { key: 'uncategorized', label: 'Uncategorized', icon: Brain },
+  { key: 'duplicates', label: 'Duplicate Review', icon: Copy },
 ];
 
 export default function AdminInbox() {
@@ -21,7 +23,7 @@ export default function AdminInbox() {
   const [authLoading, setAuthLoading] = useState(true);
   const [tab, setTab] = useState('problems');
   const [refreshKey, setRefreshKey] = useState(0);
-  const [counts, setCounts] = useState({ problems: 0, approvals: 0, uploads: 0, familyLinks: 0, uncategorized: 0 });
+  const [counts, setCounts] = useState({ problems: 0, approvals: 0, uploads: 0, familyLinks: 0, uncategorized: 0, duplicates: 0 });
 
   useEffect(() => {
     base44.auth.me().then(u => {
@@ -38,13 +40,15 @@ export default function AdminInbox() {
       base44.entities.ContentItem.list('-created_date', 50).catch(() => []),
       base44.entities.FamilyLink.filter({ status: 'pending' }).catch(() => []),
       base44.entities.ContentItem.filter({ content_type: 'uncategorized' }).catch(() => []),
-    ]).then(([probs, flags, items, familyLinks, uncategorized]) => {
+      base44.entities.ConflictFlag.filter({ flag_type: 'duplicate_upload', status: 'open' }).catch(() => []),
+    ]).then(([probs, flags, items, familyLinks, uncategorized, dupFlags]) => {
       setCounts({
         problems: (probs || []).length,
         approvals: (flags || []).length,
         uploads: (items || []).filter(i => !i.review_status || i.review_status === 'pending').length,
         familyLinks: (familyLinks || []).length,
         uncategorized: (uncategorized || []).length,
+        duplicates: (dupFlags || []).length,
       });
     }).catch(() => {});
   }, [user, refreshKey]);
@@ -130,6 +134,7 @@ export default function AdminInbox() {
         {tab === 'uploads' && <AdminUploads refreshKey={refreshKey} />}
         {tab === 'familyLinks' && <AdminFamilyLinks refreshKey={refreshKey} />}
         {tab === 'uncategorized' && <AdminUncategorized refreshKey={refreshKey} />}
+        {tab === 'duplicates' && <AdminDuplicateReview duplicates={[]} onResolved={() => setRefreshKey(k => k + 1)} />}
       </div>
     </Layout>
   );
