@@ -96,6 +96,11 @@ export default function UploadEvent() {
       ? `\n\n--- USER FEEDBACK / CORRECTIONS ---\nThe user has provided the following guidance after reviewing the initial analysis. Please incorporate these corrections and re-analyse the image accordingly, adjusting classification, extracted fields, transcription, title, description, tags, and any other relevant data:\n${feedback}\n--- END USER FEEDBACK ---\n`
       : '';
 
+    const fileName = selectedFile?.name || '';
+    const fileNameSection = fileName
+      ? `\n\n--- FILE NAME CONTEXT ---\nThe uploaded file is named: "${fileName}".\nFile names often contain valuable genealogical metadata — names of people, places, dates, document types, or other identifying information. Parse the file name carefully and use ANY information found in it to populate the extracted fields, suggested title, description, event location, and tags. For example:\n- "Birth Certificate - Giuseppe Freddi 1898 Venice.jpg" → full_name: Giuseppe Freddi, date_of_birth/place_of_birth from 1898 and Venice\n- "Alfredo military discharge 1901 La Spezia.pdf" → full_name: Alfredo, date_of_event: 1901, place_of_event: La Spezia\n- "Freddi family Melbourne 1955.png" → locations_visible: Melbourne, dates_visible: 1955\nTreat file name data as a strong hint, but always cross-reference with what you see in the image itself. If the file name and image conflict, prefer the image.\n--- END FILE NAME CONTEXT ---\n`
+      : '';
+
     const result = await base44.integrations.Core.InvokeLLM({
       prompt: `You are a sophisticated genealogical and historical document analyst working on a family history archive. You are analysing an image that could be ANYTHING — a photograph (portrait, landscape, group photo), a document (certificate, letter, passport, newspaper), a poster, a concert ticket, a postcard, a drawing, a map, a receipt, or any other type of visual artifact from a family's history.
 
@@ -104,6 +109,7 @@ Your job is to:
 2. Extract ALL visible data — every piece of text, every visible object, every person, every date, every location, every notable visual element
 3. Provide a confidence score for your classification
 4. Note your reasoning — what visual elements led to your conclusion, and what uncertainty remains
+5. IMPORTANT: Also parse the FILE NAME for any names, locations, dates, document types, or other metadata — file names are a valuable data source provided by the uploader
 
 CATEGORIES (choose the single best fit, or "uncategorized" if you cannot confidently classify):
 1. "photo" — A PHOTOGRAPH of a person, place, or event (portrait, landscape, group photo, etc.)
@@ -166,7 +172,7 @@ Return JSON with this structure:
   },
   "suggested_title": "a short descriptive title for this item, including the type and primary person/place if known (e.g. 'Birth Certificate — Giuseppe Freddi (1898)', 'Group Photo at Beach — circa 1950', 'Concert Ticket — Melbourne Town Hall')",
   "suggested_description": "a brief description of what this item is and its potential significance to family history",
-  "suggested_tags": ["array", "of", "relevant", "tags", "e.g. 'immigration', 'Victoria', '1890s', 'Freddi bloodline', 'concert', 'poster']" + contextSection + feedbackSection}`,
+  "suggested_tags": ["array", "of", "relevant", "tags", "e.g. 'immigration', 'Victoria', '1890s', 'Freddi bloodline', 'concert', 'poster']" + fileNameSection + feedbackSection}`,
       file_urls: [url],
       response_json_schema: {
         type: 'object',
@@ -210,6 +216,7 @@ Return JSON with this structure:
       ...(result.visual_elements?.people || []),
       ...(result.visual_elements?.text_elements || []),
       ...(result.visual_elements?.locations_visible || []),
+      fileName,
     ].filter(Boolean).join(' ');
 
     const lowerText = allTextSources.toLowerCase();
