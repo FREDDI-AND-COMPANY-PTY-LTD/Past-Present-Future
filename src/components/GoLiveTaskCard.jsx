@@ -1,0 +1,64 @@
+import React, { useState, useEffect } from 'react';
+import { Rocket, ArrowRight } from 'lucide-react';
+import { base44 } from '@/api/base44Client';
+import SwipeReviewModal from '@/components/SwipeReviewModal';
+
+export default function GoLiveTaskCard() {
+  const [completed, setCompleted] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [showModal, setShowModal] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  const loadData = async () => {
+    try {
+      const sessions = await base44.entities.GoLiveSession.list().catch(() => []);
+      const isDone = (sessions || []).some(s => s.status === 'completed');
+      setCompleted(isDone);
+
+      if (!isDone) {
+        const items = await base44.entities.ContentItem.list('-created_date', 200);
+        const pending = (items || []).filter(i => !i.review_status || i.review_status === 'pending' || i.review_status === 'flagged');
+        setPendingCount(pending.length);
+      }
+    } catch (e) {}
+    setLoading(false);
+  };
+
+  useEffect(() => { loadData(); }, []);
+
+  if (loading || completed) return null;
+
+  return (
+    <>
+      <div className="aged-card rounded-xl p-5 border-[rgba(201,145,58,0.4)] gold-glow mt-4">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#C9913A] to-[#E8C97A] flex items-center justify-center flex-shrink-0">
+            <Rocket size={20} className="text-charcoal" />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xs px-2 py-0.5 rounded-full bg-[rgba(201,145,58,0.15)] text-amber-light border border-[rgba(201,145,58,0.25)] font-medium">GOING LIVE</span>
+              <span className="text-xs text-parchment/30">Master Task</span>
+            </div>
+            <p className="text-sm text-parchment font-medium mb-1">Review all uploaded events before going live</p>
+            <p className="text-xs text-parchment/50 mb-3">
+              {pendingCount > 0
+                ? `${pendingCount} event${pendingCount !== 1 ? 's' : ''} awaiting review. Swipe through each one — right to confirm, left to flag for further review.`
+                : 'All events reviewed. Ready to go live and invite family members.'}
+            </p>
+            <button
+              onClick={() => setShowModal(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-[#C9913A] to-[#E8C97A] text-charcoal text-sm font-semibold hover:opacity-90 transition-opacity"
+            >
+              Start Review
+              <ArrowRight size={14} />
+            </button>
+          </div>
+        </div>
+      </div>
+      {showModal && (
+        <SwipeReviewModal onClose={() => { setShowModal(false); loadData(); }} />
+      )}
+    </>
+  );
+}

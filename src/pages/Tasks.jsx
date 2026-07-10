@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { CheckCircle2, MessageCircle, HelpCircle, Loader2, Bell } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
+import GoLiveTaskCard from '@/components/GoLiveTaskCard';
 
 export default function Tasks() {
   const [comments, setComments] = useState([]);
@@ -10,6 +11,7 @@ export default function Tasks() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [acknowledging, setAcknowledging] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -20,6 +22,7 @@ export default function Tasks() {
       const currentUser = await base44.auth.me();
       if (!currentUser) { setLoading(false); return; }
       setUser(currentUser);
+      setIsAdmin(currentUser.role === 'admin');
 
       const allComments = await base44.entities.Comment.list('-created_date', 200);
       const allItems = await base44.entities.ContentItem.list('-created_date', 200);
@@ -119,6 +122,9 @@ export default function Tasks() {
             })}
           </div>
         )}
+
+        {/* Going Live master task — admins only, at the bottom */}
+        {isAdmin && <GoLiveTaskCard />}
       </div>
     </Layout>
   );
