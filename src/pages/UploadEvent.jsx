@@ -392,8 +392,10 @@ Return JSON with this structure:
         date: 'No event date provided',
         description: 'No title/description provided',
       };
+      const isAdminUser = currentUser?.role === 'admin';
       const missingNotes = missingRequired.map(k => missingLabels[k]).filter(Boolean);
-      const needsReview = missingRequired.length > 0;
+      // Admin uploads are pre-approved — no admin review task needed
+      const needsReview = !isAdminUser && missingRequired.length > 0;
 
       const itemData = {
         title: formData.title,
@@ -419,7 +421,7 @@ Return JSON with this structure:
         visual_elements: visualElements || null,
         uploaded_by_id: currentUser?.id || null,
         conflict_flag_status: 'none',
-        review_status: needsReview ? 'flagged' : 'pending',
+        review_status: isAdminUser ? 'reviewed' : (needsReview ? 'flagged' : 'pending'),
         tags: [...activeTags, ...(needsReview ? ['admin_review_required'] : [])],
       };
 
