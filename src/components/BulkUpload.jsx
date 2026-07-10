@@ -2,6 +2,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import { Upload, Loader2, Save, Check, AlertCircle } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { analyzeImage } from '@/lib/imageAnalysis';
+import { analyzeAudioVideo } from '@/lib/avAnalysis';
 import BulkUploadItem from '@/components/BulkUploadItem';
 
 export default function BulkUpload({ ancestors, preselectedAncestorId, user }) {
@@ -72,14 +73,36 @@ export default function BulkUpload({ ancestors, preselectedAncestorId, user }) {
         const isImage = item.file.type.startsWith('image/');
 
         if (!isImage) {
-          // Audio/video — no AI analysis, go straight to ready for manual tagging
-          setItems(prev => prev.map(it => it.id === item.id ? {
-            ...it,
-            fileUrl: url,
-            status: 'ready',
-            analysis: { type: 'video', suggested_tags: [] },
-            form: { ...it.form },
-          } : it));
+          // Audio/video — transcribe (audio) and analyse filename/metadata via AI
+          setItems(prev => prev.map(it => it.id === item.id ? { ...it, fileUrl: url, status: 'analysing' } : it));
+
+          try {
+            const result = await analyzeAudioVideo(url, item.file.name, item.file.type);
+            const matchedIds = matchAncestors(result);
+            const eventLocation = result.event_location || '';
+            const eventDate = result.extracted_fields?.date_of_event || '';
+
+            setItems(prev => prev.map(it => it.id === item.id ? {
+              ...it,
+              status: 'ready',
+              analysis: result,
+              form: {
+                ...it.form,
+                title: result.suggested_title || it.form.title,
+                description: result.suggested_description || '',
+                date: eventDate,
+                location_name: eventLocation,
+                ancestor_ids: matchedIds.length > 0 ? matchedIds : it.form.ancestor_ids,
+              },
+            } : it));
+          } catch (e) {
+            setItems(prev => prev.map(it => it.id === item.id ? {
+              ...it,
+              fileUrl: url,
+              status: 'ready',
+              analysis: { type: item.file.type.startsWith('audio/') ? 'audio' : 'video', suggested_tags: [] },
+            } : it));
+          }
           continue;
         }
 
@@ -182,7 +205,7 @@ export default function BulkUpload({ ancestors, preselectedAncestorId, user }) {
 
         const createdItem = await base44.entities.ContentItem.create({
           title: item.form.title,
-          content_type: item.analysis?.type === 'video' ? 'video' : (item.analysis?.type || 'photo'),
+          content_type: item.analysis?.type || 'photo',
           description: item.form.description,
           date: item.form.date || null,
           location_name: item.form.location_name,
