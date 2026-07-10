@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Loader2, Search, Brain, HelpCircle, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
-import EventExtractionPanel from '@/components/admin/EventExtractionPanel';
+import AdminEventEditor from '@/components/admin/AdminEventEditor';
 
 const typeOptions = [
   { value: 'photo', label: 'Photograph' },
@@ -216,7 +216,7 @@ export default function AdminUncategorized({ refreshKey }) {
                       <button onClick={() => setExpandedId(isExpanded ? null : item.id)}
                         className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[rgba(201,145,58,0.06)] text-amber-light border border-[rgba(201,145,58,0.12)] hover:bg-[rgba(201,145,58,0.12)] transition-colors text-xs font-medium">
                         {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                        {isExpanded ? 'Collapse' : 'View Extraction'}
+                        {isExpanded ? 'Collapse' : 'Review & Edit'}
                       </button>
                       <a href={`/content/${item.id}`} target="_blank" rel="noreferrer"
                         className="p-1.5 rounded-lg bg-[rgba(201,145,58,0.06)] text-parchment/40 border border-[rgba(201,145,58,0.1)] hover:text-amber-light transition-colors" title="Open detail page">
@@ -238,7 +238,7 @@ export default function AdminUncategorized({ refreshKey }) {
                 {/* Full extraction — expands inline */}
                 {isExpanded && (
                   <div className="border-t border-[rgba(201,145,58,0.12)] p-5">
-                    <EventExtractionPanel item={item} />
+                    <AdminEventEditor item={item} onApproved={(id) => { setItems(prev => prev.filter(i => i.id !== id)); setExpandedId(null); }} />
                   </div>
                 )}
               </div>

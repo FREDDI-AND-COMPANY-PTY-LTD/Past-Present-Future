@@ -4,7 +4,7 @@ import { Activity, Flag, Upload, Edit, Trash2, GitBranch, UserPlus, CheckCircle,
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import AdminEditRequests from '@/components/admin/AdminEditRequests';
-import EventExtractionPanel from '@/components/admin/EventExtractionPanel';
+import AdminEventEditor from '@/components/admin/AdminEventEditor';
 
 const actionIcons = {
   upload: Upload,
@@ -234,7 +234,7 @@ export default function AdminDashboard() {
                       <button onClick={() => setExpandedFlaggedId(isExpanded ? null : item.id)}
                         className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[rgba(201,145,58,0.06)] text-amber-light border border-[rgba(201,145,58,0.12)] hover:bg-[rgba(201,145,58,0.12)] transition-colors text-xs font-medium">
                         {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                        {isExpanded ? 'Collapse' : 'View Full Extraction'}
+                        {isExpanded ? 'Collapse' : 'Review & Edit'}
                       </button>
                       <Link to={`/content/${item.id}`} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(201,145,58,0.1)] border border-[rgba(201,145,58,0.2)] text-amber-light text-xs font-medium hover:bg-[rgba(201,145,58,0.15)] transition-colors">
                         <ExternalLink size={14} /> View & Edit
@@ -247,7 +247,7 @@ export default function AdminDashboard() {
 
                   {isExpanded && (
                     <div className="border-t border-[rgba(201,145,58,0.12)] p-5">
-                      <EventExtractionPanel item={item} />
+                      <AdminEventEditor item={item} onApproved={(id) => { setFlaggedItems(prev => prev.filter(i => i.id !== id)); setExpandedFlaggedId(null); }} />
                     </div>
                   )}
                 </div>
