@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { MapPin, Users, ChevronDown, ChevronUp, Check, Loader2, Image as ImageIcon, FileText, Award, BookUser, IdCard, Mail, Newspaper, HelpCircle, Calendar, Video, Music, Eye, MessageSquare, UserPlus, AlertTriangle } from 'lucide-react';
 import LocationPicker from '@/components/LocationPicker';
 import NewAncestorDialog from '@/components/NewAncestorDialog';
-import DuplicateCheckDialog from '@/components/DuplicateCheckDialog';
+import DuplicateResolutionDialog from '@/components/DuplicateResolutionDialog';
 
 const typeIcons = {
   photo: ImageIcon, narrative: FileText, correspondence: Mail, press_clipping: Newspaper,
@@ -239,13 +239,17 @@ export default function BulkUploadItem({ item, ancestors, onFieldChange, onToggl
       />
 
       {item.duplicates && dupDialogOpen && (
-        <DuplicateCheckDialog
+        <DuplicateResolutionDialog
           duplicates={item.duplicates}
           newItemId={item.savedItemId}
           newItemTitle={form.title}
           user={user}
           onClose={() => setDupDialogOpen(false)}
           onRemoved={() => {
+            setDupDialogOpen(false);
+            setExpanded(false);
+          }}
+          onMerged={() => {
             setDupDialogOpen(false);
             setExpanded(false);
           }}

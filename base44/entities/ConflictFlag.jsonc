@@ -18,10 +18,11 @@
       "type": "string",
       "enum": [
         "dispute",
-        "duplicate_upload"
+        "duplicate_upload",
+        "contested"
       ],
       "default": "dispute",
-      "description": "Type of conflict flag \u2014 'dispute' for data disagreements, 'duplicate_upload' for potential duplicate content"
+      "description": "Type of conflict flag \u2014 'dispute' for data disagreements, 'duplicate_upload' for potential duplicate content, 'contested' for fields where the correct value is uncertain after merge resolution"
     },
     "duplicate_of_content_item_id": {
       "type": "string",
@@ -34,6 +35,11 @@
     "duplicate_confidence": {
       "type": "number",
       "description": "AI confidence score (0-1) for the duplicate detection"
+    },
+    "competing_values": {
+      "type": "object",
+      "description": "Stores the competing data values that led to the contested flag, e.g. { 'your_upload': 'Melbourne', 'existing_item': 'Sydney' }",
+      "properties": {}
     },
     "raised_by_id": {
       "type": "string",

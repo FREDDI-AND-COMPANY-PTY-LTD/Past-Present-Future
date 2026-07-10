@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { MapPin, Calendar, Flag, ChevronLeft, ExternalLink, FileText, Award, Edit3, HelpCircle } from 'lucide-react';
 import RaiseQueryDialog from '@/components/RaiseQueryDialog';
+import ContestedFieldBadge from '@/components/ContestedFieldBadge';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import EngageButton from '@/components/EngageButton';
@@ -20,17 +21,22 @@ export default function ContentDetail() {
   const [showQueryDialog, setShowQueryDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [user, setUser] = useState(null);
+  const [contestedFlags, setContestedFlags] = useState([]);
 
   useEffect(() => {
     Promise.all([
       base44.entities.ContentItem.get(id),
       base44.entities.Ancestor.list(),
-    ]).then(([ci, ancs]) => {
+      base44.entities.ConflictFlag.filter({ content_item_id: id, flag_type: 'contested', status: 'open' }).catch(() => []),
+    ]).then(([ci, ancs, flags]) => {
       setItem(ci);
       setAncestors(ancs || []);
+      setContestedFlags(flags || []);
     }).catch(() => {}).finally(() => setLoading(false));
     base44.auth.me().then(setUser).catch(() => {});
   }, [id]);
+
+  const flagsForField = (fieldName) => contestedFlags.filter(f => f.field_name === fieldName);
 
   const taggedAncestors = (item?.ancestor_ids || [])
     .map(aid => ancestors.find(a => a.id === aid))
@@ -84,18 +90,30 @@ export default function ContentDetail() {
             </div>
           )}
           <div className="p-8">
-            <h1 className="font-display text-3xl md:text-4xl text-parchment mb-4">{item.title}</h1>
-            <div className="flex flex-wrap gap-4 text-sm text-parchment/60 mb-4">
+            <div className="flex items-center gap-2 mb-4">
+              <h1 className="font-display text-3xl md:text-4xl text-parchment">{item.title}</h1>
+              <ContestedFieldBadge flags={flagsForField('title')} />
+            </div>
+            <div className="flex flex-wrap items-center gap-4 text-sm text-parchment/60 mb-4">
               {item.date && <span className="flex items-center gap-1.5"><Calendar size={14} className="text-gold/60" /> {new Date(item.date).toLocaleDateString('en-AU', { year: 'numeric', month: 'long', day: 'numeric' })}</span>}
+              {flagsForField('date').length > 0 && <ContestedFieldBadge flags={flagsForField('date')} />}
               {item.location_name && <span className="flex items-center gap-1.5"><MapPin size={14} className="text-gold/60" /> {item.location_name}</span>}
-              {item.era && <span className="px-2 py-0.5 rounded-full bg-[rgba(201,145,58,0.08)] text-amber-light/70 text-xs">{item.era}</span>}
+              {flagsForField('location_name').length > 0 && <ContestedFieldBadge flags={flagsForField('location_name')} />}
+              {item.era && <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[rgba(201,145,58,0.08)] text-amber-light/70 text-xs">{item.era} <ContestedFieldBadge flags={flagsForField('era')} /></span>}
             </div>
 
-            {item.description && <p className="text-parchment/70 leading-relaxed mb-6">{item.description}</p>}
+            {item.description && (
+              <div className="mb-6">
+                <div className="flex items-center gap-2 mb-1">
+                  <ContestedFieldBadge flags={flagsForField('description')} />
+                </div>
+                <p className="text-parchment/70 leading-relaxed">{item.description}</p>
+              </div>
+            )}
 
             {item.transcribed_text && (
               <div className="mb-6 p-6 bg-[#0D0B0A] rounded-xl border border-[rgba(201,145,58,0.1)]">
-                <div className="flex items-center gap-2 mb-3"><FileText size={16} className="text-gold" /><h3 className="font-display text-lg text-parchment">Transcribed Text</h3></div>
+                <div className="flex items-center gap-2 mb-3"><FileText size={16} className="text-gold" /><h3 className="font-display text-lg text-parchment">Transcribed Text</h3><ContestedFieldBadge flags={flagsForField('transcribed_text')} /></div>
                 <p className="text-parchment/60 leading-relaxed whitespace-pre-wrap text-sm">{item.transcribed_text}</p>
                 <TranslatedText text={item.transcribed_text} />
               </div>
@@ -106,7 +124,7 @@ export default function ContentDetail() {
                 <div className="flex items-center gap-2 mb-3"><Award size={16} className="text-gold" /><h3 className="font-display text-lg text-parchment">Extracted Certificate Data</h3></div>
                 <div className="grid grid-cols-2 gap-3">
                   {Object.entries(item.extracted_fields).map(([key, val]) => (
-                    val && <div key={key}><p className="text-xs text-parchment/40 capitalize">{key.replace(/_/g, ' ')}</p><p className="text-sm text-parchment">{String(val)}</p></div>
+                    val && <div key={key}><p className="text-xs text-parchment/40 capitalize flex items-center gap-1">{key.replace(/_/g, ' ')} <ContestedFieldBadge flags={flagsForField(`extracted_fields.${key}`)} /></p><p className="text-sm text-parchment">{String(val)}</p></div>
                   ))}
                 </div>
               </div>

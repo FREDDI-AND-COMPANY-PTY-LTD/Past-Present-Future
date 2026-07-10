@@ -8,7 +8,7 @@ import LocationPicker from '@/components/LocationPicker';
 import BulkUpload from '@/components/BulkUpload';
 import MentionTextarea from '@/components/MentionTextarea';
 import NewAncestorDialog from '@/components/NewAncestorDialog';
-import DuplicateCheckDialog from '@/components/DuplicateCheckDialog';
+import DuplicateResolutionDialog from '@/components/DuplicateResolutionDialog';
 import FocalPointEditor from '@/components/FocalPointEditor';
 
 const STEPS = {
@@ -1184,13 +1184,14 @@ Return JSON with this structure:
       )}
 
       {duplicateCheck && (
-        <DuplicateCheckDialog
+        <DuplicateResolutionDialog
           duplicates={duplicateCheck.duplicates}
           newItemId={duplicateCheck.itemId}
           newItemTitle={duplicateCheck.itemTitle}
           user={user}
           onClose={() => setDuplicateCheck(null)}
           onRemoved={() => { setDuplicateCheck(null); resetForm(); }}
+          onMerged={() => { setDuplicateCheck(null); resetForm(); }}
         />
       )}
 
