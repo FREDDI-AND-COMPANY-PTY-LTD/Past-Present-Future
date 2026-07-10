@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { MapPin, Calendar, Flag, ChevronLeft, ExternalLink, FileText, Award, Edit3 } from 'lucide-react';
+import { MapPin, Calendar, Flag, ChevronLeft, ExternalLink, FileText, Award, Edit3, HelpCircle } from 'lucide-react';
+import RaiseQueryDialog from '@/components/RaiseQueryDialog';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import EngageButton from '@/components/EngageButton';
@@ -16,6 +17,7 @@ export default function ContentDetail() {
   const [showFlagForm, setShowFlagForm] = useState(false);
   const [flagText, setFlagText] = useState('');
   const [flagSubmitted, setFlagSubmitted] = useState(false);
+  const [showQueryDialog, setShowQueryDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [user, setUser] = useState(null);
 
@@ -143,10 +145,21 @@ export default function ContentDetail() {
           />
         )}
 
-        {/* Flag conflict */}
-        <div className="aged-card rounded-xl p-6">
+        {showQueryDialog && (
+          <RaiseQueryDialog
+            item={item}
+            onClose={() => setShowQueryDialog(false)}
+            onSubmitted={() => setShowQueryDialog(false)}
+          />
+        )}
+
+        {/* Flag conflict / Raise query */}
+        <div className="aged-card rounded-xl p-6 flex flex-wrap gap-4">
           <button onClick={() => setShowFlagForm(!showFlagForm)} className="flex items-center gap-2 text-amber-light/70 hover:text-amber-light transition-colors text-sm">
             <Flag size={16} /> Flag a Conflict on this item
+          </button>
+          <button onClick={() => setShowQueryDialog(true)} className="flex items-center gap-2 text-amber-light/70 hover:text-amber-light transition-colors text-sm">
+            <HelpCircle size={16} /> Raise a Query
           </button>
           {showFlagForm && (
             <div className="mt-4">
