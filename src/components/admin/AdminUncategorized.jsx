@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, Search, Brain, HelpCircle, ArrowRight, Sparkles } from 'lucide-react';
+import { Loader2, Search, Brain, HelpCircle, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import EventExtractionPanel from '@/components/admin/EventExtractionPanel';
 
 const typeOptions = [
   { value: 'photo', label: 'Photograph' },
@@ -21,6 +22,7 @@ export default function AdminUncategorized({ refreshKey }) {
   const [analysis, setAnalysis] = useState(null);
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [recategorizing, setRecategorizing] = useState(null);
+  const [expandedId, setExpandedId] = useState(null);
 
   const fetchItems = async () => {
     setLoading(true);
@@ -119,7 +121,6 @@ export default function AdminUncategorized({ refreshKey }) {
                   <div className="space-y-2">
                     {analysis.reclassification_suggestions.map((s, i) => (
                       <div key={i} className="flex items-center gap-2 p-3 rounded-lg bg-[#0D0B0A] border border-[rgba(201,145,58,0.1)]">
-                        <ArrowRight size={14} className="text-gold flex-shrink-0" />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm text-parchment truncate">{s.current_title}</p>
                           <p className="text-xs text-parchment/40">→ {s.suggested_type} · {s.reasoning}</p>
@@ -159,7 +160,6 @@ export default function AdminUncategorized({ refreshKey }) {
                     {analysis.emerging_categories.map((c, i) => (
                       <div key={i} className="p-3 rounded-lg bg-[#0D0B0A] border border-[rgba(201,145,58,0.1)]">
                         <div className="flex items-center gap-2">
-                          <Sparkles size={14} className="text-gold" />
                           <p className="text-sm text-amber-light font-medium">{c.proposed_name}</p>
                           <span className="text-xs text-parchment/40 ml-auto">{c.item_count} items</span>
                         </div>
@@ -183,59 +183,67 @@ export default function AdminUncategorized({ refreshKey }) {
         </div>
       ) : (
         <div className="space-y-3">
-          {filtered.map(item => (
-            <div key={item.id} className="aged-card rounded-xl p-5">
-              <div className="flex items-start gap-4">
-                {item.file_url ? (
-                  <img src={item.file_url} alt={item.title} className="w-16 h-16 rounded-lg object-cover sepia-tint flex-shrink-0" />
-                ) : (
-                  <div className="w-12 h-12 rounded-lg bg-[rgba(201,145,58,0.08)] border border-[rgba(201,145,58,0.15)] flex items-center justify-center flex-shrink-0">
-                    <HelpCircle size={20} className="text-gold" />
+          {filtered.map(item => {
+            const isExpanded = expandedId === item.id;
+            return (
+              <div key={item.id} className="aged-card rounded-xl">
+                {/* Header */}
+                <div className="p-5">
+                  <div className="flex items-start gap-4">
+                    {item.file_url ? (
+                      <img src={item.file_url} alt={item.title} className="w-16 h-16 rounded-lg object-cover sepia-tint flex-shrink-0" />
+                    ) : (
+                      <div className="w-12 h-12 rounded-lg bg-[rgba(201,145,58,0.08)] border border-[rgba(201,145,58,0.15)] flex items-center justify-center flex-shrink-0">
+                        <HelpCircle size={20} className="text-gold" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs text-parchment/40 uppercase tracking-wider">Uncategorized</span>
+                        {item.ai_confidence != null && (
+                          <span className={`px-2 py-0.5 rounded-full text-xs ${item.ai_confidence >= 0.7 ? 'bg-green-500/10 text-green-300' : item.ai_confidence >= 0.4 ? 'bg-[rgba(201,145,58,0.1)] text-amber-light' : 'bg-red-500/10 text-red-300'}`}>
+                            {Math.round(item.ai_confidence * 100)}%
+                          </span>
+                        )}
+                      </div>
+                      <h3 className="font-display text-base text-parchment">{item.title}</h3>
+                      {item.description && <p className="text-sm text-parchment/50 mt-0.5">{item.description}</p>}
+                      <span className="text-xs text-parchment/40 mt-1 block">
+                        {new Date(item.created_date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <button onClick={() => setExpandedId(isExpanded ? null : item.id)}
+                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[rgba(201,145,58,0.06)] text-amber-light border border-[rgba(201,145,58,0.12)] hover:bg-[rgba(201,145,58,0.12)] transition-colors text-xs font-medium">
+                        {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                        {isExpanded ? 'Collapse' : 'View Extraction'}
+                      </button>
+                      <a href={`/content/${item.id}`} target="_blank" rel="noreferrer"
+                        className="p-1.5 rounded-lg bg-[rgba(201,145,58,0.06)] text-parchment/40 border border-[rgba(201,145,58,0.1)] hover:text-amber-light transition-colors" title="Open detail page">
+                        <ExternalLink size={14} />
+                      </a>
+                      <select
+                        value=""
+                        onChange={e => { if (e.target.value) recategorize(item.id, e.target.value); }}
+                        disabled={recategorizing === item.id}
+                        className="bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-2 py-1.5 text-xs text-parchment focus:outline-none focus:border-[#C9913A] disabled:opacity-50"
+                      >
+                        <option value="">Reclassify...</option>
+                        {typeOptions.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Full extraction — expands inline */}
+                {isExpanded && (
+                  <div className="border-t border-[rgba(201,145,58,0.12)] p-5">
+                    <EventExtractionPanel item={item} />
                   </div>
                 )}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs text-parchment/40 uppercase tracking-wider">Uncategorized</span>
-                    {item.ai_confidence != null && (
-                      <span className={`px-2 py-0.5 rounded-full text-xs ${item.ai_confidence >= 0.7 ? 'bg-green-500/10 text-green-300' : item.ai_confidence >= 0.4 ? 'bg-[rgba(201,145,58,0.1)] text-amber-light' : 'bg-red-500/10 text-red-300'}`}>
-                        {Math.round(item.ai_confidence * 100)}%
-                      </span>
-                    )}
-                  </div>
-                  <h3 className="font-display text-base text-parchment">{item.title}</h3>
-                  {item.description && <p className="text-sm text-parchment/50 line-clamp-2 mt-0.5">{item.description}</p>}
-                  {item.categorization_notes && <p className="text-xs text-parchment/40 mt-1 italic">AI: {item.categorization_notes}</p>}
-                  {item.visual_elements && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {(item.visual_elements.objects || []).slice(0, 5).map((o, i) => (
-                        <span key={i} className="text-xs text-amber-light/60 bg-[rgba(201,145,58,0.05)] px-1.5 py-0.5 rounded">{o}</span>
-                      ))}
-                      {(item.visual_elements.dates_visible || []).slice(0, 3).map((d, i) => (
-                        <span key={`d${i}`} className="text-xs text-amber-light/60 bg-[rgba(201,145,58,0.05)] px-1.5 py-0.5 rounded">{d}</span>
-                      ))}
-                      {(item.visual_elements.locations_visible || []).slice(0, 3).map((l, i) => (
-                        <span key={`l${i}`} className="text-xs text-amber-light/60 bg-[rgba(201,145,58,0.05)] px-1.5 py-0.5 rounded">{l}</span>
-                      ))}
-                    </div>
-                  )}
-                  <div className="flex items-center gap-3 mt-2 text-xs text-parchment/40">
-                    <span>{new Date(item.created_date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                  </div>
-                </div>
-                <div className="flex-shrink-0">
-                  <select
-                    value=""
-                    onChange={e => { if (e.target.value) recategorize(item.id, e.target.value); }}
-                    disabled={recategorizing === item.id}
-                    className="bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-2 py-1.5 text-xs text-parchment focus:outline-none focus:border-[#C9913A] disabled:opacity-50"
-                  >
-                    <option value="">Reclassify...</option>
-                    {typeOptions.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                  </select>
-                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
