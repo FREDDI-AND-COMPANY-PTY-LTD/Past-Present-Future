@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import GoogleMap from '@/components/GoogleMap';
+import MigrationTimeline from '@/components/MigrationTimeline';
 import { useBranchRoot } from '@/hooks/useBranchRoot';
 
 const routeColors = ['#C9913A', '#E8C97A', '#8B6914', '#D4A04C'];
@@ -37,6 +38,7 @@ export default function MapPage() {
   const [routes, setRoutes] = useState([]);
   const [ancestors, setAncestors] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeWaypoint, setActiveWaypoint] = useState(null);
   const { descendantIds, loading: branchLoading } = useBranchRoot();
 
   useEffect(() => {
@@ -63,6 +65,23 @@ export default function MapPage() {
     ? ancestors.filter(a => descendantIds.has(a.id))
     : ancestors;
 
+  // Compute flat waypoint list from routes (same iteration order as GoogleMap uses)
+  const flatWaypoints = useMemo(() => {
+    const list = [];
+    branchRoutes.forEach((route) => {
+      (route.waypoints || []).forEach(wp => {
+        if (wp.lat && wp.lng) {
+          list.push({
+            lat: wp.lat, lng: wp.lng,
+            label: wp.label, date: wp.date, description: wp.description,
+            routeName: route.name,
+          });
+        }
+      });
+    });
+    return list;
+  }, [branchRoutes]);
+
   const markers = useMemo(() => {
     return branchItems
       .filter(i => i.latitude && i.longitude)
@@ -78,31 +97,55 @@ export default function MapPage() {
       });
   }, [branchItems, branchAncestors]);
 
+  const handleWaypointSelect = useCallback((idx) => {
+    setActiveWaypoint(idx);
+  }, []);
+
   return (
     <Layout>
       <div className="px-6 lg:px-12 py-8 max-w-7xl mx-auto">
         <div className="mb-6">
           <h1 className="font-display text-4xl text-parchment mb-2">Migration Map</h1>
-          <p className="text-parchment/50 text-sm">Trace the Freddi bloodlines from their international origins to Victoria. Click any pin to explore — jump straight to ancestor profiles and media.</p>
+          <p className="text-parchment/50 text-sm">Trace the Freddi bloodlines from their international origins to Victoria. Click any numbered pin or use the timeline to follow the migration journey over time.</p>
         </div>
       </div>
 
       <div className="px-6 lg:px-12 pb-12 max-w-7xl mx-auto">
-        <GoogleMap markers={markers} routes={branchRoutes} loading={loading || branchLoading} />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Map takes 2 columns on desktop */}
+          <div className="lg:col-span-2">
+            <GoogleMap
+              markers={markers}
+              routes={branchRoutes}
+              loading={loading || branchLoading}
+              activeWaypoint={activeWaypoint}
+              onWaypointSelect={handleWaypointSelect}
+            />
 
-        {branchRoutes.length > 0 && (
-          <div className="aged-card rounded-xl p-4 mt-4">
-            <p className="text-xs text-parchment/40 uppercase tracking-wider mb-2">Migration Routes</p>
-            <div className="flex flex-wrap gap-4">
-              {branchRoutes.map((route, ri) => (
-                <div key={route.id} className="flex items-center gap-2">
-                  <div className="w-6 h-0.5" style={{ backgroundColor: route.color || routeColors[ri % routeColors.length] }} />
-                  <span className="text-sm text-parchment/70">{route.name}</span>
+            {branchRoutes.length > 0 && (
+              <div className="aged-card rounded-xl p-4 mt-4">
+                <p className="text-xs text-parchment/40 uppercase tracking-wider mb-2">Migration Routes</p>
+                <div className="flex flex-wrap gap-4">
+                  {branchRoutes.map((route, ri) => (
+                    <div key={route.id} className="flex items-center gap-2">
+                      <div className="w-6 h-0.5" style={{ backgroundColor: route.color || routeColors[ri % routeColors.length] }} />
+                      <span className="text-sm text-parchment/70">{route.name}</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
           </div>
-        )}
+
+          {/* Timeline panel takes 1 column on desktop */}
+          <div className="lg:col-span-1">
+            <MigrationTimeline
+              waypoints={flatWaypoints}
+              activeIndex={activeWaypoint}
+              onSelect={handleWaypointSelect}
+            />
+          </div>
+        </div>
       </div>
     </Layout>
   );

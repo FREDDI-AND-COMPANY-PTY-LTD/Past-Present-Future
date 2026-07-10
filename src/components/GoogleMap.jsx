@@ -54,6 +54,17 @@ const goldPinSvg = encodeURIComponent(
   '<circle cx="14" cy="14" r="5" fill="#E8C97A"/></svg>'
 );
 
+// Numbered pin for migration waypoints — shows sequence order
+function numberedPinSvg(number, color) {
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="34" height="44" viewBox="0 0 34 44">' +
+    '<path d="M17 0C7.61 0 0 7.61 0 17c0 13 17 27 17 27s17-14 17-27C34 7.61 26.39 0 17 0z" ' +
+    `fill="${color}" stroke="#0D0B0A" stroke-width="2"/>` +
+    '<circle cx="17" cy="17" r="9" fill="#E8C97A"/>' +
+    `<text x="17" y="21" text-anchor="middle" fill="#0D0B0A" font-size="13" font-weight="bold" font-family="Arial,sans-serif">${number}</text>` +
+    '</svg>';
+  return 'data:image/svg+xml;utf-8,' + encodeURIComponent(svg);
+}
+
 let clustererScriptPromise = null;
 
 function loadMarkerClusterer() {
@@ -75,7 +86,7 @@ function clusterIconSvg(size, fillColor) {
     '<circle cx="' + (size / 2) + '" cy="' + (size / 2) + '" r="' + (size / 2 - 3) + '" fill="' + fillColor + '" stroke="#0D0B0A" stroke-width="2" opacity="0.9"/>' +
     '<circle cx="' + (size / 2) + '" cy="' + (size / 2) + '" r="' + (size / 2 - 7) + '" fill="none" stroke="#0D0B0A" stroke-width="1" opacity="0.3"/>' +
     '</svg>';
-  return 'data:image/svg+xml;utf-8,' + encodeURIComponent(svg);
+  return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
 }
 
 const clusterStyles = [
@@ -84,17 +95,19 @@ const clusterStyles = [
   { url: clusterIconSvg(60, '#E8C97A'), height: 60, width: 60, textColor: '#0D0B0A', textSize: 15, textDecoration: 'none' },
 ];
 
-export default function GoogleMap({ markers = [], routes = [], loading = false }) {
+export default function GoogleMap({ markers = [], routes = [], loading = false, activeWaypoint, onWaypointSelect }) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
   const gmapsRef = useRef(null);
   const markersRef = useRef([]);
+  const waypointMarkersRef = useRef([]);   // numbered waypoint markers (never clustered)
   const polylinesRef = useRef([]);
   const clustererRef = useRef(null);
   const userMarkerRef = useRef(null);
+  const activeInfoWindowRef = useRef(null);
   const [error, setError] = useState(null);
   const [mapsReady, setMapsReady] = useState(false);
-  const [userCenter, setUserCenter] = useState(null);  // {lat, lng} once geolocation resolves
+  const [userCenter, setUserCenter] = useState(null);
   const [geoResolved, setGeoResolved] = useState(false);
   const initialViewSetRef = useRef(false);
 
@@ -138,15 +151,13 @@ export default function GoogleMap({ markers = [], routes = [], loading = false }
         } catch (e) { /* clustering optional */ }
         setMapsReady(true);
 
-        // Try to open the map at the user's current location so they can
-        // begin exploring the migration routes from where they are.
         if (navigator.geolocation) {
           navigator.geolocation.getCurrentPosition(
             (pos) => {
               setUserCenter({ lat: pos.coords.latitude, lng: pos.coords.longitude });
               setGeoResolved(true);
             },
-            () => { setGeoResolved(true); },  // denied or unavailable — fall back to auto-fit
+            () => { setGeoResolved(true); },
             { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
           );
         } else {
@@ -167,23 +178,31 @@ export default function GoogleMap({ markers = [], routes = [], loading = false }
 
     // Clear existing overlays
     markersRef.current.forEach(m => m.setMap(null));
+    waypointMarkersRef.current.forEach(w => w.marker.setMap(null));
     polylinesRef.current.forEach(p => p.setMap(null));
     markersRef.current = [];
+    waypointMarkersRef.current = [];
     polylinesRef.current = [];
     if (clustererRef.current) {
       clustererRef.current.clearMarkers();
       clustererRef.current = null;
     }
+    if (activeInfoWindowRef.current) {
+      activeInfoWindowRef.current.close();
+      activeInfoWindowRef.current = null;
+    }
 
     const bounds = new gmaps.LatLngBounds();
     const infoWindow = new gmaps.InfoWindow();
+    activeInfoWindowRef.current = infoWindow;
     const pinIcon = {
       url: `data:image/svg+xml;utf-8,${goldPinSvg}`,
       scaledSize: new gmaps.Size(28, 36),
       anchor: new gmaps.Point(14, 36),
     };
 
-    // Draw migration routes + waypoint markers
+    // Draw migration routes + numbered waypoint markers
+    const flatWaypoints = [];
     routes.forEach((route, ri) => {
       const wps = (route.waypoints || []).filter(w => w.lat && w.lng);
       if (wps.length === 0) return;
@@ -202,17 +221,37 @@ export default function GoogleMap({ markers = [], routes = [], loading = false }
       }
 
       wps.forEach(wp => {
+        const wpIdx = flatWaypoints.length;
         const pos = { lat: wp.lat, lng: wp.lng };
         bounds.extend(pos);
-        const html = `<div style="min-width:180px;padding:4px">
-          <p style="color:#C9913A;font-weight:600;font-size:14px;margin:0 0 4px">${wp.label || 'Waypoint'}</p>
+        const num = wpIdx + 1;
+        const html = `<div style="min-width:200px;padding:4px">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#C9913A;color:#0D0B0A;font-size:11px;font-weight:bold;border:2px solid #E8C97A">${num}</span>
+            <p style="color:#C9913A;font-weight:600;font-size:14px;margin:0">${wp.label || 'Waypoint'}</p>
+          </div>
           ${wp.date ? `<p style="color:#F5ECD7;font-size:12px;opacity:0.7;margin:0">${wp.date}</p>` : ''}
           ${wp.description ? `<p style="color:#F5ECD7;font-size:12px;opacity:0.6;margin:4px 0 0">${wp.description}</p>` : ''}
-          <p style="color:#C9913A;font-size:11px;opacity:0.6;margin:6px 0 0">${route.name}</p>
+          <p style="color:#C9913A;font-size:11px;opacity:0.5;margin:6px 0 0">${route.name}</p>
         </div>`;
-        const marker = new gmaps.Marker({ position: pos, icon: pinIcon, title: wp.label || 'Waypoint' });
-        marker.addListener('click', () => { infoWindow.setContent(html); infoWindow.open(map, marker); });
-        markersRef.current.push(marker);
+        const marker = new gmaps.Marker({
+          position: pos,
+          icon: {
+            url: numberedPinSvg(num, color),
+            scaledSize: new gmaps.Size(34, 44),
+            anchor: new gmaps.Point(17, 44),
+          },
+          title: wp.label || `Waypoint ${num}`,
+          map,
+          zIndex: 1000 + wpIdx,
+        });
+        marker.addListener('click', () => {
+          infoWindow.setContent(html);
+          infoWindow.open(map, marker);
+          if (onWaypointSelect) onWaypointSelect(wpIdx);
+        });
+        waypointMarkersRef.current.push({ marker, infoHtml: html, lat: wp.lat, lng: wp.lng, label: wp.label, date: wp.date, description: wp.description, routeName: route.name });
+        flatWaypoints.push({ lat: wp.lat, lng: wp.lng, label: wp.label, date: wp.date, description: wp.description, routeName: route.name });
       });
     });
 
@@ -225,7 +264,8 @@ export default function GoogleMap({ markers = [], routes = [], loading = false }
       markersRef.current.push(marker);
     });
 
-    // Cluster markers for cleaner display at lower zoom levels
+    // Cluster content item markers for cleaner display at lower zoom levels
+    // (waypoint markers are always visible — they're already on the map)
     if (window.MarkerClusterer && markersRef.current.length > 0) {
       clustererRef.current = new window.MarkerClusterer(map, markersRef.current, {
         styles: clusterStyles,
@@ -236,9 +276,6 @@ export default function GoogleMap({ markers = [], routes = [], loading = false }
       markersRef.current.forEach(m => m.setMap(map));
     }
 
-    // Set the initial view once geolocation has resolved — center on the
-    // user's current location so they can explore migration routes from
-    // where they actually are. Fall back to fitting all pins if denied.
     if (!initialViewSetRef.current && geoResolved) {
       if (userCenter) {
         map.setCenter(userCenter);
@@ -250,6 +287,21 @@ export default function GoogleMap({ markers = [], routes = [], loading = false }
       }
     }
   }, [markers, routes, mapsReady, userCenter, geoResolved]);
+
+  // Fly to active waypoint when it changes (from timeline panel)
+  useEffect(() => {
+    const gmaps = gmapsRef.current;
+    const map = mapRef.current;
+    if (!gmaps || !map || !mapsReady || activeWaypoint == null) return;
+    const wp = waypointMarkersRef.current[activeWaypoint];
+    if (!wp) return;
+    map.panTo({ lat: wp.lat, lng: wp.lng });
+    map.setZoom(7);
+    if (activeInfoWindowRef.current) {
+      activeInfoWindowRef.current.setContent(wp.infoHtml);
+      activeInfoWindowRef.current.open(map, wp.marker);
+    }
+  }, [activeWaypoint, mapsReady]);
 
   // Drop a "you are here" marker at the user's current location
   useEffect(() => {
