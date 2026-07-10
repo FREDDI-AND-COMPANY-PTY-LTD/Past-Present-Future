@@ -14,9 +14,34 @@
       "type": "string",
       "description": "Which field or data point is disputed"
     },
+    "flag_type": {
+      "type": "string",
+      "enum": [
+        "dispute",
+        "duplicate_upload"
+      ],
+      "default": "dispute",
+      "description": "Type of conflict flag \u2014 'dispute' for data disagreements, 'duplicate_upload' for potential duplicate content"
+    },
+    "duplicate_of_content_item_id": {
+      "type": "string",
+      "description": "When flag_type is 'duplicate_upload' \u2014 ID of the existing content item that this upload may duplicate"
+    },
+    "duplicate_of_content_item_title": {
+      "type": "string",
+      "description": "Title of the existing content item that this upload may duplicate"
+    },
+    "duplicate_confidence": {
+      "type": "number",
+      "description": "AI confidence score (0-1) for the duplicate detection"
+    },
     "raised_by_id": {
       "type": "string",
       "description": "User ID of the person raising the flag"
+    },
+    "raised_by_name": {
+      "type": "string",
+      "description": "Display name of the person raising the flag"
     },
     "dispute_description": {
       "type": "string",

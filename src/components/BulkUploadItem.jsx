@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { MapPin, Users, ChevronDown, ChevronUp, Check, Loader2, Image as ImageIcon, FileText, Award, BookUser, IdCard, Mail, Newspaper, HelpCircle, Calendar, Video, Music, Eye, MessageSquare, UserPlus } from 'lucide-react';
+import { MapPin, Users, ChevronDown, ChevronUp, Check, Loader2, Image as ImageIcon, FileText, Award, BookUser, IdCard, Mail, Newspaper, HelpCircle, Calendar, Video, Music, Eye, MessageSquare, UserPlus, AlertTriangle } from 'lucide-react';
 import LocationPicker from '@/components/LocationPicker';
 import NewAncestorDialog from '@/components/NewAncestorDialog';
+import DuplicateCheckDialog from '@/components/DuplicateCheckDialog';
 
 const typeIcons = {
   photo: ImageIcon, narrative: FileText, correspondence: Mail, press_clipping: Newspaper,
@@ -13,6 +14,7 @@ export default function BulkUploadItem({ item, ancestors, onFieldChange, onToggl
   const [expanded, setExpanded] = useState(false);
   const [locationPickerOpen, setLocationPickerOpen] = useState(false);
   const [newAncestorOpen, setNewAncestorOpen] = useState(false);
+  const [dupDialogOpen, setDupDialogOpen] = useState(false);
 
   const a = item.analysis || {};
   const form = item.form;
@@ -48,6 +50,15 @@ export default function BulkUploadItem({ item, ancestors, onFieldChange, onToggl
         </div>
 
         <div className="flex-shrink-0 flex items-center gap-2">
+          {item.duplicates && (
+            <button
+              onClick={() => setDupDialogOpen(true)}
+              className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-amber-500/10 text-amber-light border border-amber-500/30 hover:bg-amber-500/15 transition-colors"
+              title="Possible duplicate detected — click to review"
+            >
+              <AlertTriangle size={12} /> {item.duplicates.length} duplicate{item.duplicates.length !== 1 ? 's' : ''}
+            </button>
+          )}
           {status === 'uploading' && <Loader2 size={16} className="text-gold/50 animate-spin" />}
           {status === 'analysing' && <Loader2 size={16} className="text-gold animate-spin" />}
           {status === 'ready' && <span className="text-xs text-amber-light/70 px-2 py-0.5 rounded-full bg-[rgba(201,145,58,0.1)]">Ready</span>}
@@ -226,6 +237,20 @@ export default function BulkUploadItem({ item, ancestors, onFieldChange, onToggl
         }}
         user={user}
       />
+
+      {item.duplicates && dupDialogOpen && (
+        <DuplicateCheckDialog
+          duplicates={item.duplicates}
+          newItemId={item.savedItemId}
+          newItemTitle={form.title}
+          user={user}
+          onClose={() => setDupDialogOpen(false)}
+          onRemoved={() => {
+            setDupDialogOpen(false);
+            setExpanded(false);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -228,7 +228,17 @@ export default function BulkUpload({ ancestors, preselectedAncestorId, user }) {
           }).catch(() => {});
         }
 
-        setItems(prev => prev.map(it => it.id === item.id ? { ...it, status: 'saved' } : it));
+        setItems(prev => prev.map(it => it.id === item.id ? { ...it, status: 'saved', savedItemId: createdItem.id } : it));
+
+        // Check for potential duplicates against existing items for the same ancestor(s)
+        base44.functions.invoke('checkDuplicateUpload', { content_item_id: createdItem.id })
+          .then(res => {
+            const dups = res.data?.potential_duplicates || [];
+            if (dups.length > 0) {
+              setItems(prev => prev.map(it => it.id === item.id ? { ...it, duplicates: dups } : it));
+            }
+          })
+          .catch(() => {});
       } catch (e) {
         setItems(prev => prev.map(it => it.id === item.id ? { ...it, status: 'error' } : it));
       }

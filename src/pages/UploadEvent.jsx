@@ -8,6 +8,7 @@ import LocationPicker from '@/components/LocationPicker';
 import BulkUpload from '@/components/BulkUpload';
 import MentionTextarea from '@/components/MentionTextarea';
 import NewAncestorDialog from '@/components/NewAncestorDialog';
+import DuplicateCheckDialog from '@/components/DuplicateCheckDialog';
 
 const STEPS = {
   CAPTURE: 'capture',
@@ -66,6 +67,7 @@ export default function UploadEvent() {
   const [activeTags, setActiveTags] = useState([]);
   const [tagInput, setTagInput] = useState('');
   const [newAncestorOpen, setNewAncestorOpen] = useState(false);
+  const [duplicateCheck, setDuplicateCheck] = useState(null);
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
   const cameraInputRef = useRef(null);
@@ -467,6 +469,16 @@ Return JSON with this structure:
       }
 
       setStep(STEPS.SAVED);
+
+      // Check for potential duplicates against existing items for the same ancestor(s)
+      base44.functions.invoke('checkDuplicateUpload', { content_item_id: createdItem.id })
+        .then(res => {
+          const dups = res.data?.potential_duplicates || [];
+          if (dups.length > 0) {
+            setDuplicateCheck({ duplicates: dups, itemId: createdItem.id, itemTitle: formData.title });
+          }
+        })
+        .catch(() => {});
     } catch (e) {
       // error
     }
@@ -1128,6 +1140,17 @@ Return JSON with this structure:
         }}
         user={user}
       />
+
+      {duplicateCheck && (
+        <DuplicateCheckDialog
+          duplicates={duplicateCheck.duplicates}
+          newItemId={duplicateCheck.itemId}
+          newItemTitle={duplicateCheck.itemTitle}
+          user={user}
+          onClose={() => setDuplicateCheck(null)}
+          onRemoved={() => { setDuplicateCheck(null); resetForm(); }}
+        />
+      )}
 
     </Layout>
   );
