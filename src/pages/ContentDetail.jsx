@@ -5,6 +5,7 @@ import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import EngageButton from '@/components/EngageButton';
 import EditEventDialog from '@/components/EditEventDialog';
+import TranslatedText from '@/components/TranslatedText';
 
 export default function ContentDetail() {
   const { id } = useParams();
@@ -93,6 +94,7 @@ export default function ContentDetail() {
               <div className="mb-6 p-6 bg-[#0D0B0A] rounded-xl border border-[rgba(201,145,58,0.1)]">
                 <div className="flex items-center gap-2 mb-3"><FileText size={16} className="text-gold" /><h3 className="font-display text-lg text-parchment">Transcribed Text</h3></div>
                 <p className="text-parchment/60 leading-relaxed whitespace-pre-wrap text-sm">{item.transcribed_text}</p>
+                <TranslatedText text={item.transcribed_text} />
               </div>
             )}
 
