@@ -5,6 +5,7 @@ import Layout from '@/components/Layout';
 import { getMessages, subscribe } from '@/lib/assistantStore';
 import AncestorMatchDialog from '@/components/AncestorMatchDialog';
 import LocationPicker from '@/components/LocationPicker';
+import BulkUpload from '@/components/BulkUpload';
 
 const STEPS = {
   CAPTURE: 'capture',
@@ -59,6 +60,7 @@ export default function UploadEvent() {
   const [assistantMessages, setAssistantMessages] = useState(getMessages());
   const [refreshing, setRefreshing] = useState(false);
   const [mediaUploading, setMediaUploading] = useState(false);
+  const [bulkMode, setBulkMode] = useState(false);
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
   const cameraInputRef = useRef(null);
@@ -549,6 +551,21 @@ Return JSON with this structure:
             </div>
 
             <div className="border-t border-[rgba(201,145,58,0.1)] pt-6">
+              <div className="flex justify-center gap-2 mb-6">
+                <button onClick={() => setBulkMode(false)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${!bulkMode ? 'bg-[rgba(201,145,58,0.12)] text-gold border border-[rgba(201,145,58,0.3)]' : 'text-parchment/50 border border-transparent'}`}>
+                  Single Upload
+                </button>
+                <button onClick={() => setBulkMode(true)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${bulkMode ? 'bg-[rgba(201,145,58,0.12)] text-gold border border-[rgba(201,145,58,0.3)]' : 'text-parchment/50 border border-transparent'}`}>
+                  Bulk Upload
+                </button>
+              </div>
+
+              {bulkMode ? (
+                <BulkUpload ancestors={ancestors} preselectedAncestorId={selectedAncestorId} user={user} />
+              ) : (
+                <>
               <p className="text-parchment/60 text-sm mb-6 text-center">Upload a file from your device, or use your camera to photograph a document.</p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <button
@@ -579,6 +596,8 @@ Return JSON with this structure:
               <input ref={fileInputRef} type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,image/*" className="hidden" onChange={e => handleFile(e.target.files?.[0])} />
               <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={e => handleFile(e.target.files?.[0])} />
               <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={e => handleFile(e.target.files?.[0])} />
+                </>
+              )}
             </div>
 
             <div className="mt-6 pt-6 border-t border-[rgba(201,145,58,0.1)]">
