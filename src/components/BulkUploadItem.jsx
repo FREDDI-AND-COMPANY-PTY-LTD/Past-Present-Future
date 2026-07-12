@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MapPin, Users, ChevronDown, ChevronUp, Check, Loader2, Image as ImageIcon, FileText, Award, BookUser, IdCard, Mail, Newspaper, HelpCircle, Calendar, Video, Music, Eye, MessageSquare, UserPlus, AlertTriangle, Heart } from 'lucide-react';
+import { MapPin, Users, ChevronDown, ChevronUp, Check, Loader2, Image as ImageIcon, FileText, Award, BookUser, IdCard, Mail, Newspaper, HelpCircle, Calendar, Video, Music, Eye, MessageSquare, UserPlus, AlertTriangle, Heart, Link2, ExternalLink } from 'lucide-react';
 import LocationPicker from '@/components/LocationPicker';
 import NewAncestorDialog from '@/components/NewAncestorDialog';
 import DuplicateResolutionDialog from '@/components/DuplicateResolutionDialog';
@@ -34,7 +34,9 @@ export default function BulkUploadItem({ item, ancestors, onFieldChange, onToggl
     <div className="aged-card rounded-xl overflow-hidden">
       <div className="flex items-center gap-3 p-3">
         <div className="w-16 h-16 rounded-lg overflow-hidden bg-[#0D0B0A] flex-shrink-0 flex items-center justify-center">
-          {item.file?.type?.startsWith('video/') ? (
+          {item.externalUrl || form.external_url ? (
+            <Link2 size={20} className="text-gold/50" />
+          ) : item.file?.type?.startsWith('video/') ? (
             <Video size={20} className="text-gold/50" />
           ) : item.file?.type?.startsWith('audio/') ? (
             <Music size={20} className="text-gold/50" />
@@ -111,6 +113,24 @@ export default function BulkUploadItem({ item, ancestors, onFieldChange, onToggl
             <textarea value={form.description} onChange={e => onFieldChange(item.id, 'description', e.target.value)} rows={2}
               className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-3 py-2 text-sm text-parchment focus:outline-none focus:border-[#C9913A]" />
           </div>
+
+          {(item.externalUrl || form.external_url) && (
+            <div className="p-3 bg-[rgba(201,145,58,0.05)] rounded-lg border border-[rgba(201,145,58,0.15)]">
+              <label className="text-xs text-parchment/40 mb-1 block flex items-center gap-1"><Link2 size={10} /> External URL</label>
+              <div className="flex items-center gap-2">
+                <input
+                  value={form.external_url || item.externalUrl || ''}
+                  onChange={e => onFieldChange(item.id, 'external_url', e.target.value)}
+                  className="flex-1 bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-3 py-2 text-sm text-parchment focus:outline-none focus:border-[#C9913A]"
+                  placeholder="https://..."
+                />
+                <a href={form.external_url || item.externalUrl} target="_blank" rel="noreferrer"
+                  className="flex items-center gap-1 px-2.5 py-2 rounded-lg bg-[rgba(201,145,58,0.1)] border border-[rgba(201,145,58,0.2)] text-amber-light text-xs font-medium hover:bg-[rgba(201,145,58,0.15)] flex-shrink-0">
+                  <ExternalLink size={12} /> Open
+                </a>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <div>

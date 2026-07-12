@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { Upload, Loader2, Save, Check, AlertCircle } from 'lucide-react';
+import { Upload, Loader2, Save, Check, AlertCircle, Link2, Video, Music } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { analyzeImage } from '@/lib/imageAnalysis';
 import { analyzeAudioVideo } from '@/lib/avAnalysis';
@@ -10,6 +10,10 @@ export default function BulkUpload({ ancestors, preselectedAncestorId, user }) {
   const [dragging, setDragging] = useState(false);
   const [savingAll, setSavingAll] = useState(false);
   const [ancestorsList, setAncestorsList] = useState(ancestors);
+  const [showLinkForm, setShowLinkForm] = useState(false);
+  const [linkUrl, setLinkUrl] = useState('');
+  const [linkTitle, setLinkTitle] = useState('');
+  const [linkType, setLinkType] = useState('video');
   const fileInputRef = useRef(null);
 
   const matchAncestors = useCallback((analysis) => {
@@ -151,6 +155,37 @@ export default function BulkUpload({ ancestors, preselectedAncestorId, user }) {
     e.target.value = '';
   };
 
+  const handleAddLink = () => {
+    const url = linkUrl.trim();
+    if (!url) return;
+    const isYouTube = /(?:youtube\.com\/watch\?v=|youtu\.be\/)/.test(url);
+    const isVimeo = /vimeo\.com\/\d+/.test(url);
+    const detectedType = isYouTube || isVimeo ? 'video' : linkType;
+    const newItem = {
+      id: `${Date.now()}-link-${Math.random().toString(36).slice(2)}`,
+      file: null,
+      fileUrl: null,
+      externalUrl: url,
+      status: 'ready',
+      analysis: { type: detectedType, suggested_tags: [], ai_confidence: 1.0 },
+      form: {
+        title: linkTitle.trim() || (isYouTube ? 'YouTube Video' : isVimeo ? 'Vimeo Video' : 'External Recording'),
+        description: '',
+        date: '',
+        location_name: '',
+        latitude: '',
+        longitude: '',
+        era: '',
+        ancestor_ids: preselectedAncestorId ? [preselectedAncestorId] : [],
+        external_url: url,
+      },
+    };
+    setItems(prev => [...prev, newItem]);
+    setLinkUrl('');
+    setLinkTitle('');
+    setShowLinkForm(false);
+  };
+
   const updateField = (itemId, field, value) => {
     // Handle special prefixed fields that map to analysis object
     if (field === '_extracted_fields') {
@@ -219,6 +254,7 @@ export default function BulkUpload({ ancestors, preselectedAncestorId, user }) {
           ancestor_ids: effectiveAncestorIds,
           era: item.form.era,
           file_url: item.fileUrl,
+          external_url: item.form.external_url || item.externalUrl || null,
           transcribed_text: item.analysis?.transcription || null,
           extracted_fields: item.analysis?.extracted_fields || null,
           raw_ai_analysis: item.analysis || null,
@@ -297,6 +333,66 @@ export default function BulkUpload({ ancestors, preselectedAncestorId, user }) {
         <p className="text-xs text-parchment/40">or click to browse — photos, audio, video</p>
         <input ref={fileInputRef} type="file" accept="image/*,audio/*,video/*" multiple className="hidden" onChange={handleFileSelect} />
       </div>
+
+      {/* External link option */}
+      {!showLinkForm ? (
+        <button
+          onClick={() => setShowLinkForm(true)}
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border border-[rgba(201,145,58,0.2)] text-amber-light text-sm font-medium hover:bg-[rgba(201,145,58,0.06)] transition-colors"
+        >
+          <Link2 size={16} /> Add External Link (YouTube, Vimeo, or recording URL)
+        </button>
+      ) : (
+        <div className="aged-card rounded-xl p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Link2 size={16} className="text-gold" />
+            <h3 className="font-display text-sm text-parchment">Add External Link</h3>
+            <button onClick={() => setShowLinkForm(false)} className="ml-auto text-parchment/40 hover:text-parchment text-xs">Cancel</button>
+          </div>
+          {/* Type toggle */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setLinkType('video')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs border transition-all ${linkType === 'video' ? 'border-[#C9913A] bg-[rgba(201,145,58,0.1)] text-gold' : 'border-[rgba(201,145,58,0.15)] text-parchment/50'}`}
+            >
+              <Video size={12} /> Video
+            </button>
+            <button
+              onClick={() => setLinkType('audio')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs border transition-all ${linkType === 'audio' ? 'border-[#C9913A] bg-[rgba(201,145,58,0.1)] text-gold' : 'border-[rgba(201,145,58,0.15)] text-parchment/50'}`}
+            >
+              <Music size={12} /> Audio
+            </button>
+          </div>
+          <div>
+            <label className="text-xs text-parchment/40 mb-1 block">URL</label>
+            <input
+              value={linkUrl}
+              onChange={e => setLinkUrl(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleAddLink())}
+              className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-3 py-2 text-sm text-parchment focus:outline-none focus:border-[#C9913A]"
+              placeholder="https://youtube.com/watch?v=... or https://example.com/recording.mp3"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-parchment/40 mb-1 block">Title (optional)</label>
+            <input
+              value={linkTitle}
+              onChange={e => setLinkTitle(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleAddLink())}
+              className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-3 py-2 text-sm text-parchment focus:outline-none focus:border-[#C9913A]"
+              placeholder="e.g. Interview with Nonna — 2015"
+            />
+          </div>
+          <button
+            onClick={handleAddLink}
+            disabled={!linkUrl.trim()}
+            className="w-full py-2.5 rounded-lg bg-[#C9913A] text-charcoal text-sm font-semibold disabled:opacity-40 hover:opacity-90 transition-opacity"
+          >
+            Add to Batch
+          </button>
+        </div>
+      )}
 
       {items.length > 0 && (
         <div className="flex flex-wrap items-center gap-4 text-xs text-parchment/50">
