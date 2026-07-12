@@ -10,6 +10,7 @@ import MentionTextarea from '@/components/MentionTextarea';
 import NewAncestorDialog from '@/components/NewAncestorDialog';
 import DuplicateResolutionDialog from '@/components/DuplicateResolutionDialog';
 import FocalPointEditor from '@/components/FocalPointEditor';
+import { analyzeCrop } from '@/lib/cropAnalysis';
 
 const STEPS = {
   CAPTURE: 'capture',
@@ -84,6 +85,7 @@ export default function UploadEvent() {
   const [newAncestorOpen, setNewAncestorOpen] = useState(false);
   const [duplicateCheck, setDuplicateCheck] = useState(null);
   const [focalPointReview, setFocalPointReview] = useState(null);
+  const [cropData, setCropData] = useState(null);
   const [analyzingFocalPoint, setAnalyzingFocalPoint] = useState(false);
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
@@ -324,6 +326,8 @@ Return JSON with this structure:
     } else if (exactMatches.length === 0 && nearMatches.length === 0 && !selectedAncestorId) {
       setMatchDialog({ mode: 'prompt' });
     }
+
+    return { type: result.type, extracted_fields: result.extracted_fields, transcription: result.transcription, suggested_title: result.suggested_title, autoTaggedIds, eventDate, eventLocation };
   };
 
   const handleRefreshAnalysis = async () => {
@@ -346,14 +350,57 @@ Return JSON with this structure:
     if (!selectedFile) return;
     setFile(selectedFile);
     setStep(STEPS.ANALYSING);
+    setCropData(null);
+    setDuplicateCheck(null);
+    setAnalyzingFocalPoint(true);
     try {
       const uploadRes = await base44.integrations.Core.UploadFile({ file: selectedFile });
       const url = uploadRes.file_url;
       setFileUrl(url);
-      await runAnalysis(url, selectedFile);
+
+      // Run crop analysis in parallel with main analysis (fire-and-forget — results show when ready)
+      const isImage = selectedFile.type.startsWith('image/');
+      if (isImage) {
+        analyzeCrop(url).then(crop => {
+          if (crop) {
+            setCropData(crop);
+            setFocalPointReview({
+              fileUrl: url,
+              title: selectedFile?.name?.replace(/\.[^.]+$/, '') || '',
+              focalX: crop.focal_point_x,
+              focalY: crop.focal_point_y,
+              reasoning: crop.reasoning,
+            });
+          }
+        }).catch(() => {}).finally(() => setAnalyzingFocalPoint(false));
+      } else {
+        setAnalyzingFocalPoint(false);
+      }
+
+      const analysis = await runAnalysis(url, selectedFile);
+
+      // Run duplicate check with pre-save item data (fire-and-forget)
+      base44.functions.invoke('checkDuplicateUpload', {
+        item_data: {
+          file_url: url,
+          title: analysis?.suggested_title || selectedFile?.name || '',
+          content_type: analysis?.type || 'uncategorized',
+          date: analysis?.eventDate || null,
+          location_name: analysis?.eventLocation || '',
+          transcribed_text: analysis?.transcription || '',
+          extracted_fields: analysis?.extracted_fields || {},
+          ancestor_ids: analysis?.autoTaggedIds || [],
+        }
+      }).then(res => {
+        const dups = res.data?.potential_duplicates || [];
+        if (dups.length > 0) {
+          setDuplicateCheck({ duplicates: dups, itemTitle: analysis?.suggested_title || selectedFile?.name || '' });
+        }
+      }).catch(() => {});
     } catch (e) {
       setClassification('uncategorized');
       setStep(STEPS.FORM);
+      setAnalyzingFocalPoint(false);
     }
   };
 
@@ -380,6 +427,8 @@ Return JSON with this structure:
     setNewAncestorOpen(false);
     setFocalPointReview(null);
     setAnalyzingFocalPoint(false);
+    setCropData(null);
+    setDuplicateCheck(null);
     setFormData(INITIAL_FORM);
   };
 
@@ -436,6 +485,10 @@ Return JSON with this structure:
         categorization_notes: needsReview
           ? `${categorizationNotes || ''}\n\n⚠ FLAGGED FOR ADMIN REVIEW — Missing data:\n${missingNotes.join('\n')}`.trim()
           : categorizationNotes || null,
+        focal_point_x: cropData?.focal_point_x ?? 0.5,
+        focal_point_y: cropData?.focal_point_y ?? 0.4,
+        shot_type: cropData?.shot_type || null,
+        crop_bounds: cropData?.crop_bounds || null,
         visual_elements: visualElements || null,
         uploaded_by_id: currentUser?.id || null,
         conflict_flag_status: 'none',
@@ -489,33 +542,10 @@ Return JSON with this structure:
 
       setStep(STEPS.SAVED);
 
-      // Auto-analyse focal point for smart image cropping on cards/hero
-      if (fileUrl && (contentType === 'photo' || contentType === 'uncategorized' || contentType === 'certificate' || contentType === 'passport' || contentType === 'press_clipping' || contentType === 'narrative' || contentType === 'correspondence' || contentType === 'memorial' || contentType === 'identity_document')) {
-        setAnalyzingFocalPoint(true);
-        base44.functions.invoke('analyzeImageCrop', { content_item_id: createdItem.id })
-          .then(res => {
-            setFocalPointReview({
-              itemId: createdItem.id,
-              fileUrl,
-              title: formData.title,
-              focalX: res.data?.focal_point_x ?? 0.5,
-              focalY: res.data?.focal_point_y ?? 0.4,
-              reasoning: res.data?.reasoning,
-            });
-          })
-          .catch(err => console.error('[analyzeImageCrop] Failed for', createdItem.id, err?.response?.data || err))
-          .finally(() => setAnalyzingFocalPoint(false));
+      // If duplicates were detected pre-save, attach the saved item ID for the resolution dialog
+      if (duplicateCheck) {
+        setDuplicateCheck(prev => ({ ...prev, itemId: createdItem.id }));
       }
-
-      // Check for potential duplicates against existing items for the same ancestor(s)
-      base44.functions.invoke('checkDuplicateUpload', { content_item_id: createdItem.id })
-        .then(res => {
-          const dups = res.data?.potential_duplicates || [];
-          if (dups.length > 0) {
-            setDuplicateCheck({ duplicates: dups, itemId: createdItem.id, itemTitle: formData.title });
-          }
-        })
-        .catch(() => {});
     } catch (e) {
       // error
     }
@@ -859,6 +889,11 @@ Return JSON with this structure:
                     Re-analysis will incorporate {assistantMessages.length} message{assistantMessages.length !== 1 ? 's' : ''} from the AI assistant chat
                   </p>
                 )}
+                {analyzingFocalPoint && (
+                  <p className="text-xs text-amber-light/60 mt-2 text-center flex items-center justify-center gap-1.5">
+                    <Loader2 size={12} className="animate-spin" /> Analyzing optimal image crop...
+                  </p>
+                )}
               </div>
             )}
 
@@ -1091,6 +1126,20 @@ Return JSON with this structure:
               </div>
             </div>
 
+            {/* Duplicate warning — pre-save detection */}
+            {duplicateCheck && (
+              <div className="aged-card rounded-xl p-4 flex items-start gap-3 border-[rgba(201,145,58,0.3)]">
+                <AlertCircle size={20} className="text-amber-light flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm text-parchment font-medium">Potential duplicate detected</p>
+                  <p className="text-xs text-parchment/40 mt-1">
+                    This may be a duplicate of an existing item ({duplicateCheck.duplicates.length} match{duplicateCheck.duplicates.length !== 1 ? 'es' : ''} found).
+                    You can still save — a resolution dialog will appear after saving to merge or resolve.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Incomplete data warning — shows what will be flagged for admin review */}
             {missingRequired.length > 0 && (
               <div className="aged-card rounded-xl p-4 flex items-start gap-3 border-[rgba(201,145,58,0.3)]">
@@ -1185,18 +1234,20 @@ Return JSON with this structure:
 
       {focalPointReview && (
         <FocalPointEditor
-          itemId={focalPointReview.itemId}
           fileUrl={focalPointReview.fileUrl}
           title={focalPointReview.title}
           focalX={focalPointReview.focalX}
           focalY={focalPointReview.focalY}
           reasoning={focalPointReview.reasoning}
-          onApprove={() => setFocalPointReview(null)}
+          onApprove={(coords) => {
+            setCropData(prev => ({ ...prev, ...coords }));
+            setFocalPointReview(null);
+          }}
           onClose={() => setFocalPointReview(null)}
         />
       )}
 
-      {duplicateCheck && (
+      {duplicateCheck?.itemId && (
         <DuplicateResolutionDialog
           duplicates={duplicateCheck.duplicates}
           newItemId={duplicateCheck.itemId}

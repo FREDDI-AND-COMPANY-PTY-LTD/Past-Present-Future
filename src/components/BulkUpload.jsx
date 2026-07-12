@@ -4,6 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { analyzeImage } from '@/lib/imageAnalysis';
 import { analyzeAudioVideo } from '@/lib/avAnalysis';
 import BulkUploadItem from '@/components/BulkUploadItem';
+import { analyzeCrop } from '@/lib/cropAnalysis';
 
 export default function BulkUpload({ ancestors, preselectedAncestorId, user }) {
   const [items, setItems] = useState([]);
@@ -99,6 +100,25 @@ export default function BulkUpload({ ancestors, preselectedAncestorId, user }) {
                 ancestor_ids: matchedIds.length > 0 ? matchedIds : it.form.ancestor_ids,
               },
             } : it));
+
+            // Run duplicate check with pre-save item data
+            base44.functions.invoke('checkDuplicateUpload', {
+              item_data: {
+                file_url: url,
+                title: result.suggested_title || item.form.title,
+                content_type: result.type,
+                date: eventDate,
+                location_name: eventLocation,
+                transcribed_text: result.transcription || '',
+                extracted_fields: result.extracted_fields || {},
+                ancestor_ids: matchedIds,
+              }
+            }).then(res => {
+              const dups = res.data?.potential_duplicates || [];
+              if (dups.length > 0) {
+                setItems(prev => prev.map(it => it.id === item.id ? { ...it, duplicates: dups } : it));
+              }
+            }).catch(() => {});
           } catch (e) {
             setItems(prev => prev.map(it => it.id === item.id ? {
               ...it,
@@ -112,7 +132,14 @@ export default function BulkUpload({ ancestors, preselectedAncestorId, user }) {
 
         setItems(prev => prev.map(it => it.id === item.id ? { ...it, fileUrl: url, status: 'analysing' } : it));
 
-        const result = await analyzeImage(url);
+        const [analysisResult, cropResult] = await Promise.allSettled([
+          analyzeImage(url),
+          analyzeCrop(url),
+        ]);
+
+        if (analysisResult.status !== 'fulfilled') throw analysisResult.reason;
+        const result = analysisResult.value;
+        const crop = cropResult.status === 'fulfilled' ? cropResult.value : null;
 
         const matchedIds = matchAncestors(result);
         const eventLocation = result.event_location
@@ -129,6 +156,7 @@ export default function BulkUpload({ ancestors, preselectedAncestorId, user }) {
           ...it,
           status: 'ready',
           analysis: result,
+          cropData: crop,
           form: {
             ...it.form,
             title: result.suggested_title || it.form.title,
@@ -138,6 +166,25 @@ export default function BulkUpload({ ancestors, preselectedAncestorId, user }) {
             ancestor_ids: matchedIds.length > 0 ? matchedIds : it.form.ancestor_ids,
           },
         } : it));
+
+        // Run duplicate check with pre-save item data
+        base44.functions.invoke('checkDuplicateUpload', {
+          item_data: {
+            file_url: url,
+            title: result.suggested_title || item.form.title,
+            content_type: result.type,
+            date: eventDate,
+            location_name: eventLocation,
+            transcribed_text: result.transcription || '',
+            extracted_fields: result.extracted_fields || {},
+            ancestor_ids: matchedIds,
+          }
+        }).then(res => {
+          const dups = res.data?.potential_duplicates || [];
+          if (dups.length > 0) {
+            setItems(prev => prev.map(it => it.id === item.id ? { ...it, duplicates: dups } : it));
+          }
+        }).catch(() => {});
       } catch (e) {
         setItems(prev => prev.map(it => it.id === item.id ? { ...it, status: 'error' } : it));
       }
@@ -260,6 +307,10 @@ export default function BulkUpload({ ancestors, preselectedAncestorId, user }) {
           raw_ai_analysis: item.analysis || null,
           ai_confidence: item.analysis?.ai_confidence,
           categorization_notes: item.analysis?.categorization_notes || null,
+          focal_point_x: item.cropData?.focal_point_x ?? 0.5,
+          focal_point_y: item.cropData?.focal_point_y ?? 0.4,
+          shot_type: item.cropData?.shot_type || null,
+          crop_bounds: item.cropData?.crop_bounds || null,
           visual_elements: item.analysis?.visual_elements || null,
           uploaded_by_id: user?.id || null,
           review_status: isAdminUser ? 'reviewed' : (needsReview ? 'flagged' : 'pending'),
@@ -293,22 +344,6 @@ export default function BulkUpload({ ancestors, preselectedAncestorId, user }) {
         }
 
         setItems(prev => prev.map(it => it.id === item.id ? { ...it, status: 'saved', savedItemId: createdItem.id } : it));
-
-        // Auto-analyse focal point for smart image cropping on cards/hero
-        if (item.fileUrl) {
-          base44.functions.invoke('analyzeImageCrop', { content_item_id: createdItem.id })
-            .catch(err => console.error('[analyzeImageCrop] Failed for', createdItem.id, err?.response?.data || err));
-        }
-
-        // Check for potential duplicates against existing items for the same ancestor(s)
-        base44.functions.invoke('checkDuplicateUpload', { content_item_id: createdItem.id })
-          .then(res => {
-            const dups = res.data?.potential_duplicates || [];
-            if (dups.length > 0) {
-              setItems(prev => prev.map(it => it.id === item.id ? { ...it, duplicates: dups } : it));
-            }
-          })
-          .catch(() => {});
       } catch (e) {
         setItems(prev => prev.map(it => it.id === item.id ? { ...it, status: 'error' } : it));
       }

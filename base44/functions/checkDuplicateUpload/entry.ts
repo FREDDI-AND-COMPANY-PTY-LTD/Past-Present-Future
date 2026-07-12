@@ -7,11 +7,16 @@ Deno.serve(async (req) => {
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json().catch(() => ({}));
-    const { content_item_id } = body;
-    if (!content_item_id) return Response.json({ error: 'content_item_id is required' }, { status: 400 });
+    const { content_item_id, item_data } = body;
 
-    const newItem = await base44.asServiceRole.entities.ContentItem.get(content_item_id);
-    if (!newItem) return Response.json({ error: 'Content item not found' }, { status: 404 });
+    let newItem;
+    if (item_data) {
+      newItem = item_data;
+    } else {
+      if (!content_item_id) return Response.json({ error: 'content_item_id or item_data is required' }, { status: 400 });
+      newItem = await base44.asServiceRole.entities.ContentItem.get(content_item_id);
+      if (!newItem) return Response.json({ error: 'Content item not found' }, { status: 404 });
+    }
 
     const ancestorIds = newItem.ancestor_ids || [];
     if (ancestorIds.length === 0) {

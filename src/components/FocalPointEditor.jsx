@@ -43,14 +43,18 @@ export default function FocalPointEditor({ itemId, fileUrl, title, focalX, focal
     };
   }, [dragging, updateFromClient]);
 
+  const handleApprove = () => onApprove({ focal_point_x: posX, focal_point_y: posY });
+
   const handleSaveOverride = async () => {
     setSaving(true);
     try {
-      await base44.entities.ContentItem.update(itemId, {
-        focal_point_x: posX,
-        focal_point_y: posY,
-      });
-      onApprove();
+      if (itemId) {
+        await base44.entities.ContentItem.update(itemId, {
+          focal_point_x: posX,
+          focal_point_y: posY,
+        });
+      }
+      onApprove({ focal_point_x: posX, focal_point_y: posY });
     } catch (e) {}
     setSaving(false);
   };
@@ -133,7 +137,7 @@ export default function FocalPointEditor({ itemId, fileUrl, title, focalX, focal
 
           <div className="flex gap-3 pt-2">
             <button
-              onClick={onApprove}
+              onClick={handleApprove}
               className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg border border-[rgba(201,145,58,0.3)] text-amber-light text-sm font-semibold hover:bg-[rgba(201,145,58,0.08)] transition-colors"
             >
               <Check size={18} />
