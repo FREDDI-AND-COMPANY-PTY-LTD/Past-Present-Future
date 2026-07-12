@@ -82,7 +82,7 @@ export default function ContentDetail() {
 
         <div className="aged-card rounded-2xl overflow-hidden mb-8">
           {item.file_url && imageTypes.includes(item.content_type) && (
-            <div className="relative bg-black/40">
+            <div className="relative bg-black/40 h-[400px] md:h-[550px] overflow-hidden">
               {(() => {
                 const fx = item.focal_point_x ?? 0.5;
                 const fy = item.focal_point_y ?? 0.4;
@@ -99,7 +99,7 @@ export default function ContentDetail() {
                 } else {
                   detailStyle = { objectPosition: `${fx * 100}% ${fy * 100}%` };
                 }
-                return <img src={item.file_url} alt={item.title} className="w-full max-h-[600px] object-contain sepia-tint" style={detailStyle} />;
+                return <img src={item.file_url} alt={item.title} className="w-full h-full object-cover sepia-tint" style={detailStyle} />;
               })()}
             </div>
           )}
