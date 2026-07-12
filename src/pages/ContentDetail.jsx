@@ -10,6 +10,8 @@ import EditEventDialog from '@/components/EditEventDialog';
 import TranslatedText from '@/components/TranslatedText';
 import HistoricalBackground from '@/components/HistoricalBackground';
 
+const imageTypes = ['photo', 'uncategorized', 'certificate', 'passport', 'identity_document', 'press_clipping', 'narrative', 'correspondence', 'memorial'];
+
 export default function ContentDetail() {
   const { id } = useParams();
   const [item, setItem] = useState(null);
@@ -79,9 +81,26 @@ export default function ContentDetail() {
         </div>
 
         <div className="aged-card rounded-2xl overflow-hidden mb-8">
-          {item.file_url && (item.content_type === 'photo' || item.content_type === 'uncategorized') && (
+          {item.file_url && imageTypes.includes(item.content_type) && (
             <div className="relative bg-black/40">
-              <img src={item.file_url} alt={item.title} className="w-full max-h-[600px] object-contain sepia-tint" />
+              {(() => {
+                const fx = item.focal_point_x ?? 0.5;
+                const fy = item.focal_point_y ?? 0.4;
+                const b = item.crop_bounds;
+                const hasFrame = b && ((b.x_max - b.x_min) < 0.95 || (b.y_max - b.y_min) < 0.95);
+                let detailStyle;
+                if (hasFrame) {
+                  const scale = Math.max(1 / (b.x_max - b.x_min), 1 / (b.y_max - b.y_min));
+                  detailStyle = {
+                    objectPosition: `${fx * 100}% ${fy * 100}%`,
+                    transform: `scale(${scale})`,
+                    transformOrigin: `${fx * 100}% ${fy * 100}%`,
+                  };
+                } else {
+                  detailStyle = { objectPosition: `${fx * 100}% ${fy * 100}%` };
+                }
+                return <img src={item.file_url} alt={item.title} className="w-full max-h-[600px] object-contain sepia-tint" style={detailStyle} />;
+              })()}
             </div>
           )}
           {item.external_url && (

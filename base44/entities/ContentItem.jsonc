@@ -149,7 +149,42 @@
     "focal_point_y": {
       "type": "number",
       "description": "AI-determined focal point Y coordinate (0-1, 0=top, 0.5=center, 1=bottom). Used by CSS object-position to crop images perfectly on card thumbnails and hero displays.",
-      "default": 0.5
+      "default": 0.4
+    },
+    "shot_type": {
+      "type": "string",
+      "enum": [
+        "closeup",
+        "portrait",
+        "mid_shot",
+        "long_shot",
+        "group_photo",
+        "document",
+        "landscape"
+      ],
+      "description": "AI-detected shot type \u2014 determines how the image is cropped when thumbnailed. closeup/portrait = face is focal; mid_shot = upper body; long_shot = full scene; group_photo = center of group; document = text/heading area; landscape = center of scene."
+    },
+    "crop_bounds": {
+      "type": "object",
+      "description": "Inner content frame for 'photo within a photo' scenarios \u2014 when the actual image content is a sub-region of the full image (e.g., a scanned photo with white borders, a framed picture, a photo on a scanner bed). The card thumbnail zooms into this area before applying the focal point. When null or near-full-frame, the full image is used.",
+      "properties": {
+        "x_min": {
+          "type": "number",
+          "description": "Left edge of content area (0-1)"
+        },
+        "y_min": {
+          "type": "number",
+          "description": "Top edge of content area (0-1)"
+        },
+        "x_max": {
+          "type": "number",
+          "description": "Right edge of content area (0-1)"
+        },
+        "y_max": {
+          "type": "number",
+          "description": "Bottom edge of content area (0-1)"
+        }
+      }
     },
     "file_url": {
       "type": "string",

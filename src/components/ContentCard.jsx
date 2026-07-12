@@ -30,25 +30,46 @@ const typeLabels = {
   uncategorized: 'Uncategorized',
 };
 
+const imageTypes = ['photo', 'uncategorized', 'certificate', 'passport', 'identity_document', 'press_clipping', 'narrative', 'correspondence', 'memorial'];
+
 export default function ContentCard({ item, ancestors = [] }) {
   const Icon = typeIcons[item.content_type] || FileText;
   const taggedAncestors = (item.ancestor_ids || [])
     .map(id => ancestors.find(a => a.id === id))
     .filter(Boolean);
 
-  const focalStyle = (item.focal_point_x != null || item.focal_point_y != null)
-    ? { objectPosition: `${(item.focal_point_x ?? 0.5) * 100}% ${(item.focal_point_y ?? 0.4) * 100}%` }
-    : {};
+  const focalX = item.focal_point_x ?? 0.5;
+  const focalY = item.focal_point_y ?? 0.4;
+
+  const bounds = item.crop_bounds;
+  const hasInnerFrame = bounds && (bounds.x_max - bounds.x_min) < 0.95 || (bounds && bounds.y_max - bounds.y_min < 0.95);
+
+  let imgStyle;
+  if (hasInnerFrame) {
+    const contentW = bounds.x_max - bounds.x_min;
+    const contentH = bounds.y_max - bounds.y_min;
+    const scale = Math.max(1 / contentW, 1 / contentH);
+    imgStyle = {
+      objectFit: 'cover',
+      objectPosition: `${focalX * 100}% ${focalY * 100}%`,
+      transform: `scale(${scale})`,
+      transformOrigin: `${focalX * 100}% ${focalY * 100}%`,
+    };
+  } else {
+    imgStyle = { objectPosition: `${focalX * 100}% ${focalY * 100}%` };
+  }
+
+  const showImage = item.file_url && imageTypes.includes(item.content_type);
 
   return (
     <Link to={`/content/${item.id}`} className="block aged-card rounded-xl overflow-hidden hover:border-[rgba(201,145,58,0.4)] transition-all duration-300 group">
-      {item.file_url && (item.content_type === 'photo' || item.content_type === 'uncategorized') && (
+      {showImage && (
         <div className="relative h-48 overflow-hidden bg-black/40">
           <img
             src={item.file_url}
             alt={item.title}
             className="w-full h-full object-cover sepia-tint group-hover:scale-105 transition-transform duration-500"
-            style={focalStyle}
+            style={imgStyle}
           />
           <div className="absolute top-3 right-3 bg-charcoal/80 backdrop-blur-sm px-2.5 py-1 rounded-full flex items-center gap-1.5 border border-[rgba(201,145,58,0.2)]">
             <Icon size={12} className="text-gold" />
@@ -63,7 +84,7 @@ export default function ContentCard({ item, ancestors = [] }) {
         </div>
       )}
       <div className="p-5">
-        {!item.file_url || item.content_type !== 'photo' ? (
+        {!showImage ? (
           <div className="flex items-center gap-2 mb-2">
             <div className="w-8 h-8 rounded-lg bg-[rgba(201,145,58,0.1)] flex items-center justify-center border border-[rgba(201,145,58,0.15)]">
               <Icon size={16} className="text-gold" />

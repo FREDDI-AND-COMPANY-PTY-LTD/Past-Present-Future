@@ -43,14 +43,31 @@ export default function Home() {
       {/* Hero */}
       <section className="relative h-[70vh] min-h-[500px] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0">
-          <img
-            src={heroPhoto?.file_url || FALLBACK_HERO}
-            alt={heroPhoto?.title || 'Family archive'}
-            className="w-full h-full object-cover sepia-tint"
-            style={heroPhoto?.focal_point_x != null || heroPhoto?.focal_point_y != null
-              ? { objectPosition: `${(heroPhoto.focal_point_x ?? 0.5) * 100}% ${(heroPhoto.focal_point_y ?? 0.4) * 100}%` }
-              : undefined}
-          />
+          {(() => {
+            const fx = heroPhoto?.focal_point_x ?? 0.5;
+            const fy = heroPhoto?.focal_point_y ?? 0.4;
+            const b = heroPhoto?.crop_bounds;
+            const hasFrame = b && ((b.x_max - b.x_min) < 0.95 || (b.y_max - b.y_min) < 0.95);
+            let heroStyle;
+            if (hasFrame) {
+              const scale = Math.max(1 / (b.x_max - b.x_min), 1 / (b.y_max - b.y_min));
+              heroStyle = {
+                objectPosition: `${fx * 100}% ${fy * 100}%`,
+                transform: `scale(${scale})`,
+                transformOrigin: `${fx * 100}% ${fy * 100}%`,
+              };
+            } else {
+              heroStyle = { objectPosition: `${fx * 100}% ${fy * 100}%` };
+            }
+            return (
+              <img
+                src={heroPhoto?.file_url || FALLBACK_HERO}
+                alt={heroPhoto?.title || 'Family archive'}
+                className="w-full h-full object-cover sepia-tint"
+                style={heroStyle}
+              />
+            );
+          })()}
           <div className="absolute inset-0 hero-overlay" />
         </div>
         <div className="relative z-10 text-center px-6 max-w-3xl animate-fade-in-up">
