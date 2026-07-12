@@ -503,7 +503,7 @@ Return JSON with this structure:
               reasoning: res.data?.reasoning,
             });
           })
-          .catch(() => {})
+          .catch(err => console.error('[analyzeImageCrop] Failed for', createdItem.id, err?.response?.data || err))
           .finally(() => setAnalyzingFocalPoint(false));
       }
 

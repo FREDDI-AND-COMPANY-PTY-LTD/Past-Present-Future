@@ -296,7 +296,8 @@ export default function BulkUpload({ ancestors, preselectedAncestorId, user }) {
 
         // Auto-analyse focal point for smart image cropping on cards/hero
         if (item.fileUrl) {
-          base44.functions.invoke('analyzeImageCrop', { content_item_id: createdItem.id }).catch(() => {});
+          base44.functions.invoke('analyzeImageCrop', { content_item_id: createdItem.id })
+            .catch(err => console.error('[analyzeImageCrop] Failed for', createdItem.id, err?.response?.data || err));
         }
 
         // Check for potential duplicates against existing items for the same ancestor(s)
