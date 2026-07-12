@@ -163,6 +163,11 @@ export default function BulkUpload({ ancestors, preselectedAncestorId, user }) {
         ...it,
         analysis: { ...it.analysis, transcription: value },
       } : it));
+    } else if (field === '_type') {
+      setItems(prev => prev.map(it => it.id === itemId ? {
+        ...it,
+        analysis: { ...it.analysis, type: value },
+      } : it));
     } else {
       setItems(prev => prev.map(it => it.id === itemId ? { ...it, form: { ...it.form, [field]: value } } : it));
     }

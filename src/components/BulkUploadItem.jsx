@@ -1,14 +1,22 @@
 import React, { useState } from 'react';
-import { MapPin, Users, ChevronDown, ChevronUp, Check, Loader2, Image as ImageIcon, FileText, Award, BookUser, IdCard, Mail, Newspaper, HelpCircle, Calendar, Video, Music, Eye, MessageSquare, UserPlus, AlertTriangle } from 'lucide-react';
+import { MapPin, Users, ChevronDown, ChevronUp, Check, Loader2, Image as ImageIcon, FileText, Award, BookUser, IdCard, Mail, Newspaper, HelpCircle, Calendar, Video, Music, Eye, MessageSquare, UserPlus, AlertTriangle, Heart } from 'lucide-react';
 import LocationPicker from '@/components/LocationPicker';
 import NewAncestorDialog from '@/components/NewAncestorDialog';
 import DuplicateResolutionDialog from '@/components/DuplicateResolutionDialog';
 
-const typeIcons = {
-  photo: ImageIcon, narrative: FileText, correspondence: Mail, press_clipping: Newspaper,
-  certificate: Award, passport: BookUser, identity_document: IdCard, uncategorized: HelpCircle,
-  video: Video, audio: Music,
-};
+const typeOptions = [
+  { value: 'photo', label: 'Photo', icon: ImageIcon },
+  { value: 'narrative', label: 'Narrative', icon: FileText },
+  { value: 'correspondence', label: 'Letter', icon: Mail },
+  { value: 'press_clipping', label: 'Press', icon: Newspaper },
+  { value: 'certificate', label: 'Certificate', icon: Award },
+  { value: 'passport', label: 'Passport', icon: BookUser },
+  { value: 'identity_document', label: 'ID Doc', icon: IdCard },
+  { value: 'memorial', label: 'Memorial', icon: Heart },
+  { value: 'video', label: 'Video', icon: Video },
+  { value: 'audio', label: 'Audio', icon: Music },
+  { value: 'uncategorized', label: 'Other', icon: HelpCircle },
+];
 
 export default function BulkUploadItem({ item, ancestors, onFieldChange, onToggleAncestor, onLocationPick, onCreateAncestor, user }) {
   const [expanded, setExpanded] = useState(false);
@@ -20,7 +28,7 @@ export default function BulkUploadItem({ item, ancestors, onFieldChange, onToggl
   const form = item.form;
   const status = item.status;
 
-  const Icon = typeIcons[a.type] || HelpCircle;
+  const Icon = (typeOptions.find(t => t.value === (a.type || 'uncategorized'))?.icon) || HelpCircle;
 
   return (
     <div className="aged-card rounded-xl overflow-hidden">
@@ -75,6 +83,23 @@ export default function BulkUploadItem({ item, ancestors, onFieldChange, onToggl
 
       {expanded && (
         <div className="border-t border-[rgba(201,145,58,0.1)] p-4 space-y-3">
+          {/* Content type selector */}
+          <div>
+            <label className="text-xs text-parchment/40 mb-1.5 block">Content Type</label>
+            <div className="flex flex-wrap gap-1.5">
+              {typeOptions.map(opt => {
+                const Icon = opt.icon;
+                const isActive = (a.type || 'uncategorized') === opt.value;
+                return (
+                  <button key={opt.value} onClick={() => onFieldChange(item.id, '_type', opt.value)}
+                    className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs border transition-all ${isActive ? 'bg-[#C9913A] text-charcoal border-transparent font-medium' : 'border-[rgba(201,145,58,0.15)] text-parchment/60 hover:border-[rgba(201,145,58,0.3)]'}`}>
+                    <Icon size={11} /> {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <div>
             <label className="text-xs text-parchment/40 mb-1 block">Title</label>
             <input value={form.title} onChange={e => onFieldChange(item.id, 'title', e.target.value)}

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, Upload, FileText, Image as ImageIcon, Award, Loader2, Check, Sparkles, Newspaper, Tag, Link2, Search, UserPlus, BookUser, IdCard, Mail, Heart, HelpCircle, Eye, MessageSquare, AlertCircle, MapPin, Calendar, RefreshCw, X, Video } from 'lucide-react';
+import { Camera, Upload, FileText, Image as ImageIcon, Award, Loader2, Check, Sparkles, Newspaper, Tag, Link2, Search, UserPlus, BookUser, IdCard, Mail, Heart, HelpCircle, Eye, MessageSquare, AlertCircle, MapPin, Calendar, RefreshCw, X, Video, Music } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import { getMessages, subscribe } from '@/lib/assistantStore';
@@ -17,6 +17,20 @@ const STEPS = {
   FORM: 'form',
   SAVED: 'saved',
 };
+
+const typeOptions = [
+  { value: 'photo', label: 'Photo', icon: ImageIcon },
+  { value: 'narrative', label: 'Narrative', icon: FileText },
+  { value: 'correspondence', label: 'Letter', icon: Mail },
+  { value: 'press_clipping', label: 'Press', icon: Newspaper },
+  { value: 'certificate', label: 'Certificate', icon: Award },
+  { value: 'passport', label: 'Passport', icon: BookUser },
+  { value: 'identity_document', label: 'ID Doc', icon: IdCard },
+  { value: 'memorial', label: 'Memorial', icon: Heart },
+  { value: 'video', label: 'Video', icon: Video },
+  { value: 'audio', label: 'Audio', icon: Music },
+  { value: 'uncategorized', label: 'Other', icon: HelpCircle },
+];
 
 const INITIAL_FORM = {
   title: '',
@@ -674,25 +688,24 @@ Return JSON with this structure:
 
         {step === STEPS.FORM && (
           <div className="space-y-6">
-            {/* Classification badge */}
-            <div className="aged-card rounded-xl p-4 flex items-center gap-3">
-              {classification === 'photo' && <ImageIcon size={24} className="text-gold" />}
-              {classification === 'narrative' && <FileText size={24} className="text-gold" />}
-              {classification === 'correspondence' && <Mail size={24} className="text-gold" />}
-              {classification === 'press_clipping' && <Newspaper size={24} className="text-gold" />}
-              {classification === 'certificate' && <Award size={24} className="text-gold" />}
-              {classification === 'passport' && <BookUser size={24} className="text-gold" />}
-              {classification === 'identity_document' && <IdCard size={24} className="text-gold" />}
-              {classification === 'uncategorized' && <HelpCircle size={24} className="text-gold" />}
-              <div>
-                <p className="text-xs text-parchment/40 uppercase tracking-wider">Detected Type</p>
-                <p className="text-parchment font-medium">
-                  {classification === 'photo' ? 'Photograph' : classification === 'narrative' ? 'Narrative Document' : classification === 'correspondence' ? 'Correspondence' : classification === 'press_clipping' ? 'Press Clipping' : classification === 'certificate' ? 'Certificate / Formal Record' : classification === 'passport' ? 'Passport / Travel Document' : classification === 'identity_document' ? 'Identity Document' : classification === 'uncategorized' ? 'Uncategorized — pending review' : 'Document'}
-                  {documentSubtype && documentSubtype !== 'other_official_record' && (
-                    <span className="text-amber-light/70 text-sm ml-2">({documentSubtype.replace(/_/g, ' ')})</span>
-                  )}
-                </p>
+            {/* Content type selector — all categories */}
+            <div className="aged-card rounded-xl p-4">
+              <p className="text-xs text-parchment/40 uppercase tracking-wider mb-2">Content Type {aiConfidence !== null && <span className="ml-1 text-parchment/30 normal-case tracking-normal">(AI detected — change if needed)</span>}</p>
+              <div className="flex flex-wrap gap-2">
+                {typeOptions.map(opt => {
+                  const Icon = opt.icon;
+                  const isActive = (classification || 'uncategorized') === opt.value;
+                  return (
+                    <button key={opt.value} onClick={() => setClassification(opt.value)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm border transition-all ${isActive ? 'border-[#C9913A] bg-[rgba(201,145,58,0.1)] text-gold' : 'border-[rgba(201,145,58,0.12)] text-parchment/50 hover:border-[rgba(201,145,58,0.25)]'}`}>
+                      <Icon size={14} /> {opt.label}
+                    </button>
+                  );
+                })}
               </div>
+              {documentSubtype && documentSubtype !== 'other_official_record' && (
+                <p className="text-xs text-amber-light/60 mt-2">Subtype: {documentSubtype.replace(/_/g, ' ')}</p>
+              )}
             </div>
 
             {/* ── MISSING FIELD PROMPTS ── */}

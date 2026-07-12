@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, Check, MapPin, Tag, Award, FileText, Eye, Calendar, Image as ImageIcon, Newspaper, BookUser, IdCard, Mail, Heart, HelpCircle, X, Network, User, Users } from 'lucide-react';
+import { Loader2, Check, MapPin, Tag, Award, FileText, Eye, Calendar, Image as ImageIcon, Newspaper, BookUser, IdCard, Mail, Heart, HelpCircle, X, Network, User, Users, Video, Music } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import LocationPicker from '@/components/LocationPicker';
 
@@ -12,6 +12,8 @@ const typeOptions = [
   { value: 'passport', label: 'Passport', icon: BookUser },
   { value: 'identity_document', label: 'Identity Document', icon: IdCard },
   { value: 'memorial', label: 'Memorial', icon: Heart },
+  { value: 'video', label: 'Video', icon: Video },
+  { value: 'audio', label: 'Audio', icon: Music },
   { value: 'uncategorized', label: 'Uncategorized', icon: HelpCircle },
 ];
 

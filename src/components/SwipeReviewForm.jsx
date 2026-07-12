@@ -1,17 +1,19 @@
 import React, { useState } from 'react';
-import { MapPin, Award, FileText, Image as ImageIcon, Newspaper, BookUser, IdCard, Mail, Heart, HelpCircle, Calendar, Tag, X } from 'lucide-react';
+import { MapPin, Award, FileText, Image as ImageIcon, Newspaper, BookUser, IdCard, Mail, Heart, HelpCircle, Calendar, Tag, X, Video, Music } from 'lucide-react';
 import LocationPicker from '@/components/LocationPicker';
 
 const typeOptions = [
-  { value: 'photo', label: 'Photograph', icon: ImageIcon },
+  { value: 'photo', label: 'Photo', icon: ImageIcon },
   { value: 'narrative', label: 'Narrative', icon: FileText },
-  { value: 'correspondence', label: 'Correspondence', icon: Mail },
-  { value: 'press_clipping', label: 'Press Clipping', icon: Newspaper },
+  { value: 'correspondence', label: 'Letter', icon: Mail },
+  { value: 'press_clipping', label: 'Press', icon: Newspaper },
   { value: 'certificate', label: 'Certificate', icon: Award },
   { value: 'passport', label: 'Passport', icon: BookUser },
-  { value: 'identity_document', label: 'Identity Doc', icon: IdCard },
+  { value: 'identity_document', label: 'ID Doc', icon: IdCard },
   { value: 'memorial', label: 'Memorial', icon: Heart },
-  { value: 'uncategorized', label: 'Uncategorized', icon: HelpCircle },
+  { value: 'video', label: 'Video', icon: Video },
+  { value: 'audio', label: 'Audio', icon: Music },
+  { value: 'uncategorized', label: 'Other', icon: HelpCircle },
 ];
 
 export default function SwipeReviewForm({ item, formData, setFormData, ancestors }) {
@@ -130,7 +132,7 @@ export default function SwipeReviewForm({ item, formData, setFormData, ancestors
 
       {/* Extracted fields */}
       {formData.extracted_fields && Object.keys(formData.extracted_fields).length > 0 && (
-        <details className="border border-[rgba(201,145,58,0.15)] rounded-lg p-3">
+        <details open className="border border-[rgba(201,145,58,0.15)] rounded-lg p-3">
           <summary className="text-xs text-parchment/50 cursor-pointer flex items-center gap-1"><Award size={12} /> Extracted Fields (tap to edit)</summary>
           <div className="grid grid-cols-2 gap-2 mt-2">
             {Object.entries(formData.extracted_fields).map(([key, val]) => val && (
@@ -146,7 +148,7 @@ export default function SwipeReviewForm({ item, formData, setFormData, ancestors
 
       {/* Transcribed text */}
       {formData.transcribed_text && (
-        <details className="border border-[rgba(201,145,58,0.15)] rounded-lg p-3">
+        <details open className="border border-[rgba(201,145,58,0.15)] rounded-lg p-3">
           <summary className="text-xs text-parchment/50 cursor-pointer flex items-center gap-1"><FileText size={12} /> Transcribed Text (tap to edit)</summary>
           <textarea value={formData.transcribed_text} onChange={e => setField('transcribed_text', e.target.value)} rows={4}
             className="w-full mt-2 bg-[#0D0B0A] border border-[rgba(201,145,58,0.15)] rounded-lg px-3 py-2 text-xs text-parchment focus:outline-none focus:border-[#C9913A]" />
