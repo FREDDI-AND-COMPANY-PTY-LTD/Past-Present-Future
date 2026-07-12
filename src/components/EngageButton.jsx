@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MessageSquare, Upload, Loader2, Send, X, FileText, Image as ImageIcon, Link2 } from 'lucide-react';
+import { Upload, Loader2, X, FileText, Image as ImageIcon, Link2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import CommentThread from './CommentThread';
@@ -37,13 +37,10 @@ export default function EngageButton({ item, user }) {
 
   return (
     <div>
-      <div className="flex items-center gap-2">
-        <button
-          onClick={() => setMode(mode === 'comments' ? null : 'comments')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${mode === 'comments' ? 'border-[#C9913A] text-gold bg-[rgba(201,145,58,0.08)]' : 'border-[rgba(201,145,58,0.2)] text-amber-light/70 hover:text-amber-light hover:border-[rgba(201,145,58,0.4)]'}`}
-        >
-          <MessageSquare size={14} /> Comment
-        </button>
+      {/* Comments — always visible, social media style */}
+      <CommentThread entityType="ContentItem" entityId={item.id} fieldName="general_discussion" user={user} />
+
+      <div className="mt-4 pt-4 border-t border-[rgba(201,145,58,0.1)]">
         <button
           onClick={() => setMode(mode === 'upload' ? null : 'upload')}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${mode === 'upload' ? 'border-[#C9913A] text-gold bg-[rgba(201,145,58,0.08)]' : 'border-[rgba(201,145,58,0.2)] text-amber-light/70 hover:text-amber-light hover:border-[rgba(201,145,58,0.4)]'}`}
@@ -51,13 +48,6 @@ export default function EngageButton({ item, user }) {
           <Upload size={14} /> Add Related Event
         </button>
       </div>
-
-      {/* Comments panel */}
-      {mode === 'comments' && (
-        <div className="mt-3 pt-3 border-t border-[rgba(201,145,58,0.1)]">
-          <CommentThread entityType="ContentItem" entityId={item.id} fieldName="general_discussion" />
-        </div>
-      )}
 
       {/* Upload related event panel */}
       {mode === 'upload' && (
