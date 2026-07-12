@@ -21,6 +21,7 @@ import ArchiveDataset from '@/pages/ArchiveDataset';
 import Newsletters from '@/pages/Newsletters';
 import NewsletterDetail from '@/pages/NewsletterDetail';
 import Tasks from '@/pages/Tasks';
+import MigrationJourney from '@/pages/MigrationJourney';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -59,6 +60,7 @@ const AuthenticatedApp = () => {
       <Route path="/newsletters" element={<Newsletters />} />
       <Route path="/newsletter/:id" element={<NewsletterDetail />} />
       <Route path="/tasks" element={<Tasks />} />
+      <Route path="/migration-journey" element={<MigrationJourney />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
