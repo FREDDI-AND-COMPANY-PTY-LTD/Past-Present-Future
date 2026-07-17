@@ -115,7 +115,18 @@ export default function MentionTextarea({
         value={value}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
-        onBlur={handleBlur}
+        onFocus={(e) => {
+          const el = textareaRef.current;
+          if (el) {
+            el.style.height = 'auto';
+            const lineHeight = parseFloat(getComputedStyle(el).lineHeight) || 22;
+            el.style.height = Math.min(el.scrollHeight, lineHeight * 14) + 'px';
+          }
+        }}
+        onBlur={(e) => {
+          handleBlur(e);
+          if (textareaRef.current) textareaRef.current.style.height = '';
+        }}
         rows={rows}
         className={className}
         placeholder={placeholder}

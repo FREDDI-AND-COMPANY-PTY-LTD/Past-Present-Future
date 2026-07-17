@@ -5,6 +5,7 @@ import LocationPicker from '@/components/LocationPicker';
 import MentionTextarea from '@/components/MentionTextarea';
 import LocationAutocompleteInput from '@/components/LocationAutocompleteInput';
 import NewAncestorDialog from '@/components/NewAncestorDialog';
+import AutoGrowTextarea from '@/components/AutoGrowTextarea';
 
 const typeOptions = [
   { value: 'photo', label: 'Photograph', icon: ImageIcon },
@@ -197,8 +198,8 @@ export default function AdminEventEditor({ item, onApproved }) {
         </div>
         <div>
           <label className="text-sm text-parchment/60 mb-1 block">Description</label>
-          <textarea value={formData.description} onChange={e => setField('description', e.target.value)} rows={3}
-            className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-parchment focus:outline-none focus:border-[#C9913A]" />
+          <AutoGrowTextarea value={formData.description} onChange={e => setField('description', e.target.value)} rows={2}
+            className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-parchment focus:outline-none focus:border-[#C9913A] resize-none" />
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
@@ -342,11 +343,11 @@ export default function AdminEventEditor({ item, onApproved }) {
             <FileText size={16} className="text-gold" />
             <h3 className="font-display text-base text-parchment">Transcribed Text</h3>
           </div>
-          <textarea
+          <AutoGrowTextarea
             value={transcribedText}
             onChange={e => setTranscribedText(e.target.value)}
-            rows={6}
-            className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-3 text-sm text-parchment focus:outline-none focus:border-[#C9913A] leading-relaxed"
+            rows={4}
+            className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-3 text-sm text-parchment focus:outline-none focus:border-[#C9913A] leading-relaxed resize-none"
           />
         </div>
       )}
