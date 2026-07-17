@@ -133,21 +133,19 @@ export default function Layout({ children }) {
             </>
           ) : (
             <div className="space-y-2">
-              <Link
-                to="/login"
-                onClick={() => setSidebarOpen(false)}
-                className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg border border-[rgba(201,145,58,0.3)] text-amber-light text-sm font-semibold hover:bg-[rgba(201,145,58,0.08)] transition-colors"
+              <button
+                onClick={() => { setSidebarOpen(false); base44.auth.redirectToLogin(window.location.href); }}
+                className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg border border-[rgba(201,145,58,0.3)] text-amber-light text-sm font-semibold hover:bg-[rgba(201,145,58,0.08)] transition-colors w-full"
               >
                 Login
-              </Link>
-              <Link
-                to="/register"
-                onClick={() => setSidebarOpen(false)}
-                className="flash-pulse flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-gradient-to-r from-[#C9913A] to-[#E8C97A] text-charcoal font-semibold text-sm hover:opacity-90 transition-opacity text-center leading-tight"
+              </button>
+              <button
+                onClick={() => { setSidebarOpen(false); base44.auth.redirectToLogin(window.location.href); }}
+                className="flash-pulse flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-gradient-to-r from-[#C9913A] to-[#E8C97A] text-charcoal font-semibold text-sm hover:opacity-90 transition-opacity text-center leading-tight w-full"
               >
                 <Sparkles size={16} />
                 Become Your Own Ancestor
-              </Link>
+              </button>
             </div>
           )}
         </div>
