@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MapPin, Search, X, Loader2, Check } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import { loadGoogleMaps } from '@/lib/googleMaps';
 
 const darkMapStyles = [
   { elementType: 'geometry', stylers: [{ color: '#1A1614' }] },
@@ -18,22 +19,6 @@ const darkMapStyles = [
   { featureType: 'landscape', elementType: 'geometry', stylers: [{ color: '#151210' }] },
 ];
 
-let scriptPromise = null;
-
-function loadGoogleMaps(apiKey) {
-  if (window.google?.maps) return Promise.resolve(window.google.maps);
-  if (scriptPromise) return scriptPromise;
-  scriptPromise = new Promise((resolve, reject) => {
-    const s = document.createElement('script');
-    s.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
-    s.async = true;
-    s.defer = true;
-    s.onload = () => resolve(window.google.maps);
-    s.onerror = () => { scriptPromise = null; reject(new Error('Failed to load Google Maps')); };
-    document.head.appendChild(s);
-  });
-  return scriptPromise;
-}
 
 export default function LocationPicker({ open, onClose, onPick, initialLocation, initialLat, initialLng }) {
   const containerRef = useRef(null);

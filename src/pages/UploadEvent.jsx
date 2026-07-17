@@ -10,6 +10,7 @@ import MentionTextarea from '@/components/MentionTextarea';
 import NewAncestorDialog from '@/components/NewAncestorDialog';
 import DuplicateResolutionDialog from '@/components/DuplicateResolutionDialog';
 import FocalPointEditor from '@/components/FocalPointEditor';
+import LocationAutocompleteInput from '@/components/LocationAutocompleteInput';
 import { analyzeCrop } from '@/lib/cropAnalysis';
 
 const STEPS = {
@@ -753,11 +754,16 @@ Return JSON with this structure:
                 </div>
                 <p className="text-xs text-parchment/40 mb-3">The AI couldn't determine where this event took place. Can you help? Enter the city, state, or address where the photo was taken or the event occurred — not your current location.</p>
                 <div className="flex gap-2">
-                  <input
+                  <LocationAutocompleteInput
                     value={formData.location_name}
-                    onChange={e => setFormData(f => ({ ...f, location_name: e.target.value }))}
-                    className="flex-1 bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]"
+                    onChange={({ location_name, latitude, longitude }) => setFormData(f => ({
+                      ...f,
+                      location_name,
+                      latitude: latitude !== undefined ? latitude : f.latitude,
+                      longitude: longitude !== undefined ? longitude : f.longitude,
+                    }))}
                     placeholder="e.g. Melbourne, Victoria, Australia"
+                    className="flex-1 bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]"
                   />
                   <button
                     type="button"
@@ -995,8 +1001,17 @@ Return JSON with this structure:
                     {!requiredChecks.location && <span className="text-xs text-red-400/70 ml-1">required</span>}
                   </label>
                   <div className="flex gap-2">
-                    <input value={formData.location_name} onChange={e => setFormData(f => ({ ...f, location_name: e.target.value }))}
-                      className="flex-1 bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-parchment focus:outline-none focus:border-[#C9913A]" placeholder="Where the photo was taken or event occurred" />
+                    <LocationAutocompleteInput
+                      value={formData.location_name}
+                      onChange={({ location_name, latitude, longitude }) => setFormData(f => ({
+                        ...f,
+                        location_name,
+                        latitude: latitude !== undefined ? latitude : f.latitude,
+                        longitude: longitude !== undefined ? longitude : f.longitude,
+                      }))}
+                      placeholder="Where the photo was taken or event occurred"
+                      className="flex-1 bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-parchment focus:outline-none focus:border-[#C9913A]"
+                    />
                     <button
                       type="button"
                       onClick={() => setLocationPickerOpen(true)}

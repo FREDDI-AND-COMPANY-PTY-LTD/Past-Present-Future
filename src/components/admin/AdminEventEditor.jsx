@@ -3,6 +3,7 @@ import { Loader2, Check, MapPin, Tag, Award, FileText, Eye, Calendar, Image as I
 import { base44 } from '@/api/base44Client';
 import LocationPicker from '@/components/LocationPicker';
 import MentionTextarea from '@/components/MentionTextarea';
+import LocationAutocompleteInput from '@/components/LocationAutocompleteInput';
 
 const typeOptions = [
   { value: 'photo', label: 'Photograph', icon: ImageIcon },
@@ -201,8 +202,16 @@ export default function AdminEventEditor({ item, onApproved }) {
         <div>
           <label className="text-sm text-parchment/60 mb-1 block flex items-center gap-1"><MapPin size={12} /> Event Location</label>
           <div className="flex gap-2">
-            <input value={formData.location_name} onChange={e => setField('location_name', e.target.value)}
-              className="flex-1 bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-parchment focus:outline-none focus:border-[#C9913A]" placeholder="Where the event occurred" />
+            <LocationAutocompleteInput
+              value={formData.location_name}
+              onChange={({ location_name, latitude, longitude }) => {
+                setField('location_name', location_name);
+                if (latitude) setField('latitude', latitude);
+                if (longitude) setField('longitude', longitude);
+              }}
+              placeholder="Where the event occurred"
+              className="flex-1 bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-parchment focus:outline-none focus:border-[#C9913A]"
+            />
             <button type="button" onClick={() => setLocationPickerOpen(true)}
               className="flex items-center gap-1.5 px-3 rounded-lg bg-[rgba(201,145,58,0.1)] border border-[rgba(201,145,58,0.2)] text-amber-light text-sm font-medium hover:bg-[rgba(201,145,58,0.15)] transition-colors flex-shrink-0">
               <MapPin size={14} /> Map
