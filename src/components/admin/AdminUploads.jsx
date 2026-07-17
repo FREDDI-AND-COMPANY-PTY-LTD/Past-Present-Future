@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Loader2, Check, Clock, Image, FileText, Newspaper, Award, BookUser, IdCard, Mail, Heart, HelpCircle, ExternalLink } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import AdminReviewModal from '@/components/admin/AdminReviewModal';
+import UndoToast from '@/components/UndoToast';
 
 const typeIcons = {
   photo: Image, story: FileText, press_clipping: Newspaper, certificate: Award,
@@ -20,6 +21,7 @@ export default function AdminUploads({ refreshKey }) {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(null);
   const [reviewingItem, setReviewingItem] = useState(null);
+  const [undoToasts, setUndoToasts] = useState([]);
 
   const fetchItems = async () => {
     setLoading(true);
@@ -34,16 +36,52 @@ export default function AdminUploads({ refreshKey }) {
 
   const markReviewed = async (id) => {
     setUpdating(id);
+    const originalItem = items.find(i => i.id === id);
     try {
       await base44.entities.ContentItem.update(id, { review_status: 'reviewed' });
       setItems(prev => prev.map(i => i.id === id ? { ...i, review_status: 'reviewed' } : i));
+      if (originalItem) {
+        setUndoToasts(prev => [...prev, {
+          id: `mark-${id}-${Date.now()}`,
+          itemId: id,
+          originalStatus: originalItem.review_status,
+          message: `"${originalItem.title}" marked as reviewed`,
+        }]);
+      }
     } catch (e) {}
     setUpdating(null);
   };
 
   const handleApproved = (id) => {
+    const originalItem = items.find(i => i.id === id);
     setItems(prev => prev.filter(i => i.id !== id));
     setReviewingItem(null);
+    if (originalItem) {
+      setUndoToasts(prev => [...prev, {
+        id: `approve-${id}-${Date.now()}`,
+        itemId: id,
+        originalStatus: originalItem.review_status,
+        message: `"${originalItem.title}" approved`,
+      }]);
+    }
+  };
+
+  const handleUndo = async (toast) => {
+    try {
+      await base44.entities.ContentItem.update(toast.itemId, { review_status: toast.originalStatus });
+      const item = await base44.entities.ContentItem.get(toast.itemId);
+      setItems(prev => {
+        if (prev.some(i => i.id === item.id)) {
+          return prev.map(i => i.id === item.id ? { ...i, review_status: toast.originalStatus } : i);
+        }
+        return [item, ...prev];
+      });
+    } catch (e) {}
+    setUndoToasts(prev => prev.filter(t => t.id !== toast.id));
+  };
+
+  const dismissToast = (toastId) => {
+    setUndoToasts(prev => prev.filter(t => t.id !== toastId));
   };
 
   if (loading) {
@@ -126,6 +164,19 @@ export default function AdminUploads({ refreshKey }) {
           onClose={() => setReviewingItem(null)}
           onApproved={handleApproved}
         />
+      )}
+
+      {undoToasts.length > 0 && (
+        <div className="fixed bottom-6 right-6 z-[60] space-y-3 flex flex-col items-end">
+          {undoToasts.map(toast => (
+            <UndoToast
+              key={toast.id}
+              message={toast.message}
+              onUndo={() => handleUndo(toast)}
+              onDismiss={() => dismissToast(toast.id)}
+            />
+          ))}
+        </div>
       )}
     </div>
   );
