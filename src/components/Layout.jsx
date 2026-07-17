@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Users, Map, Clock, Network, GitBranch, Upload, Shield, Search, Menu, X, Sparkles, Database, Inbox, AlertCircle, Newspaper, CheckSquare } from 'lucide-react';
+import { Home, Users, Map, Clock, Network, GitBranch, Upload, Shield, Search, Menu, X, Sparkles, Database, Inbox, AlertCircle, Newspaper, CheckSquare, UserPlus } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import ReportProblemDialog from '@/components/ReportProblemDialog';
+import InviteUserDialog from '@/components/InviteUserDialog';
 import NewsletterOptIn from '@/components/NewsletterOptIn';
 import NotificationPopup from '@/components/NotificationPopup';
 import BranchUpgradeForm from '@/components/BranchUpgradeForm';
@@ -26,6 +27,7 @@ const navItems = [
 
 export default function Layout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
   const [user, setUser] = useState(null);
   const location = useLocation();
   const navigate = useNavigate();
@@ -114,6 +116,16 @@ export default function Layout({ children }) {
               </Link>
             );
           })}
+
+          {isAdmin && (
+            <button
+              onClick={() => { setSidebarOpen(false); setInviteOpen(true); }}
+              className="flex items-center gap-3 px-4 py-3 mt-2 rounded-lg bg-[rgba(201,145,58,0.08)] border border-[rgba(201,145,58,0.25)] text-amber-light text-sm font-medium hover:bg-[rgba(201,145,58,0.15)] transition-colors w-full"
+            >
+              <UserPlus size={18} />
+              Invite New User
+            </button>
+          )}
         </nav>
 
         <div className="p-4 border-t border-[rgba(201,145,58,0.15)]">
@@ -184,6 +196,8 @@ export default function Layout({ children }) {
       </div>
 
       <UploadAssistant />
+
+      <InviteUserDialog open={inviteOpen} onClose={() => setInviteOpen(false)} user={user} />
     </div>
   );
 }
