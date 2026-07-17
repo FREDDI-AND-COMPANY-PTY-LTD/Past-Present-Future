@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { MapPin, Calendar, Globe, Heart, FileText, Award, Flag, ChevronLeft, BookUser } from 'lucide-react';
+import { MapPin, Calendar, Globe, Heart, FileText, Award, Flag, ChevronLeft, BookUser, Pencil } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import AncestorAvatar from '@/components/AncestorAvatar';
 import ContentCard from '@/components/ContentCard';
 import SourcedField from '@/components/SourcedField';
+import AncestorEditDialog from '@/components/AncestorEditDialog';
 
 export default function AncestorProfile() {
   const { id } = useParams();
@@ -18,6 +19,12 @@ export default function AncestorProfile() {
   const [showFlagForm, setShowFlagForm] = useState(false);
   const [flagText, setFlagText] = useState('');
   const [flagSubmitted, setFlagSubmitted] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [editOpen, setEditOpen] = useState(false);
+
+  useEffect(() => {
+    base44.auth.me().then(setCurrentUser).catch(() => {});
+  }, []);
 
   useEffect(() => {
     Promise.all([
@@ -81,9 +88,17 @@ export default function AncestorProfile() {
   return (
     <Layout>
       <div className="px-6 lg:px-12 py-12 max-w-5xl mx-auto">
-        <Link to="/ancestors" className="inline-flex items-center gap-1 text-parchment/50 hover:text-gold transition-colors mb-6 text-sm">
-          <ChevronLeft size={16} /> All Ancestors
-        </Link>
+        <div className="flex items-center justify-between mb-6">
+          <Link to="/ancestors" className="inline-flex items-center gap-1 text-parchment/50 hover:text-gold transition-colors text-sm">
+            <ChevronLeft size={16} /> All Ancestors
+          </Link>
+          {currentUser?.role === 'admin' && (
+            <button onClick={() => setEditOpen(true)}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-[rgba(201,145,58,0.3)] text-amber-light text-sm font-medium hover:bg-[rgba(201,145,58,0.08)] transition-colors">
+              <Pencil size={14} /> Edit Profile
+            </button>
+          )}
+        </div>
 
         {/* Profile header */}
         <div className="aged-card rounded-2xl p-8 mb-8">
@@ -239,6 +254,13 @@ export default function AncestorProfile() {
             </div>
           )}
         </div>
+
+        <AncestorEditDialog
+          open={editOpen}
+          ancestor={ancestor}
+          onClose={() => setEditOpen(false)}
+          onSaved={(updated) => setAncestor(updated)}
+        />
       </div>
     </Layout>
   );
