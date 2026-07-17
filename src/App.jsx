@@ -21,9 +21,10 @@ import ArchiveDataset from '@/pages/ArchiveDataset';
 import Newsletters from '@/pages/Newsletters';
 import NewsletterDetail from '@/pages/NewsletterDetail';
 import Tasks from '@/pages/Tasks';
+import OnboardingGate from '@/components/OnboardingGate';
 
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
+  const { user, isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
 
   if (isLoadingPublicSettings || isLoadingAuth) {
     return (
@@ -43,24 +44,26 @@ const AuthenticatedApp = () => {
   }
 
   return (
-    <Routes>
-      <Route path="/" element={<Home />} />
-      <Route path="/ancestors" element={<Ancestors />} />
-      <Route path="/ancestor/:id" element={<AncestorProfile />} />
-      <Route path="/map" element={<MapPage />} />
-      <Route path="/timeline" element={<TimelinePage />} />
-      <Route path="/family-tree" element={<FamilyTree />} />
-      <Route path="/upload" element={<UploadEvent />} />
-      <Route path="/admin" element={<AdminDashboard />} />
-      <Route path="/admin-inbox" element={<AdminInbox />} />
-      <Route path="/content/:id" element={<ContentDetail />} />
-      <Route path="/branches" element={<Branches />} />
-      <Route path="/archive-dataset" element={<ArchiveDataset />} />
-      <Route path="/newsletters" element={<Newsletters />} />
-      <Route path="/newsletter/:id" element={<NewsletterDetail />} />
-      <Route path="/tasks" element={<Tasks />} />
-      <Route path="*" element={<PageNotFound />} />
-    </Routes>
+    <OnboardingGate user={user}>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/ancestors" element={<Ancestors />} />
+        <Route path="/ancestor/:id" element={<AncestorProfile />} />
+        <Route path="/map" element={<MapPage />} />
+        <Route path="/timeline" element={<TimelinePage />} />
+        <Route path="/family-tree" element={<FamilyTree />} />
+        <Route path="/upload" element={<UploadEvent />} />
+        <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/admin-inbox" element={<AdminInbox />} />
+        <Route path="/content/:id" element={<ContentDetail />} />
+        <Route path="/branches" element={<Branches />} />
+        <Route path="/archive-dataset" element={<ArchiveDataset />} />
+        <Route path="/newsletters" element={<Newsletters />} />
+        <Route path="/newsletter/:id" element={<NewsletterDetail />} />
+        <Route path="/tasks" element={<Tasks />} />
+        <Route path="*" element={<PageNotFound />} />
+      </Routes>
+    </OnboardingGate>
   );
 };
 
