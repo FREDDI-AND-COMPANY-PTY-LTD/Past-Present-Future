@@ -16,10 +16,12 @@ Deno.serve(async (req) => {
 
     // Fetch tagged ancestors for biographical context
     const ancestorIds = item.ancestor_ids || [];
+    const allAncestors = ancestorIds.length > 0
+      ? await base44.asServiceRole.entities.Ancestor.list()
+      : [];
+    const tagged = allAncestors.filter(a => ancestorIds.includes(a.id));
     let ancestorSummaries = '';
-    if (ancestorIds.length > 0) {
-      const allAncestors = await base44.asServiceRole.entities.Ancestor.list();
-      const tagged = allAncestors.filter(a => ancestorIds.includes(a.id));
+    if (tagged.length > 0) {
       ancestorSummaries = tagged.map(a => {
         const parts = [`Name: ${a.full_name}`];
         if (a.birth_date) parts.push(`Born: ${a.birth_date}`);
@@ -31,6 +33,81 @@ Deno.serve(async (req) => {
         if (a.biography) parts.push(`Biography: ${a.biography}`);
         return parts.join(', ');
       }).join('\n');
+    }
+
+    // Fetch other life events for the same ancestor(s) — chronological timeline
+    let lifeEventsTimeline = '';
+    if (ancestorIds.length > 0) {
+      const allContentItems = await base44.asServiceRole.entities.ContentItem.list();
+      const otherItems = allContentItems
+        .filter(ci => ci.id !== content_item_id && (ci.ancestor_ids || []).some(aid => ancestorIds.includes(aid)))
+        .sort((a, b) => {
+          const dateA = a.date ? new Date(a.date).getTime() : Infinity;
+          const dateB = b.date ? new Date(b.date).getTime() : Infinity;
+          return dateA - dateB;
+        })
+        .slice(0, 20);
+      if (otherItems.length > 0) {
+        lifeEventsTimeline = otherItems.map(ci => {
+          const eventAncestors = (ci.ancestor_ids || [])
+            .map(aid => allAncestors.find(an => an.id === aid)?.full_name)
+            .filter(Boolean)
+            .join(', ');
+          const parts = [];
+          if (ci.date) parts.push(ci.date);
+          if (ci.location_name) parts.push(ci.location_name);
+          if (ci.title) parts.push(`"${ci.title}"`);
+          if (ci.content_type) parts.push(`(${ci.content_type})`);
+          if (eventAncestors) parts.push(`Tagged: ${eventAncestors}`);
+          if (ci.description) parts.push(`Summary: ${ci.description.substring(0, 150)}`);
+          return parts.join(' — ');
+        }).join('\n');
+      }
+    }
+
+    // Fetch extended family context (mother, father, partner)
+    let familyContext = '';
+    if (tagged.length > 0) {
+      const familyMembers = [];
+      for (const a of tagged) {
+        const relatives = [
+          { id: a.mother_id, relation: 'Mother' },
+          { id: a.father_id, relation: 'Father' },
+          { id: a.partner_id, relation: 'Partner/Spouse' },
+        ].filter(r => r.id);
+        for (const rel of relatives) {
+          const relative = allAncestors.find(an => an.id === rel.id);
+          if (relative) {
+            const parts = [`${rel.relation} of ${a.full_name}: ${relative.full_name}`];
+            if (relative.birth_date) parts.push(`Born: ${relative.birth_date}`);
+            if (relative.birth_place) parts.push(`Birthplace: ${relative.birth_place}`);
+            if (relative.death_date) parts.push(`Died: ${relative.death_date}`);
+            if (relative.nationality) parts.push(`Nationality: ${relative.nationality}`);
+            if (relative.occupation) parts.push(`Occupation: ${relative.occupation}`);
+            if (relative.biography) parts.push(`Bio: ${relative.biography}`);
+            familyMembers.push(parts.join(', '));
+          }
+        }
+      }
+      if (familyMembers.length > 0) familyContext = familyMembers.join('\n');
+    }
+
+    // Fetch migration routes for the tagged ancestor(s)
+    let migrationContext = '';
+    if (ancestorIds.length > 0) {
+      const allRoutes = await base44.asServiceRole.entities.MigrationRoute.list();
+      const routes = allRoutes.filter(r => ancestorIds.includes(r.ancestor_id));
+      if (routes.length > 0) {
+        migrationContext = routes.map(r => {
+          const wp = (r.waypoints || []).map(w => {
+            const parts = [w.label || 'Unknown location'];
+            if (w.date) parts.push(w.date);
+            if (w.description) parts.push(w.description);
+            return parts.join(' — ');
+          }).join(' → ');
+          return `${r.name}: ${wp}`;
+        }).join('\n');
+      }
     }
 
     // Build a comprehensive data profile from all extracted information
@@ -75,6 +152,9 @@ Deno.serve(async (req) => {
     if (ve.format_description) dataPoints.push(`Format: ${ve.format_description}`);
 
     if (ancestorSummaries) dataPoints.push(`\nTagged ancestor(s):\n${ancestorSummaries}`);
+    if (lifeEventsTimeline) dataPoints.push(`\nOther life events for tagged ancestor(s) (chronological timeline):\n${lifeEventsTimeline}`);
+    if (familyContext) dataPoints.push(`\nExtended family context:\n${familyContext}`);
+    if (migrationContext) dataPoints.push(`\nMigration journey:\n${migrationContext}`);
 
     const dataProfile = dataPoints.join('\n');
 
@@ -104,7 +184,13 @@ Using the extracted data below, research and write about the RELEVANT historical
 
 Write as a ghost writer crafting a biography — not an encyclopedia entry. Use vivid, evocative prose that helps the reader SEE the ancestor as a real person living through a specific historical moment. Address the family reader directly with warmth. Connect the personal details from the document to the wider historical currents that shaped this ancestor's life.
 
-The narrative should be 3-5 paragraphs, rich in historical detail researched from the web, but always anchored to the specific person, place, and time in the data.
+If a chronological timeline of other life events is provided, weave this event into the ancestor's broader life story — referencing what came before and after, showing how this moment fits into the arc of their life. If the same ancestor appears in multiple events, build a sense of continuity and development across time. Do not list events mechanically — integrate them naturally into the narrative flow.
+
+If extended family context is provided (parents, spouse), bring these family members into the narrative where relevant — show how family relationships shaped the ancestor's journey, and how this event connects to the broader family story.
+
+If a migration journey is provided, discuss the ancestor's movement across places and time — the push and pull factors, the experience of leaving one world and entering another, and how this event fits into that journey.
+
+The narrative should be 4-7 paragraphs, rich in historical detail researched from the web, but always anchored to the specific person, place, and time in the data, and connected to the broader family and life story.
 
 If you cannot find specific historical information about a place or institution, provide the best general context you can for the era and region, and note that specifics may require further research.
 
