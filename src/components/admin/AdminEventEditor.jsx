@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, Check, MapPin, Tag, Award, FileText, Eye, Calendar, Image as ImageIcon, Newspaper, BookUser, IdCard, Mail, Heart, HelpCircle, X, Network, User, Users, Video, Music, Link2, MessageSquare } from 'lucide-react';
+import { Loader2, Check, MapPin, Tag, Award, FileText, Eye, Calendar, Image as ImageIcon, Newspaper, BookUser, IdCard, Mail, Heart, HelpCircle, X, Network, User, Users, Video, Music, Link2, MessageSquare, UserPlus } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import LocationPicker from '@/components/LocationPicker';
 import MentionTextarea from '@/components/MentionTextarea';
 import LocationAutocompleteInput from '@/components/LocationAutocompleteInput';
+import NewAncestorDialog from '@/components/NewAncestorDialog';
 
 const typeOptions = [
   { value: 'photo', label: 'Photograph', icon: ImageIcon },
@@ -35,6 +36,9 @@ export default function AdminEventEditor({ item, onApproved }) {
   const [isQuery, setIsQuery] = useState(false);
   const [users, setUsers] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
+  const [newAncestorOpen, setNewAncestorOpen] = useState(false);
+  const [attachToProfile, setAttachToProfile] = useState(false);
+  const [selectedAncestorId, setSelectedAncestorId] = useState('');
 
   useEffect(() => {
     setFormData({
@@ -55,6 +59,8 @@ export default function AdminEventEditor({ item, onApproved }) {
     setComment('');
     setTaggedUserIds([]);
     setIsQuery(false);
+    setAttachToProfile(false);
+    setSelectedAncestorId(item.ancestor_ids?.[0] || '');
     // Load any family link extracted from this content item
     base44.entities.FamilyLink.filter({ content_item_id: item.id }).then(links => {
       setFamilyLink(links && links.length > 0 ? links[0] : null);
@@ -121,6 +127,17 @@ export default function AdminEventEditor({ item, onApproved }) {
           is_query: isQuery,
           acknowledged_by: [],
         }).catch(() => {});
+      }
+      // Attach certificate/passport directly to ancestor's profile
+      if (attachToProfile && selectedAncestorId && item.file_url) {
+        const documentSubtype = extractedFields?.document_subtype;
+        const profileField =
+          documentSubtype === 'birth_certificate' ? 'birth_certificate' :
+          documentSubtype === 'marriage_certificate' ? 'marriage_certificate' :
+          formData.content_type === 'passport' ? 'passport_document' : null;
+        if (profileField) {
+          await base44.entities.Ancestor.update(selectedAncestorId, { [profileField]: item.file_url }).catch(() => {});
+        }
       }
       // If a family link exists and is still pending, integrate it now
       if (familyLink && familyLink.status === 'pending') {
@@ -245,7 +262,10 @@ export default function AdminEventEditor({ item, onApproved }) {
         <label className="text-sm text-parchment/60 mb-2 block">Tag Ancestors</label>
         <div className="flex flex-wrap gap-2">
           {ancestors.map(a => (
-            <button key={a.id} onClick={() => toggleAncestor(a.id)}
+            <button key={a.id} onClick={() => {
+              toggleAncestor(a.id);
+              setSelectedAncestorId(a.id);
+            }}
               className={`px-3 py-1.5 rounded-full text-sm transition-all ${
                 formData.ancestor_ids?.includes(a.id)
                   ? 'bg-[#C9913A] text-charcoal font-medium'
@@ -254,8 +274,44 @@ export default function AdminEventEditor({ item, onApproved }) {
               {a.full_name}
             </button>
           ))}
+          <button
+            onClick={() => setNewAncestorOpen(true)}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-full text-sm border border-dashed border-[rgba(201,145,58,0.3)] text-amber-light/70 hover:border-[#C9913A] hover:text-gold transition-colors"
+          >
+            <UserPlus size={14} /> Enter New Ancestor
+          </button>
         </div>
       </div>
+
+      {/* Attach certificate to profile — same as user upload form */}
+      {(() => {
+        const documentSubtype = extractedFields?.document_subtype;
+        const canAttach = selectedAncestorId && (
+          (formData.content_type === 'certificate' && (documentSubtype === 'birth_certificate' || documentSubtype === 'marriage_certificate')) ||
+          formData.content_type === 'passport'
+        );
+        if (!canAttach) return null;
+        const selectedAncestor = ancestors.find(a => a.id === selectedAncestorId);
+        return (
+          <div className="aged-card rounded-xl p-4 flex items-center gap-3">
+            <Link2 size={20} className="text-gold flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm text-parchment font-medium">
+                Attach to {selectedAncestor?.full_name || 'ancestor'}'s profile
+              </p>
+              <p className="text-xs text-parchment/40">
+                {formData.content_type === 'passport' ? 'Passport document' : documentSubtype === 'birth_certificate' ? 'Birth certificate' : 'Marriage certificate'} will be saved to their profile page
+              </p>
+            </div>
+            <button
+              onClick={() => setAttachToProfile(!attachToProfile)}
+              className={`w-11 h-6 rounded-full transition-colors flex-shrink-0 ${attachToProfile ? 'bg-[#C9913A]' : 'bg-[rgba(245,236,215,0.1)]'}`}
+            >
+              <div className={`w-5 h-5 rounded-full bg-parchment transition-transform ${attachToProfile ? 'translate-x-5' : 'translate-x-0.5'}`} />
+            </button>
+          </div>
+        );
+      })()}
 
       {/* Extracted fields — editable */}
       {Object.keys(extractedFields).length > 0 && (
@@ -417,6 +473,17 @@ export default function AdminEventEditor({ item, onApproved }) {
         {saving ? <Loader2 size={20} className="animate-spin" /> : <Check size={20} />}
         {saving ? 'Saving...' : familyLink && familyLink.status === 'pending' ? 'Approve & Integrate Family Tree' : 'Approve & Save'}
       </button>
+
+      <NewAncestorDialog
+        open={newAncestorOpen}
+        onClose={() => setNewAncestorOpen(false)}
+        onCreated={(created) => {
+          setAncestors(prev => [...prev, created]);
+          setFormData(f => ({ ...f, ancestor_ids: [...new Set([...(f.ancestor_ids || []), created.id])] }));
+          setSelectedAncestorId(created.id);
+        }}
+        user={currentUser}
+      />
 
       <LocationPicker
         open={locationPickerOpen}
