@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, Check, Pencil, X, Clock, Image, FileText, Newspaper, Award, BookUser, IdCard, Mail, Heart, HelpCircle, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
+import { Loader2, Check, Clock, Image, FileText, Newspaper, Award, BookUser, IdCard, Mail, Heart, HelpCircle, ExternalLink } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
-import AdminEventEditor from '@/components/admin/AdminEventEditor';
+import AdminReviewModal from '@/components/admin/AdminReviewModal';
 
 const typeIcons = {
   photo: Image, story: FileText, press_clipping: Newspaper, certificate: Award,
@@ -19,9 +19,7 @@ export default function AdminUploads({ refreshKey }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(null);
-  const [editing, setEditing] = useState(null);
-  const [editData, setEditData] = useState({});
-  const [expandedId, setExpandedId] = useState(null);
+  const [reviewingItem, setReviewingItem] = useState(null);
 
   const fetchItems = async () => {
     setLoading(true);
@@ -45,25 +43,7 @@ export default function AdminUploads({ refreshKey }) {
 
   const handleApproved = (id) => {
     setItems(prev => prev.filter(i => i.id !== id));
-    setExpandedId(null);
-  };
-
-  const startEdit = (item) => {
-    setEditing(item.id);
-    setEditData({ title: item.title, description: item.description || '' });
-  };
-
-  const saveEdit = async (id) => {
-    setUpdating(id);
-    try {
-      await base44.entities.ContentItem.update(id, {
-        title: editData.title,
-        description: editData.description,
-      });
-      setItems(prev => prev.map(i => i.id === id ? { ...i, title: editData.title, description: editData.description } : i));
-      setEditing(null);
-    } catch (e) {}
-    setUpdating(null);
+    setReviewingItem(null);
   };
 
   if (loading) {
@@ -79,12 +59,9 @@ export default function AdminUploads({ refreshKey }) {
       {items.map(item => {
         const Icon = typeIcons[item.content_type] || FileText;
         const reviewed = item.review_status === 'reviewed';
-        const isEditing = editing === item.id;
-        const isExpanded = expandedId === item.id;
 
         return (
           <div key={item.id} className="aged-card rounded-xl">
-            {/* Header row — always visible */}
             <div className="p-5">
               <div className="flex items-start gap-4">
                 {item.file_url && item.content_type === 'photo' ? (
@@ -96,94 +73,57 @@ export default function AdminUploads({ refreshKey }) {
                 )}
 
                 <div className="flex-1 min-w-0">
-                  {isEditing ? (
-                    <div className="space-y-2">
-                      <input
-                        value={editData.title}
-                        onChange={e => setEditData(prev => ({ ...prev, title: e.target.value }))}
-                        className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-3 py-2 text-sm text-parchment focus:outline-none focus:border-[#C9913A]"
-                      />
-                      <textarea
-                        value={editData.description}
-                        onChange={e => setEditData(prev => ({ ...prev, description: e.target.value }))}
-                        rows={2}
-                        className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-3 py-2 text-sm text-parchment focus:outline-none focus:border-[#C9913A] resize-none"
-                      />
-                    </div>
-                  ) : (
-                    <>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs text-parchment/40 uppercase tracking-wider">{typeLabels[item.content_type] || 'Document'}</span>
-                        <span className={`px-2 py-0.5 rounded-full text-xs ${reviewed ? 'bg-green-500/10 text-green-300' : 'bg-[rgba(201,145,58,0.1)] text-amber-light'}`}>
-                          {reviewed ? 'Reviewed' : 'Pending'}
-                        </span>
-                        {item.ai_confidence != null && (
-                          <span className={`px-2 py-0.5 rounded-full text-xs ${item.ai_confidence >= 0.7 ? 'bg-green-500/10 text-green-300' : item.ai_confidence >= 0.4 ? 'bg-[rgba(201,145,58,0.1)] text-amber-light' : 'bg-red-500/10 text-red-300'}`}>
-                            {Math.round(item.ai_confidence * 100)}%
-                          </span>
-                        )}
-                      </div>
-                      <h3 className="font-display text-base text-parchment">{item.title}</h3>
-                      <div className="flex items-center gap-3 mt-1 text-xs text-parchment/40">
-                        <span className="flex items-center gap-1">
-                          <Clock size={11} />
-                          {new Date(item.created_date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
-                        </span>
-                        {item.location_name && <span>· {item.location_name}</span>}
-                      </div>
-                    </>
-                  )}
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs text-parchment/40 uppercase tracking-wider">{typeLabels[item.content_type] || 'Document'}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-xs ${reviewed ? 'bg-green-500/10 text-green-300' : 'bg-[rgba(201,145,58,0.1)] text-amber-light'}`}>
+                      {reviewed ? 'Reviewed' : 'Pending'}
+                    </span>
+                    {item.ai_confidence != null && (
+                      <span className={`px-2 py-0.5 rounded-full text-xs ${item.ai_confidence >= 0.7 ? 'bg-green-500/10 text-green-300' : item.ai_confidence >= 0.4 ? 'bg-[rgba(201,145,58,0.1)] text-amber-light' : 'bg-red-500/10 text-red-300'}`}>
+                        {Math.round(item.ai_confidence * 100)}%
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="font-display text-base text-parchment">{item.title}</h3>
+                  <div className="flex items-center gap-3 mt-1 text-xs text-parchment/40">
+                    <span className="flex items-center gap-1">
+                      <Clock size={11} />
+                      {new Date(item.created_date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </span>
+                    {item.location_name && <span>· {item.location_name}</span>}
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-1.5 flex-shrink-0">
-                  {isEditing ? (
-                    <>
-                      <button onClick={() => saveEdit(item.id)} disabled={updating === item.id}
-                        className="p-1.5 rounded-lg bg-green-500/10 text-green-300 border border-green-500/25 hover:bg-green-500/20 transition-colors">
-                        {updating === item.id ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-                      </button>
-                      <button onClick={() => setEditing(null)}
-                        className="p-1.5 rounded-lg bg-[rgba(201,145,58,0.06)] text-parchment/40 border border-[rgba(201,145,58,0.1)] hover:text-parchment transition-colors">
-                        <X size={14} />
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button onClick={() => setExpandedId(isExpanded ? null : item.id)}
-                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[rgba(201,145,58,0.06)] text-amber-light border border-[rgba(201,145,58,0.12)] hover:bg-[rgba(201,145,58,0.12)] transition-colors text-xs font-medium">
-                        {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                        {isExpanded ? 'Collapse' : 'Review & Edit'}
-                      </button>
-                      <a href={`/content/${item.id}`} target="_blank" rel="noreferrer"
-                        className="p-1.5 rounded-lg bg-[rgba(201,145,58,0.06)] text-parchment/40 border border-[rgba(201,145,58,0.1)] hover:text-amber-light transition-colors" title="Open detail page">
-                        <ExternalLink size={14} />
-                      </a>
-                      {!reviewed && (
-                        <button onClick={() => markReviewed(item.id)} disabled={updating === item.id}
-                          title="Mark as reviewed"
-                          className="p-1.5 rounded-lg bg-[rgba(201,145,58,0.08)] text-amber-light border border-[rgba(201,145,58,0.15)] hover:bg-[rgba(201,145,58,0.15)] transition-colors">
-                          {updating === item.id ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-                        </button>
-                      )}
-                      <button onClick={() => startEdit(item)} title="Edit / overwrite"
-                        className="p-1.5 rounded-lg bg-[rgba(201,145,58,0.06)] text-parchment/40 border border-[rgba(201,145,58,0.1)] hover:text-amber-light transition-colors">
-                        <Pencil size={14} />
-                      </button>
-                    </>
+                  <button onClick={() => setReviewingItem(item)}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-[#C9913A] to-[#E8C97A] text-charcoal text-xs font-semibold hover:opacity-90 transition-opacity">
+                    <Check size={14} /> Review & Approve
+                  </button>
+                  <a href={`/content/${item.id}`} target="_blank" rel="noreferrer"
+                    className="p-1.5 rounded-lg bg-[rgba(201,145,58,0.06)] text-parchment/40 border border-[rgba(201,145,58,0.1)] hover:text-amber-light transition-colors" title="Open detail page">
+                    <ExternalLink size={14} />
+                  </a>
+                  {!reviewed && (
+                    <button onClick={() => markReviewed(item.id)} disabled={updating === item.id}
+                      title="Mark as reviewed"
+                      className="p-1.5 rounded-lg bg-[rgba(201,145,58,0.08)] text-amber-light border border-[rgba(201,145,58,0.15)] hover:bg-[rgba(201,145,58,0.15)] transition-colors">
+                      {updating === item.id ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                    </button>
                   )}
                 </div>
               </div>
             </div>
-
-            {/* Full extraction — expands inline, no scroll box */}
-            {isExpanded && (
-              <div className="border-t border-[rgba(201,145,58,0.12)] p-5">
-                <AdminEventEditor item={item} onApproved={handleApproved} />
-              </div>
-            )}
           </div>
         );
       })}
+
+      {reviewingItem && (
+        <AdminReviewModal
+          item={reviewingItem}
+          onClose={() => setReviewingItem(null)}
+          onApproved={handleApproved}
+        />
+      )}
     </div>
   );
 }

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, Check, MapPin, Tag, Award, FileText, Eye, Calendar, Image as ImageIcon, Newspaper, BookUser, IdCard, Mail, Heart, HelpCircle, X, Network, User, Users, Video, Music } from 'lucide-react';
+import { Loader2, Check, MapPin, Tag, Award, FileText, Eye, Calendar, Image as ImageIcon, Newspaper, BookUser, IdCard, Mail, Heart, HelpCircle, X, Network, User, Users, Video, Music, Link2, MessageSquare } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import LocationPicker from '@/components/LocationPicker';
+import MentionTextarea from '@/components/MentionTextarea';
 
 const typeOptions = [
   { value: 'photo', label: 'Photograph', icon: ImageIcon },
@@ -27,6 +28,12 @@ export default function AdminEventEditor({ item, onApproved }) {
   const [locationPickerOpen, setLocationPickerOpen] = useState(false);
   const [newTag, setNewTag] = useState('');
   const [familyLink, setFamilyLink] = useState(null);
+  const [externalUrl, setExternalUrl] = useState('');
+  const [comment, setComment] = useState('');
+  const [taggedUserIds, setTaggedUserIds] = useState([]);
+  const [isQuery, setIsQuery] = useState(false);
+  const [users, setUsers] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
     setFormData({
@@ -43,6 +50,10 @@ export default function AdminEventEditor({ item, onApproved }) {
     setExtractedFields(item.extracted_fields || {});
     setTranscribedText(item.transcribed_text || '');
     setTags(item.tags || []);
+    setExternalUrl(item.external_url || '');
+    setComment('');
+    setTaggedUserIds([]);
+    setIsQuery(false);
     // Load any family link extracted from this content item
     base44.entities.FamilyLink.filter({ content_item_id: item.id }).then(links => {
       setFamilyLink(links && links.length > 0 ? links[0] : null);
@@ -51,6 +62,8 @@ export default function AdminEventEditor({ item, onApproved }) {
 
   useEffect(() => {
     base44.entities.Ancestor.list().then(setAncestors).catch(() => {});
+    base44.entities.User.list().then(setUsers).catch(() => {});
+    base44.auth.me().then(setCurrentUser).catch(() => {});
   }, []);
 
   const setField = (key, val) => setFormData(prev => ({ ...prev, [key]: val }));
@@ -86,12 +99,28 @@ export default function AdminEventEditor({ item, onApproved }) {
         latitude: formData.latitude ? parseFloat(formData.latitude) : null,
         longitude: formData.longitude ? parseFloat(formData.longitude) : null,
         ancestor_ids: formData.ancestor_ids,
+        external_url: externalUrl || null,
         transcribed_text: transcribedText || null,
         extracted_fields: Object.keys(extractedFields).length > 0 ? extractedFields : null,
         tags,
         review_status: 'reviewed',
         categorization_notes: item.categorization_notes?.replace(/⚠ FLAGGED FOR ADMIN REVIEW.*$/s, '').trim() || null,
       });
+      // Create comment if provided
+      if (comment.trim()) {
+        await base44.entities.Comment.create({
+          entity_type: 'ContentItem',
+          entity_id: item.id,
+          field_name: 'general_discussion',
+          content: comment.trim(),
+          author_id: currentUser?.id || null,
+          author_name: currentUser?.full_name || currentUser?.email || 'Admin',
+          parent_comment_id: null,
+          tagged_user_ids: taggedUserIds.length > 0 ? taggedUserIds : null,
+          is_query: isQuery,
+          acknowledged_by: [],
+        }).catch(() => {});
+      }
       // If a family link exists and is still pending, integrate it now
       if (familyLink && familyLink.status === 'pending') {
         await base44.functions.invoke('integrateFamilyLink', { family_link_id: familyLink.id }).catch(() => {});
@@ -194,6 +223,14 @@ export default function AdminEventEditor({ item, onApproved }) {
         </div>
       </div>
 
+      {/* External URL */}
+      <div className="aged-card rounded-xl p-5">
+        <label className="text-sm text-parchment/60 mb-1 block flex items-center gap-1"><Link2 size={12} /> External URL (YouTube/Vimeo)</label>
+        <input value={externalUrl} onChange={e => setExternalUrl(e.target.value)}
+          className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-parchment focus:outline-none focus:border-[#C9913A]"
+          placeholder="https://youtube.com/watch?v=..." />
+      </div>
+
       {/* Ancestor tagging */}
       <div className="aged-card rounded-xl p-5">
         <label className="text-sm text-parchment/60 mb-2 block">Tag Ancestors</label>
@@ -265,6 +302,32 @@ export default function AdminEventEditor({ item, onApproved }) {
             className="flex-1 bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-3 py-2 text-sm text-parchment focus:outline-none focus:border-[#C9913A]"
             placeholder="Add a tag..." />
           <button onClick={addTag} className="px-3 py-2 rounded-lg bg-[rgba(201,145,58,0.1)] border border-[rgba(201,145,58,0.2)] text-amber-light text-sm hover:bg-[rgba(201,145,58,0.15)] transition-colors">Add</button>
+        </div>
+      </div>
+
+      {/* Comment / Query — same as the user upload form */}
+      <div className="aged-card rounded-xl p-5">
+        <label className="text-sm text-parchment/60 mb-2 block flex items-center gap-1.5">
+          <MessageSquare size={14} /> Comment
+        </label>
+        <MentionTextarea
+          value={comment}
+          onChange={setComment}
+          onTaggedUsersChange={setTaggedUserIds}
+          taggedUserIds={taggedUserIds}
+          users={users}
+          currentUser={currentUser}
+          rows={3}
+          className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-parchment focus:outline-none focus:border-[#C9913A] placeholder:text-parchment/30"
+          placeholder="Add a comment or raise a query about this event... (type @ to tag someone)"
+        />
+        <div className="mt-2">
+          <button
+            onClick={() => setIsQuery(!isQuery)}
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs border transition-colors ${isQuery ? 'border-[#C9913A] text-gold bg-[rgba(201,145,58,0.08)]' : 'border-[rgba(201,145,58,0.2)] text-amber-light/70 hover:border-[rgba(201,145,58,0.4)]'}`}
+          >
+            <HelpCircle size={12} /> {isQuery ? 'Query' : 'Comment'}
+          </button>
         </div>
       </div>
 
