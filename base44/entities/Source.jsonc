@@ -31,6 +31,14 @@
       "type": "string",
       "description": "Type of document (e.g., birth certificate, passport, statutory declaration)"
     },
+    "content_item_id": {
+      "type": "string",
+      "description": "ID of the ContentItem this source was auto-collated from, for provenance tracking and dedup"
+    },
+    "content_item_title": {
+      "type": "string",
+      "description": "Title of the ContentItem this source was collated from"
+    },
     "provided_by_id": {
       "type": "string",
       "description": "User ID of the family member providing this information"
