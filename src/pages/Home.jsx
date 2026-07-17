@@ -41,8 +41,8 @@ export default function Home() {
     <Layout>
       <UploadHelperBanner />
       {/* Hero */}
-      <section className="relative h-[70vh] min-h-[500px] flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0">
+      <section className="relative h-[70vh] min-h-[500px] flex items-center justify-center">
+        <div className="absolute inset-0 overflow-hidden">
           {(() => {
             const fx = heroPhoto?.focal_point_x ?? 0.5;
             const fy = heroPhoto?.focal_point_y ?? 0.4;
