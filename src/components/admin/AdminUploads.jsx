@@ -63,6 +63,7 @@ export default function AdminUploads({ refreshKey }) {
         return (
           <div key={item.id} className="aged-card rounded-xl">
             <div className="p-5">
+              {/* Content row */}
               <div className="flex items-start gap-4">
                 {item.file_url && item.content_type === 'photo' ? (
                   <img src={item.file_url} alt={item.title} className="w-16 h-16 rounded-lg object-cover sepia-tint flex-shrink-0" />
@@ -73,7 +74,7 @@ export default function AdminUploads({ refreshKey }) {
                 )}
 
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                     <span className="text-xs text-parchment/40 uppercase tracking-wider">{typeLabels[item.content_type] || 'Document'}</span>
                     <span className={`px-2 py-0.5 rounded-full text-xs ${reviewed ? 'bg-green-500/10 text-green-300' : 'bg-[rgba(201,145,58,0.1)] text-amber-light'}`}>
                       {reviewed ? 'Reviewed' : 'Pending'}
@@ -84,33 +85,35 @@ export default function AdminUploads({ refreshKey }) {
                       </span>
                     )}
                   </div>
-                  <h3 className="font-display text-base text-parchment">{item.title}</h3>
-                  <div className="flex items-center gap-3 mt-1 text-xs text-parchment/40">
+                  <h3 className="font-display text-base text-parchment leading-snug">{item.title}</h3>
+                  <div className="flex items-center gap-3 mt-1.5 text-xs text-parchment/40">
                     <span className="flex items-center gap-1">
                       <Clock size={11} />
                       {new Date(item.created_date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
                     </span>
-                    {item.location_name && <span>· {item.location_name}</span>}
+                    {item.location_name && <span className="truncate">· {item.location_name}</span>}
                   </div>
                 </div>
+              </div>
 
-                <div className="flex items-center gap-1.5 flex-shrink-0">
-                  <button onClick={() => setReviewingItem(item)}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-[#C9913A] to-[#E8C97A] text-charcoal text-xs font-semibold hover:opacity-90 transition-opacity">
-                    <Check size={14} /> Review & Approve
+              {/* Actions row — separate row for breathing room */}
+              <div className="flex items-center gap-2 mt-4 pt-3 border-t border-[rgba(201,145,58,0.1)]">
+                <button onClick={() => setReviewingItem(item)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-gradient-to-r from-[#C9913A] to-[#E8C97A] text-charcoal text-xs font-semibold hover:opacity-90 transition-opacity">
+                  <Check size={14} /> Review & Approve
+                </button>
+                <a href={`/content/${item.id}`} target="_blank" rel="noreferrer"
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[rgba(201,145,58,0.06)] text-parchment/60 border border-[rgba(201,145,58,0.1)] hover:text-amber-light transition-colors text-xs" title="Open detail page">
+                  <ExternalLink size={14} /> View
+                </a>
+                <div className="flex-1" />
+                {!reviewed && (
+                  <button onClick={() => markReviewed(item.id)} disabled={updating === item.id}
+                    title="Mark as reviewed"
+                    className="px-3 py-2 rounded-lg bg-[rgba(201,145,58,0.08)] text-amber-light border border-[rgba(201,145,58,0.15)] hover:bg-[rgba(201,145,58,0.15)] transition-colors text-xs font-medium">
+                    {updating === item.id ? <Loader2 size={14} className="animate-spin" /> : 'Mark Reviewed'}
                   </button>
-                  <a href={`/content/${item.id}`} target="_blank" rel="noreferrer"
-                    className="p-1.5 rounded-lg bg-[rgba(201,145,58,0.06)] text-parchment/40 border border-[rgba(201,145,58,0.1)] hover:text-amber-light transition-colors" title="Open detail page">
-                    <ExternalLink size={14} />
-                  </a>
-                  {!reviewed && (
-                    <button onClick={() => markReviewed(item.id)} disabled={updating === item.id}
-                      title="Mark as reviewed"
-                      className="p-1.5 rounded-lg bg-[rgba(201,145,58,0.08)] text-amber-light border border-[rgba(201,145,58,0.15)] hover:bg-[rgba(201,145,58,0.15)] transition-colors">
-                      {updating === item.id ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-                    </button>
-                  )}
-                </div>
+                )}
               </div>
             </div>
           </div>
