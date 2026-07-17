@@ -116,6 +116,34 @@ export default function Register() {
             notes: `Self-registered family name: ${capitalFamily}`,
           }).catch(() => {});
         }
+
+        // Send welcome email to the newly registered user
+        await base44.integrations.Core.SendEmail({
+          to: email,
+          subject: `Welcome to the Freddi Family Archive, ${givenNames}!`,
+          body: `Dear ${givenNames},
+
+Welcome to the Freddi Family Archive — your private family history platform where Present, Past, and Future come together.
+
+Your account is now active. Here's what you can do:
+
+• Upload Events — Share photographs, certificates, letters, and stories. Our AI will help analyse and tag them automatically.
+
+• Explore the Map — See where your ancestors lived and migrated across the world.
+
+• Browse the Timeline — Walk through family events in chronological order.
+
+• Family Tree — Trace your bloodline and see how everyone is connected.
+
+• Comment & Engage — Leave comments, raise queries, and interact with family members on any event.
+
+To get started, visit your home page and upload your first piece of family history.
+
+We're so glad you're here.
+
+Warm regards,
+The Freddi Family Archive`,
+        }).catch(() => {});
       }
       window.location.href = "/";
     } catch (err) {
