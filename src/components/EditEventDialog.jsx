@@ -3,6 +3,7 @@ import { Edit3, X, Save, Loader2, MapPin, Users, Image as ImageIcon, FileText, A
 import { base44 } from '@/api/base44Client';
 import LocationPicker from '@/components/LocationPicker';
 import CommentThread from '@/components/CommentThread';
+import DateSelectInput from '@/components/DateSelectInput';
 
 const typeOptions = [
   { value: 'photo', label: 'Photo', icon: ImageIcon },
@@ -221,13 +222,7 @@ export default function EditEventDialog({ item, onClose, onSubmitted }) {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs text-parchment/50 mb-1 block">Date</label>
-                  <input
-                    type="text"
-                    value={form.date}
-                    onChange={e => handleFieldChange('date', e.target.value)}
-                    className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]"
-                    placeholder="DD/MM/YYYY"
-                  />
+                  <DateSelectInput value={form.date} onChange={v => handleFieldChange('date', v)} className="w-full" />
                 </div>
                 <div>
                   <label className="text-xs text-parchment/50 mb-1 block">Era</label>

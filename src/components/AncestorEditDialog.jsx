@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, Loader2, Pencil } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import DateSelectInput from '@/components/DateSelectInput';
 
 export default function AncestorEditDialog({ open, ancestor, onClose, onSaved }) {
   const [form, setForm] = useState(null);
@@ -76,13 +77,11 @@ export default function AncestorEditDialog({ open, ancestor, onClose, onSaved })
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs text-parchment/50 mb-1 block">Birth Date</label>
-              <input type="date" value={form.birth_date} onChange={e => setField('birth_date', e.target.value)}
-                className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-3 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]" style={{ colorScheme: 'dark' }} />
+              <DateSelectInput value={form.birth_date} onChange={v => setField('birth_date', v)} className="w-full" />
             </div>
             <div>
               <label className="text-xs text-parchment/50 mb-1 block">Death Date</label>
-              <input type="date" value={form.death_date} onChange={e => setField('death_date', e.target.value)}
-                className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-3 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]" style={{ colorScheme: 'dark' }} />
+              <DateSelectInput value={form.death_date} onChange={v => setField('death_date', v)} className="w-full" />
             </div>
           </div>
 

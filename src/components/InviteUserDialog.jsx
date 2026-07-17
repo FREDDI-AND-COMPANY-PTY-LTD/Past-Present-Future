@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, UserPlus, Loader2, Mail, CheckCircle2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import DateSelectInput from '@/components/DateSelectInput';
 import LocationAutocompleteInput from '@/components/LocationAutocompleteInput';
 import LocationPicker from '@/components/LocationPicker';
 
@@ -110,12 +111,10 @@ export default function InviteUserDialog({ open, onClose, user }) {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs text-parchment/50 mb-1 block">Birth Date</label>
-                    <input
-                      type="date"
+                    <DateSelectInput
                       value={form.birth_date}
-                      onChange={e => setForm(f => ({ ...f, birth_date: e.target.value }))}
-                      className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]"
-                      style={{ colorScheme: 'dark' }}
+                      onChange={v => setForm(f => ({ ...f, birth_date: v }))}
+                      className="w-full"
                     />
                   </div>
                   <div>
