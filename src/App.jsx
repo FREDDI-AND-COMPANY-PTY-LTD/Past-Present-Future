@@ -22,6 +22,7 @@ import Newsletters from '@/pages/Newsletters';
 import NewsletterDetail from '@/pages/NewsletterDetail';
 import Tasks from '@/pages/Tasks';
 import OnboardingGate from '@/components/OnboardingGate';
+import WelcomeAuthPopup from '@/components/WelcomeAuthPopup';
 
 const AuthenticatedApp = () => {
   const { user, isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -38,8 +39,7 @@ const AuthenticatedApp = () => {
     if (authError.type === 'user_not_registered') {
       return <UserNotRegisteredError />;
     } else if (authError.type === 'auth_required') {
-      navigateToLogin();
-      return null;
+      return <WelcomeAuthPopup onContinue={navigateToLogin} />;
     }
   }
 
