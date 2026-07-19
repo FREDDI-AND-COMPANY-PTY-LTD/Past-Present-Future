@@ -7,7 +7,7 @@ import LocationPicker from '@/components/LocationPicker';
 
 export default function OnboardingPage({ user, onCompleted }) {
   const [form, setForm] = useState({
-    full_name: user?.full_name || '',
+    full_name: user?.full_name || [user?.given_names, user?.family_name].filter(Boolean).join(' ') || '',
     birth_date: '',
     birth_place: '',
     living: true,

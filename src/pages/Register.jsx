@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UserPlus, Mail, Lock, Loader2, User, ShieldCheck, GitBranch } from "lucide-react";
+import { UserPlus, Mail, Lock, Loader2, User, ShieldCheck } from "lucide-react";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
@@ -20,16 +20,6 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [showOtp, setShowOtp] = useState(false);
   const [otpCode, setOtpCode] = useState("");
-  const [unclaimedAncestors, setUnclaimedAncestors] = useState([]);
-  const [claimedAncestorId, setClaimedAncestorId] = useState("");
-
-  useEffect(() => {
-    base44.entities.Ancestor.list('full_name')
-      .then((all) => {
-        setUnclaimedAncestors((all || []).filter(a => !a.user_account_id));
-      })
-      .catch(() => {});
-  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -62,61 +52,15 @@ export default function Register() {
         base44.auth.setToken(result.access_token);
         const capitalGiven = givenNames.trim().toUpperCase();
         const capitalFamily = familyName.trim().toUpperCase();
-        const fullName = `${givenNames.trim()} ${capitalFamily}`.trim();
         // Persist the birth-certificate-style name: given names + CAPITALISED family name
         await base44.auth.updateMe({
           given_names: capitalGiven,
           family_name: capitalFamily,
         }).catch(() => {});
 
-        const userId = result.user_id || (await base44.auth.me())?.id;
-
-        // If claiming an unclaimed ancestor placeholder, link this user to that profile
-        let ancestorId = claimedAncestorId;
-        if (ancestorId) {
-          await base44.entities.Ancestor.update(ancestorId, {
-            user_account_id: userId,
-            full_name: fullName,
-            living: true,
-          }).catch(() => {});
-        } else {
-          // Create a new ancestor profile for this user
-          const newAncestor = await base44.entities.Ancestor.create({
-            full_name: fullName,
-            living: true,
-          }).catch(() => {});
-          if (newAncestor?.id) ancestorId = newAncestor.id;
-        }
-
-        // Register hearsay sources for the name fields — subject to document validation
-        if (ancestorId) {
-          const me = await base44.auth.me().catch(() => null);
-          const providedByName = fullName;
-          const baseSource = {
-            entity_type: 'Ancestor',
-            entity_id: ancestorId,
-            source_type: 'hearsay',
-            validation_status: 'hearsay',
-            provided_by_id: userId,
-            provided_by_name: providedByName,
-          };
-          await base44.entities.Source.create({
-            ...baseSource,
-            field_name: 'full_name',
-            notes: `Self-registered name: ${fullName}`,
-          }).catch(() => {});
-          await base44.entities.Source.create({
-            ...baseSource,
-            field_name: 'given_names',
-            notes: `Self-registered given names: ${capitalGiven}`,
-          }).catch(() => {});
-          await base44.entities.Source.create({
-            ...baseSource,
-            field_name: 'family_name',
-            notes: `Self-registered family name: ${capitalFamily}`,
-          }).catch(() => {});
-        }
-
+        // Ancestor profile creation is handled by the OnboardingGate's
+        // "Become Your Own Ancestor" form after registration, so invitees
+        // are taken straight to that form rather than the home page.
         // Send welcome email to the newly registered user
         await base44.integrations.Core.SendEmail({
           to: email,
@@ -263,30 +207,6 @@ The Freddi Family Archive`,
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {unclaimedAncestors.length > 0 && (
-          <div className="space-y-2">
-            <Label htmlFor="claimAncestor" className="flex items-center gap-1.5">
-              <GitBranch className="w-3.5 h-3.5 text-primary" />
-              Claim your Present, Past and Future
-            </Label>
-            <select
-              id="claimAncestor"
-              value={claimedAncestorId}
-              onChange={(e) => setClaimedAncestorId(e.target.value)}
-              className="w-full h-12 rounded-md border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            >
-              <option value="">— Not listed / I'll create my own —</option>
-              {unclaimedAncestors.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.full_name}{a.birth_date ? ` (b. ${new Date(a.birth_date).getFullYear()})` : ''}{a.bloodline ? ` — ${a.bloodline}` : ''}
-                </option>
-              ))}
-            </select>
-            <p className="text-xs text-muted-foreground">
-              If the admin has placed your name in the family tree, select it here to claim your ancestor profile.
-            </p>
-          </div>
-        )}
         <div className="space-y-2">
           <Label htmlFor="givenNames">Given Names</Label>
           <div className="relative">
