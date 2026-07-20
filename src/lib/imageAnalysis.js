@@ -68,7 +68,7 @@ Return JSON with this structure:
     "notable_features": ["any other notable visual features"]
   },
   "suggested_title": "a short descriptive title for this item",
-  "suggested_description": "a brief description of what this item is and its potential significance to family history",
+  "suggested_description": "one short sentence describing what this item is and its significance to family history",
   "suggested_tags": ["array", "of", "relevant", "tags"]
 }`;
 

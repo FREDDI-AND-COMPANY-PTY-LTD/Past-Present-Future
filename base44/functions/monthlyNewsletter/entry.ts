@@ -116,9 +116,9 @@ Write it as if you are a historian-journalist telling the story of what the fami
 
 Include:
 1. A compelling headline
-2. An opening paragraph that hooks the reader with the theme of the month's discoveries
-3. 2-4 body sections, each covering a grouping of related items (e.g. certificates found, photographs shared, stories told), with section subheadings. Each section should weave together the personal item with its broader historical context.
-4. A closing paragraph reflecting on the growing archive, the family's journey through history, and inviting members to contribute
+2. A short opening paragraph (2-3 sentences) that hooks the reader with the theme of the month's discoveries
+3. 1-2 body sections, each covering a grouping of related items (e.g. certificates found, photographs shared, stories told), with section subheadings. Keep each section to 3-4 sentences, weaving together the personal item with its broader historical context.
+4. A short closing sentence reflecting on the growing archive and inviting members to contribute
 
 Reference specific items by name where it makes the story richer. Use the uploader's historical context and family comments as primary sources. Use evocative, storytelling language — not dry summaries. The goal is to help the family SEE their ancestors as real people living through real historical moments.
 
@@ -128,11 +128,11 @@ ${itemSummaries}
 Return your response as JSON with this structure:
 {
   "headline": "the main headline",
-  "intro": "the opening paragraph(s) — can include multiple sentences",
+  "intro": "one short opening paragraph",
   "sections": [
     { "subheading": "section subheading", "body": "the section body text" }
   ],
-  "closing": "the closing paragraph"
+  "closing": "one short closing sentence"
 }`,
         model: 'gemini_3_flash',
         add_context_from_internet: true,

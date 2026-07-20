@@ -58,11 +58,11 @@ ${text.substring(0, 6000)}
 Analyse the text body and extract:
 1. event_date \u2014 the date the described event actually occurred (ISO date when determinable, otherwise empty string)
 2. event_date_display \u2014 a human-readable label (e.g. "14 March 1956", "circa 1948", "summer of 1953", "around 1960")
-3. event_description \u2014 a 1-3 sentence plain-English summary of what the text says HAPPENED (the event itself, written for a family chronicle)
+3. event_description \u2014 a single concise sentence plain-English summary of what the text says HAPPENED (the event itself, written for a family chronicle)
 4. event_type \u2014 one of: birth, marriage, death, migration, arrival, military, occupation, family gathering, travel, milestone, other
 5. named_people \u2014 every person named in the text (ancestors AND others). For each, give name, role (e.g. "subject", "author", "mother", "witness", "recipient"), and relationship to the subject if stated.
 6. named_places \u2014 every place named in the text. For each, give the place name and context (e.g. "born in", "arrived at", "married in", "departed from").
-7. chronicle_snippet \u2014 a ready-to-paste 1-2 sentence line summarising this item for a monthly family newsletter/chronicle entry. Warm, specific, referencing the people and place. Do not use generic filler.
+7. chronicle_snippet \u2014 a single concise sentence summarising this item for a monthly family newsletter/chronicle entry. Warm, specific, referencing the people and place. Do not use generic filler.
 
 Also extract, when present in the text:
 8. publication_date \u2014 the date the document/record was issued or published (e.g. a newspaper masthead date, a registry date of issue, an interview recording date). ISO date when determinable, otherwise empty string. Only if clearly distinct from the event date.

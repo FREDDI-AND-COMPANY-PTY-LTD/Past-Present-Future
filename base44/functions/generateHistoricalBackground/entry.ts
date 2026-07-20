@@ -190,7 +190,7 @@ If extended family context is provided (parents, spouse), bring these family mem
 
 If a migration journey is provided, discuss the ancestor's movement across places and time — the push and pull factors, the experience of leaving one world and entering another, and how this event fits into that journey.
 
-The narrative should be 4-7 paragraphs, rich in historical detail researched from the web, but always anchored to the specific person, place, and time in the data, and connected to the broader family and life story.
+The narrative should be 2-3 paragraphs — roughly half the length of a typical feature — concise but rich in the most relevant historical detail researched from the web, always anchored to the specific person, place, and time in the data, and connected to the broader family and life story. Be economical with words; favour the most telling details over exhaustive coverage.
 
 If you cannot find specific historical information about a place or institution, provide the best general context you can for the era and region, and note that specifics may require further research.
 

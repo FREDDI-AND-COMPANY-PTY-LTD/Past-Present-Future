@@ -47,7 +47,7 @@ Return JSON with this structure:
   "event_location": "The geographic location WHERE THE EVENT took place, if determinable from the file name${transcript ? ' or transcript' : ''}. Be as specific as possible (city, state, country). Empty string if no location can be determined.",
   "visual_elements": {},
   "suggested_title": "A short descriptive title for this item, including the type and primary person/place/date if known (e.g. 'Oral History Interview — Nonna Maria (1985)', 'Family Video — Christmas at Home, Melbourne')",
-  "suggested_description": "A brief description of what this item is and its potential significance to family history",
+  "suggested_description": "One short sentence describing what this item is and its significance to family history",
   "suggested_tags": ["array", "of", "relevant", "tags", "e.g.", "oral history", "interview", "Melbourne", "1980s"]
 }`;
 
