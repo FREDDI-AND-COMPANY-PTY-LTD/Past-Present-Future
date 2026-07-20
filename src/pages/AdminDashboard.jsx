@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Activity, Flag, Upload, Edit, Trash2, GitBranch, UserPlus, CheckCircle, Clock, XCircle, Users, Loader2, Save, AlertCircle, ExternalLink, Edit3, ChevronDown, ChevronUp } from 'lucide-react';
+import { Activity, Flag, Upload, Edit, Trash2, GitBranch, UserPlus, CheckCircle, Clock, XCircle, Users, Loader2, Save, AlertCircle, ExternalLink, Edit3, ChevronDown, ChevronUp, Copy } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import AdminEditRequests from '@/components/admin/AdminEditRequests';
 import AdminEventEditor from '@/components/admin/AdminEventEditor';
+import AdminDuplicateReview from '@/components/admin/AdminDuplicateReview';
 
 const actionIcons = {
   upload: Upload,
@@ -171,6 +172,10 @@ export default function AdminDashboard() {
             className={`px-4 py-2 rounded-lg text-sm transition-all border ${tab === 'ancestors' ? 'bg-[rgba(201,145,58,0.12)] text-gold border-[rgba(201,145,58,0.3)]' : 'text-parchment/50 border-[rgba(201,145,58,0.1)]'}`}>
             New Ancestors {newAncestors.length > 0 && <span className="ml-1 px-1.5 py-0.5 rounded-full bg-[#8B6914] text-amber-light text-xs">{newAncestors.length}</span>}
           </button>
+          <button onClick={() => setTab('duplicates')}
+            className={`px-4 py-2 rounded-lg text-sm transition-all border ${tab === 'duplicates' ? 'bg-[rgba(201,145,58,0.12)] text-gold border-[rgba(201,145,58,0.3)]' : 'text-parchment/50 border-[rgba(201,145,58,0.1)]'}`}>
+            Merge Duplicates
+          </button>
         </div>
 
         {loading ? (
@@ -262,6 +267,8 @@ export default function AdminDashboard() {
           </div>
         ) : tab === 'edits' ? (
           <AdminEditRequests />
+        ) : tab === 'duplicates' ? (
+          <AdminDuplicateReview duplicates={[]} />
         ) : tab === 'ancestors' ? (
           <div className="space-y-4">
             {newAncestors.length > 0 ? (
