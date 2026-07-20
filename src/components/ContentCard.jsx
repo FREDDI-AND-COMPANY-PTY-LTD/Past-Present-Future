@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { MapPin, Calendar, Flag, FileText, Image, Newspaper, Video, Award, BookUser, IdCard, Mail, Heart, HelpCircle, Play, Music } from 'lucide-react';
 import CropImage from '@/components/CropImage';
+import { isImageUrl, isPdfUrl } from '@/lib/pdfThumbnail';
 
 const typeIcons = {
   photo: Image,
@@ -39,7 +40,11 @@ export default function ContentCard({ item, ancestors = [] }) {
     .map(id => ancestors.find(a => a.id === id))
     .filter(Boolean);
 
-  const showImage = item.file_url && imageTypes.includes(item.content_type);
+  const isImageFile = isImageUrl(item.file_url);
+  const isPdf = isPdfUrl(item.file_url);
+  const displaySrc = item.thumbnail_url || (isImageFile ? item.file_url : null);
+  const showImage = displaySrc && imageTypes.includes(item.content_type);
+  const showPdfPlaceholder = !displaySrc && isPdf && imageTypes.includes(item.content_type);
   const isMedia = (item.content_type === 'audio' || item.content_type === 'video') && item.file_url && !item.external_url;
 
   return (
@@ -65,7 +70,7 @@ export default function ContentCard({ item, ancestors = [] }) {
       {showImage && (
         <div className="relative h-48 overflow-hidden bg-black/40">
           <CropImage
-            src={item.file_url}
+            src={displaySrc}
             alt={item.title}
             focalX={item.focal_point_x}
             focalY={item.focal_point_y}
@@ -85,8 +90,17 @@ export default function ContentCard({ item, ancestors = [] }) {
           )}
         </div>
       )}
+      {showPdfPlaceholder && (
+        <div className="relative h-48 overflow-hidden bg-gradient-to-br from-[#1A1614] to-[#0D0B0A] flex items-center justify-center">
+          <div className="absolute inset-0 opacity-20" style={{ background: 'radial-gradient(ellipse at 50% 50%, rgba(201,145,58,0.25) 0%, rgba(13,11,10,0) 70%)' }} />
+          <div className="relative w-16 h-20 rounded-md bg-[rgba(201,145,58,0.1)] border border-[rgba(201,145,58,0.3)] flex items-center justify-center group-hover:scale-105 transition-transform duration-300">
+            <FileText size={28} className="text-gold" />
+          </div>
+          <div className="absolute bottom-2 left-3 text-[10px] text-amber-light/60 uppercase tracking-wider">PDF · page 1 preview on detail</div>
+        </div>
+      )}
       <div className="p-5">
-        {!showImage && !isMedia ? (
+        {!showImage && !isMedia && !showPdfPlaceholder ? (
           <div className="flex items-center gap-2 mb-2">
             <div className="w-8 h-8 rounded-lg bg-[rgba(201,145,58,0.1)] flex items-center justify-center border border-[rgba(201,145,58,0.15)]">
               <Icon size={16} className="text-gold" />

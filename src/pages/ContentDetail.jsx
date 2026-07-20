@@ -11,6 +11,7 @@ import TranslatedText from '@/components/TranslatedText';
 import HistoricalBackground from '@/components/HistoricalBackground';
 import MediaPlayer from '@/components/MediaPlayer';
 import CropImage from '@/components/CropImage';
+import { generatePdfThumbnail, isImageUrl, isPdfUrl } from '@/lib/pdfThumbnail';
 
 const imageTypes = ['photo', 'uncategorized', 'certificate', 'passport', 'identity_document', 'press_clipping', 'narrative', 'correspondence', 'memorial'];
 
@@ -27,6 +28,19 @@ export default function ContentDetail() {
   const [user, setUser] = useState(null);
   const [contestedFlags, setContestedFlags] = useState([]);
   const [reanalysingText, setReanalysingText] = useState(false);
+  const [generatingThumb, setGeneratingThumb] = useState(false);
+
+  const generateThumbnail = async () => {
+    if (!item?.file_url || generatingThumb) return;
+    setGeneratingThumb(true);
+    try {
+      const blob = await generatePdfThumbnail(item.file_url);
+      const up = await base44.integrations.Core.UploadFile({ file: new File([blob], 'thumbnail.jpg', { type: 'image/jpeg' }) });
+      await base44.entities.ContentItem.update(item.id, { thumbnail_url: up.file_url });
+      setItem(prev => ({ ...prev, thumbnail_url: up.file_url }));
+    } catch (e) {}
+    setGeneratingThumb(false);
+  };
 
   const reanalyseText = async () => {
     if (reanalysingText) return;
@@ -98,12 +112,16 @@ export default function ContentDetail() {
         </div>
 
         <div className="aged-card rounded-2xl overflow-hidden mb-8">
-          {item.file_url && imageTypes.includes(item.content_type) && (
-            <div className="relative bg-black/40 h-[400px] md:h-[550px] overflow-hidden">
-              {(() => {
-                return (
+          {(() => {
+            const isImageFile = isImageUrl(item.file_url);
+            const isPdf = isPdfUrl(item.file_url);
+            const displaySrc = item.thumbnail_url || (isImageFile ? item.file_url : null);
+            const isDocType = imageTypes.includes(item.content_type);
+            if (displaySrc && isDocType) {
+              return (
+                <div className="relative bg-black/40 h-[400px] md:h-[550px] overflow-hidden">
                   <CropImage
-                    src={item.file_url}
+                    src={displaySrc}
                     alt={item.title}
                     focalX={item.focal_point_x}
                     focalY={item.focal_point_y}
@@ -111,10 +129,29 @@ export default function ContentDetail() {
                     className="w-full h-full"
                     imgClassName="sepia-tint"
                   />
-                );
-              })()}
-            </div>
-          )}
+                </div>
+              );
+            }
+            if (!displaySrc && isPdf && isDocType) {
+              return (
+                <div className="relative bg-gradient-to-br from-[#1A1614] to-[#0D0B0A] h-[300px] md:h-[400px] overflow-hidden flex flex-col items-center justify-center gap-4">
+                  <div className="w-20 h-24 rounded-md bg-[rgba(201,145,58,0.1)] border border-[rgba(201,145,58,0.3)] flex items-center justify-center">
+                    <FileText size={36} className="text-gold" />
+                  </div>
+                  <p className="text-sm text-parchment/50">PDF document — no preview thumbnail yet</p>
+                  <button
+                    onClick={generateThumbnail}
+                    disabled={generatingThumb}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[rgba(201,145,58,0.1)] border border-[rgba(201,145,58,0.3)] text-amber-light text-sm font-medium hover:bg-[rgba(201,145,58,0.18)] transition-colors disabled:opacity-50"
+                  >
+                    {generatingThumb ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+                    {generatingThumb ? 'Generating...' : 'Generate preview thumbnail'}
+                  </button>
+                </div>
+              );
+            }
+            return null;
+          })()}
           {(item.content_type === 'audio' || item.content_type === 'video') && item.file_url && (
             <div className="bg-black/40 px-6 py-10 flex items-center justify-center">
               <MediaPlayer src={item.file_url} type={item.content_type} title={item.title} />

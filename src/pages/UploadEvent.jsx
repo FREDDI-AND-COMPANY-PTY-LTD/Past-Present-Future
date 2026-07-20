@@ -15,6 +15,7 @@ import FocalPointEditor from '@/components/FocalPointEditor';
 import LocationAutocompleteInput from '@/components/LocationAutocompleteInput';
 import DateSelectInput from '@/components/DateSelectInput';
 import { analyzeCrop } from '@/lib/cropAnalysis';
+import { generatePdfThumbnail } from '@/lib/pdfThumbnail';
 
 const STEPS = {
   CAPTURE: 'capture',
@@ -99,6 +100,9 @@ export default function UploadEvent() {
   const [focalPointReview, setFocalPointReview] = useState(null);
   const [cropData, setCropData] = useState(null);
   const [analyzingFocalPoint, setAnalyzingFocalPoint] = useState(false);
+  const [thumbnailUrl, setThumbnailUrl] = useState(null);
+  const [generatingThumb, setGeneratingThumb] = useState(false);
+  const thumbnailPromiseRef = useRef(null);
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
   const cameraInputRef = useRef(null);
@@ -380,6 +384,17 @@ Return JSON with this structure:
       const url = uploadRes.file_url;
       setFileUrl(url);
 
+      // For PDF documents, render the first page to a JPEG thumbnail so the
+      // record shows a visual preview on cards/detail (an <img> can't render a PDF).
+      if (selectedFile.type === 'application/pdf') {
+        setGeneratingThumb(true);
+        thumbnailPromiseRef.current = generatePdfThumbnail(url)
+          .then(blob => base44.integrations.Core.UploadFile({ file: new File([blob], 'thumbnail.jpg', { type: 'image/jpeg' }) }))
+          .then(r => { setThumbnailUrl(r.file_url); return r.file_url; })
+          .catch(() => null)
+          .finally(() => setGeneratingThumb(false));
+      }
+
       // Run crop analysis in parallel with main analysis (fire-and-forget — results show when ready)
       const isImage = selectedFile.type.startsWith('image/');
       if (isImage) {
@@ -452,6 +467,9 @@ Return JSON with this structure:
     setAnalyzingFocalPoint(false);
     setCropData(null);
     setDuplicateCheck(null);
+    setThumbnailUrl(null);
+    setGeneratingThumb(false);
+    thumbnailPromiseRef.current = null;
     setFormData(INITIAL_FORM);
   };
 
@@ -516,6 +534,7 @@ Return JSON with this structure:
         focal_point_y: cropData?.focal_point_y ?? 0.4,
         shot_type: cropData?.shot_type || null,
         crop_bounds: cropData?.crop_bounds || null,
+        thumbnail_url: thumbnailUrl || null,
         visual_elements: visualElements || null,
         uploaded_by_id: currentUser?.id || null,
         conflict_flag_status: 'none',
@@ -524,6 +543,15 @@ Return JSON with this structure:
       };
 
       const createdItem = await base44.entities.ContentItem.create(itemData);
+
+      // If the PDF thumbnail is still rendering at save time, persist it once ready
+      if (thumbnailPromiseRef.current) {
+        Promise.resolve(thumbnailPromiseRef.current).then((thumb) => {
+          if (thumb && !thumbnailUrl) {
+            base44.entities.ContentItem.update(createdItem.id, { thumbnail_url: thumb }).catch(() => {});
+          }
+        });
+      }
 
       // Create initial comment if provided
       if (formData.comment?.trim()) {
@@ -831,7 +859,17 @@ Return JSON with this structure:
                   <img src={fileUrl} alt="preview" className="max-h-64 mx-auto rounded-lg sepia-tint" />
                 )}
                 {file.type === 'application/pdf' && (
-                  <iframe src={fileUrl} title="preview" className="w-full h-80 rounded-lg bg-parchment" />
+                  <>
+                    <iframe src={fileUrl} title="preview" className="w-full h-80 rounded-lg bg-parchment" />
+                    {generatingThumb && (
+                      <p className="text-xs text-amber-light/60 mt-2 text-center flex items-center justify-center gap-1.5">
+                        <Loader2 size={12} className="animate-spin" /> Generating document thumbnail...
+                      </p>
+                    )}
+                    {thumbnailUrl && (
+                      <p className="text-xs text-green-300/70 mt-2 text-center">✓ Thumbnail preview generated</p>
+                    )}
+                  </>
                 )}
                 {assistantMessages.length > 0 && (
                   <p className="text-xs text-parchment/40 mt-2 text-center">
