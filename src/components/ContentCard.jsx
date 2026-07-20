@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { MapPin, Calendar, Flag, FileText, Image, Newspaper, Video, Award, BookUser, IdCard, Mail, Heart, HelpCircle } from 'lucide-react';
+import { MapPin, Calendar, Flag, FileText, Image, Newspaper, Video, Award, BookUser, IdCard, Mail, Heart, HelpCircle, Play, Music } from 'lucide-react';
 
 const typeIcons = {
   photo: Image,
@@ -60,9 +60,28 @@ export default function ContentCard({ item, ancestors = [] }) {
   }
 
   const showImage = item.file_url && imageTypes.includes(item.content_type);
+  const isMedia = (item.content_type === 'audio' || item.content_type === 'video') && item.file_url && !item.external_url;
 
   return (
     <Link to={`/content/${item.id}`} className="block aged-card rounded-xl overflow-hidden hover:border-[rgba(201,145,58,0.4)] transition-all duration-300 group">
+      {isMedia && (
+        <div className="relative h-48 overflow-hidden bg-gradient-to-br from-[#1A1614] to-[#0D0B0A] flex items-center justify-center">
+          <div className="absolute inset-0 opacity-20" style={{ background: 'radial-gradient(ellipse at 50% 50%, rgba(201,145,58,0.25) 0%, rgba(13,11,10,0) 70%)' }} />
+          <div className="relative w-16 h-16 rounded-full bg-[rgba(201,145,58,0.15)] border border-[rgba(201,145,58,0.4)] flex items-center justify-center group-hover:scale-110 transition-transform duration-300 gold-glow">
+            {item.content_type === 'audio' ? <Music size={26} className="text-gold" /> : <Play size={26} className="text-gold ml-1" />}
+          </div>
+          <div className="absolute top-3 right-3 bg-charcoal/80 backdrop-blur-sm px-2.5 py-1 rounded-full flex items-center gap-1.5 border border-[rgba(201,145,58,0.2)]">
+            <Icon size={12} className="text-gold" />
+            <span className="text-xs text-parchment/80">{typeLabels[item.content_type]}</span>
+          </div>
+          {item.conflict_flag_status === 'open' && (
+            <div className="absolute top-3 left-3 bg-[#8B6914]/90 px-2 py-1 rounded-full flex items-center gap-1">
+              <Flag size={12} className="text-amber-light" />
+              <span className="text-xs text-amber-light">Flagged</span>
+            </div>
+          )}
+        </div>
+      )}
       {showImage && (
         <div className="relative h-48 overflow-hidden bg-black/40">
           <img
@@ -84,7 +103,7 @@ export default function ContentCard({ item, ancestors = [] }) {
         </div>
       )}
       <div className="p-5">
-        {!showImage ? (
+        {!showImage && !isMedia ? (
           <div className="flex items-center gap-2 mb-2">
             <div className="w-8 h-8 rounded-lg bg-[rgba(201,145,58,0.1)] flex items-center justify-center border border-[rgba(201,145,58,0.15)]">
               <Icon size={16} className="text-gold" />

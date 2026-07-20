@@ -9,6 +9,7 @@ import EngageButton from '@/components/EngageButton';
 import EditEventDialog from '@/components/EditEventDialog';
 import TranslatedText from '@/components/TranslatedText';
 import HistoricalBackground from '@/components/HistoricalBackground';
+import MediaPlayer from '@/components/MediaPlayer';
 
 const imageTypes = ['photo', 'uncategorized', 'certificate', 'passport', 'identity_document', 'press_clipping', 'narrative', 'correspondence', 'memorial'];
 
@@ -101,6 +102,11 @@ export default function ContentDetail() {
                 }
                 return <img src={item.file_url} alt={item.title} className="w-full h-full object-cover sepia-tint" style={detailStyle} />;
               })()}
+            </div>
+          )}
+          {(item.content_type === 'audio' || item.content_type === 'video') && item.file_url && (
+            <div className="bg-black/40 px-6 py-10 flex items-center justify-center">
+              <MediaPlayer src={item.file_url} type={item.content_type} title={item.title} />
             </div>
           )}
           {item.external_url && (
