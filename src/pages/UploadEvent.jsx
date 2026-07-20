@@ -371,6 +371,7 @@ Return JSON with this structure:
               title: selectedFile?.name?.replace(/\.[^.]+$/, '') || '',
               focalX: crop.focal_point_x,
               focalY: crop.focal_point_y,
+              cropBounds: crop.crop_bounds,
               reasoning: crop.reasoning,
             });
           }
@@ -1244,6 +1245,7 @@ Return JSON with this structure:
           title={focalPointReview.title}
           focalX={focalPointReview.focalX}
           focalY={focalPointReview.focalY}
+          cropBounds={focalPointReview.cropBounds}
           reasoning={focalPointReview.reasoning}
           onApprove={(coords) => {
             setCropData(prev => ({ ...prev, ...coords }));
