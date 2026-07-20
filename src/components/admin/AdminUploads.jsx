@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Loader2, Check, Clock, Image, FileText, Newspaper, Award, BookUser, IdCard, Mail, Heart, HelpCircle, ExternalLink } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import AdminReviewModal from '@/components/admin/AdminReviewModal';
@@ -140,10 +141,10 @@ export default function AdminUploads({ refreshKey }) {
                   className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-gradient-to-r from-[#C9913A] to-[#E8C97A] text-charcoal text-xs font-semibold hover:opacity-90 transition-opacity">
                   <Check size={14} /> Review & Approve
                 </button>
-                <a href={`/content/${item.id}`} target="_blank" rel="noreferrer"
+                <Link to={`/content/${item.id}`}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[rgba(201,145,58,0.06)] text-parchment/60 border border-[rgba(201,145,58,0.1)] hover:text-amber-light transition-colors text-xs" title="Open detail page">
                   <ExternalLink size={14} /> View
-                </a>
+                </Link>
                 <div className="flex-1" />
                 {!reviewed && (
                   <button onClick={() => markReviewed(item.id)} disabled={updating === item.id}
