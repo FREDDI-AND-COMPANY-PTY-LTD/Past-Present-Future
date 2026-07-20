@@ -7,6 +7,7 @@ import AncestorAvatar from '@/components/AncestorAvatar';
 import ContentCard from '@/components/ContentCard';
 import SourcedField from '@/components/SourcedField';
 import AncestorEditDialog from '@/components/AncestorEditDialog';
+import { formatAncestorName } from '@/lib/ancestorName';
 
 export default function AncestorProfile() {
   const { id } = useParams();
@@ -109,7 +110,7 @@ export default function AncestorProfile() {
             <div className="flex-1 text-center md:text-left">
             <div className="flex items-center gap-3 justify-center md:justify-start mb-2 flex-wrap">
               <h1 className="font-display text-4xl text-parchment">
-                {ancestor.full_name}
+                {formatAncestorName(ancestor)}
                 <span className="inline-flex ml-2 align-middle">
                   <SourcedField entityType="Ancestor" entityId={id} fieldName="full_name" label="Full Name" value="" />
                 </span>
@@ -146,7 +147,7 @@ export default function AncestorProfile() {
                   <AncestorAvatar ancestor={parents.mother} size="sm" />
                   <div>
                     <p className="text-xs text-parchment/40">Mother</p>
-                    <p className="text-sm text-parchment">{parents.mother.full_name}</p>
+                    <p className="text-sm text-parchment">{formatAncestorName(parents.mother)}</p>
                   </div>
                 </Link>
               )}
@@ -155,7 +156,7 @@ export default function AncestorProfile() {
                   <AncestorAvatar ancestor={parents.father} size="sm" />
                   <div>
                     <p className="text-xs text-parchment/40">Father</p>
-                    <p className="text-sm text-parchment">{parents.father.full_name}</p>
+                    <p className="text-sm text-parchment">{formatAncestorName(parents.father)}</p>
                   </div>
                 </Link>
               )}
@@ -164,7 +165,7 @@ export default function AncestorProfile() {
                   <AncestorAvatar ancestor={partner} size="sm" />
                   <div>
                     <p className="text-xs text-parchment/40">Partner</p>
-                    <p className="text-sm text-parchment">{partner.full_name}</p>
+                    <p className="text-sm text-parchment">{formatAncestorName(partner)}</p>
                   </div>
                 </Link>
               )}

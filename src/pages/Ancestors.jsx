@@ -4,6 +4,7 @@ import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import AncestorAvatar from '@/components/AncestorAvatar';
 import SearchBar from '@/components/SearchBar';
+import { formatAncestorName } from '@/lib/ancestorName';
 
 export default function Ancestors() {
   const [ancestors, setAncestors] = useState([]);
@@ -63,7 +64,7 @@ export default function Ancestors() {
                 <div className="flex justify-center mb-4">
                   <AncestorAvatar ancestor={ancestor} size="lg" />
                 </div>
-                <h3 className="font-display text-lg text-parchment group-hover:text-gold transition-colors mb-1">{ancestor.full_name}</h3>
+                <h3 className="font-display text-lg text-parchment group-hover:text-gold transition-colors mb-1">{formatAncestorName(ancestor)}</h3>
                 <p className="text-xs text-parchment/50">
                   {ancestor.birth_date ? new Date(ancestor.birth_date).getFullYear() : ''}
                   {ancestor.death_date ? ` – ${new Date(ancestor.death_date).getFullYear()}` : ancestor.living ? ' – present' : ''}
