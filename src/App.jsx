@@ -43,7 +43,9 @@ const AuthenticatedApp = () => {
     return <UserNotRegisteredError />;
   }
 
-  const authRequired = authError?.type === 'auth_required';
+  // The archive is fully private: anyone without an authenticated session sees
+  // the welcome popup instead of any app content.
+  const showAuthGate = !user;
 
   return (
     <Routes>
@@ -53,8 +55,8 @@ const AuthenticatedApp = () => {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
 
-      {/* Gated application routes — behind the welcome popup (if auth required) and the onboarding gate */}
-      <Route element={authRequired ? <WelcomeAuthPopup onContinue={navigateToLogin} /> : <OnboardingGate user={user} />}>
+      {/* Gated application routes — behind the welcome popup (if not logged in) and the onboarding gate */}
+      <Route element={showAuthGate ? <WelcomeAuthPopup /> : <OnboardingGate user={user} />}>
         <Route path="/" element={<Home />} />
         <Route path="/ancestors" element={<Ancestors />} />
         <Route path="/ancestor/:id" element={<AncestorProfile />} />
