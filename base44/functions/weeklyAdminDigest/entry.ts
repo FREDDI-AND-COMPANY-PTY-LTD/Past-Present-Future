@@ -30,7 +30,8 @@ Deno.serve(async (req) => {
       weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
     });
 
-    const html = buildEmailHtml(dateStr, openProblems || [], inProgressProblems || [], openFlags || [], pendingUploads, totalTasks);
+    const origin = new URL(req.url).origin;
+    const html = buildEmailHtml(dateStr, openProblems || [], inProgressProblems || [], openFlags || [], pendingUploads, totalTasks, origin);
 
     const subject = `Weekly Admin Digest — Freddi Ancestry Archive (${totalTasks} task${totalTasks !== 1 ? 's' : ''})`;
 
@@ -57,7 +58,7 @@ Deno.serve(async (req) => {
   }
 });
 
-function buildEmailHtml(dateStr, openProblems, inProgressProblems, conflicts, uploads, totalTasks) {
+function buildEmailHtml(dateStr, openProblems, inProgressProblems, conflicts, uploads, totalTasks, origin) {
   const problemSection = (openProblems.length > 0 || inProgressProblems.length > 0)
     ? renderSection('1', 'Problem Reports', `${openProblems.length} open, ${inProgressProblems.length} in progress`,
         [...openProblems, ...inProgressProblems].map(p =>
@@ -65,7 +66,7 @@ function buildEmailHtml(dateStr, openProblems, inProgressProblems, conflicts, up
             `Status: ${p.status}`,
             `Reported by: ${p.reported_by_name || 'Unknown'}`,
             p.admin_response ? `Admin note: ${p.admin_response}` : null,
-          ])
+          ], `${origin}/admin`)
         )
       )
     : renderEmptySection('1', 'Problem Reports', 'No open problem reports.');
@@ -76,7 +77,7 @@ function buildEmailHtml(dateStr, openProblems, inProgressProblems, conflicts, up
           renderItem(c.dispute_description || 'No description', null, [
             c.field_name ? `Field: ${c.field_name.replace(/_/g, ' ')}` : null,
             c.bloodline ? `Bloodline: ${c.bloodline}` : null,
-          ])
+          ], c.content_item_id ? `${origin}/content/${c.content_item_id}` : (c.ancestor_id ? `${origin}/ancestor/${c.ancestor_id}` : `${origin}/admin`))
         )
       )
     : renderEmptySection('2', 'Pending Approvals (Conflict Flags)', 'No conflict flags awaiting approval.');
@@ -87,7 +88,7 @@ function buildEmailHtml(dateStr, openProblems, inProgressProblems, conflicts, up
           renderItem(u.title || 'Untitled', u.description, [
             `Type: ${u.content_type}`,
             `Uploaded: ${new Date(u.created_date).toLocaleDateString('en-AU')}`,
-          ])
+          ], `${origin}/content/${u.id}`)
         )
       )
     : renderEmptySection('3', 'Uploads to Review', 'No uploads pending review.');
@@ -138,11 +139,14 @@ function renderEmptySection(num, title, msg) {
     </div>`;
 }
 
-function renderItem(title, description, metaLines) {
+function renderItem(title, description, metaLines, href) {
   const meta = (metaLines || []).filter(m => m !== null && m !== undefined);
+  const titleHtml = href
+    ? `<a href="${href}" target="freddi_archive" rel="noopener noreferrer" style="display:block;color:#F5ECD7;font-size:14px;font-weight:bold;margin:0 0 4px;text-decoration:none;">${title} <span style="color:#C9913A;font-size:11px;font-weight:normal;">Review &rarr;</span></a>`
+    : `<p style="color:#F5ECD7;font-size:14px;font-weight:bold;margin:0 0 4px;">${title}</p>`;
   return `
     <div style="background:#1A1614;border:1px solid rgba(201,145,58,0.12);border-radius:6px;padding:14px;margin-bottom:8px;">
-      <p style="color:#F5ECD7;font-size:14px;font-weight:bold;margin:0 0 4px;">${title}</p>
+      ${titleHtml}
       ${description ? `<p style="color:#F5ECD7;opacity:0.6;font-size:13px;margin:0 0 6px;">${description}</p>` : ''}
       ${meta.length > 0 ? `<p style="color:#C9913A;font-size:12px;margin:0;">${meta.join(' &bull; ')}</p>` : ''}
     </div>`;

@@ -179,7 +179,7 @@ Return your response as JSON with this structure:
 
     // Send teaser emails
     for (const user of optedIn) {
-      await sendTeaserEmail(base44, user, story, monthName, itemCount, newsletterUrl);
+      await sendTeaserEmail(base44, user, story, monthName, itemCount, newsletterUrl, monthlyItems, origin);
     }
 
     return Response.json({
@@ -194,7 +194,7 @@ Return your response as JSON with this structure:
   }
 });
 
-async function sendTeaserEmail(base44, user, story, monthName, itemCount, newsletterUrl) {
+async function sendTeaserEmail(base44, user, story, monthName, itemCount, newsletterUrl, items, origin) {
   const headline = story ? story.headline : 'A Quiet Month in the Archive';
   const teaser = story
     ? story.intro.substring(0, 220) + (story.intro.length > 220 ? '...' : '')
@@ -210,10 +210,15 @@ async function sendTeaserEmail(base44, user, story, monthName, itemCount, newsle
 
     <div style="background:#1A1614;border:1px solid rgba(201,145,58,0.2);border-radius:8px;padding:24px;margin-bottom:24px;">
       <p style="color:#F5ECD7;font-size:15px;line-height:1.8;margin:0 0 16px;font-style:italic;">${teaser}</p>
-      <a href="${newsletterUrl}" style="display:inline-block;background:#C9913A;color:#0D0B0A;font-size:14px;font-weight:600;padding:12px 28px;border-radius:6px;text-decoration:none;">Read the Full Chronicle &rarr;</a>
+      <a href="${newsletterUrl}" target="freddi_archive" rel="noopener noreferrer" style="display:inline-block;background:#C9913A;color:#0D0B0A;font-size:14px;font-weight:600;padding:12px 28px;border-radius:6px;text-decoration:none;">Read the Full Chronicle &rarr;</a>
       <p style="color:#F5ECD7;opacity:0.4;font-size:12px;margin:12px 0 0;">Read the full story, browse featured uploads, and share your memories in the comments.</p>
     </div>
 
+    ${(items || []).slice(0, 12).length > 0 ? `
+    <div style="margin-bottom:24px;">
+      <p style="color:#C9913A;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;margin:0 0 12px;">This month's discoveries</p>
+      ${(items || []).slice(0, 12).map(i => `<a href="${origin}/content/${i.id}" target="freddi_archive" rel="noopener noreferrer" style="display:block;background:#1A1614;border:1px solid rgba(201,145,58,0.12);border-radius:6px;padding:12px 14px;margin-bottom:8px;text-decoration:none;color:#F5ECD7;font-size:14px;">${i.title || 'Untitled'} <span style="color:#C9913A;font-size:11px;float:right;">View &rarr;</span></a>`).join('')}
+    </div>` : ''}
     <p style="color:#F5ECD7;opacity:0.3;font-size:11px;text-align:center;border-top:1px solid rgba(201,145,58,0.1);padding-top:20px;">This is an automated monthly newsletter from the Freddi Ancestry Archive.</p>
   </div>
 </body>
