@@ -187,21 +187,28 @@ export default function FocalPointEditor({ itemId, fileUrl, title, focalX, focal
           </div>
 
           <div className="flex gap-3 pt-2">
-            <button
-              onClick={handleApprove}
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg border border-[rgba(201,145,58,0.3)] text-amber-light text-sm font-semibold hover:bg-[rgba(201,145,58,0.08)] transition-colors"
-            >
-              <Check size={18} />
-              {changed ? 'Approve Edits' : 'Approve'}
-            </button>
-            <button
-              onClick={handleSaveOverride}
-              disabled={!changed || saving}
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg bg-gradient-to-r from-[#C9913A] to-[#E8C97A] text-charcoal text-sm font-semibold disabled:opacity-40 hover:opacity-90 transition-opacity"
-            >
-              {saving ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />}
-              Save My Adjustment
-            </button>
+            {itemId ? (
+              // Live-app context: the record already exists — write the crop/focal
+              // adjustment directly to the database.
+              <button
+                onClick={handleSaveOverride}
+                disabled={!changed || saving}
+                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg bg-gradient-to-r from-[#C9913A] to-[#E8C97A] text-charcoal text-sm font-semibold disabled:opacity-40 hover:opacity-90 transition-opacity"
+              >
+                {saving ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />}
+                Save My Adjustment
+              </button>
+            ) : (
+              // Upload-stage context: no record yet — hand the adjustment to the
+              // parent, which persists it when the new item is created.
+              <button
+                onClick={handleApprove}
+                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg border border-[rgba(201,145,58,0.3)] text-amber-light text-sm font-semibold hover:bg-[rgba(201,145,58,0.08)] transition-colors"
+              >
+                <Check size={18} />
+                {changed ? 'Approve Edits' : 'Approve'}
+              </button>
+            )}
           </div>
         </div>
       </div>

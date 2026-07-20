@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Crop, ChevronLeft, Loader2, Check, AlertCircle } from 'lucide-react';
+import { Crop, ChevronLeft, Check, AlertCircle } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import FocalPointEditor from '@/components/FocalPointEditor';
@@ -13,7 +13,6 @@ export default function CropReedit() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(null); // item being edited
-  const [savingId, setSavingId] = useState(null);
   const [savedId, setSavedId] = useState(null);
 
   useEffect(() => {
@@ -30,17 +29,15 @@ export default function CropReedit() {
     })();
   }, []);
 
-  const handleApprove = async (payload) => {
+  // The FocalPointEditor writes the adjustment to the record directly (it is
+  // rendered with itemId here, so it shows "Save My Adjustment"). The parent
+  // only needs to reflect the committed change in the local grid and close.
+  const handleApprove = (payload) => {
     if (!editing) return;
-    setSavingId(editing.id);
-    try {
-      await base44.entities.ContentItem.update(editing.id, payload);
-      setItems(prev => prev.map(i => i.id === editing.id ? { ...i, ...payload } : i));
-      setSavedId(editing.id);
-      setTimeout(() => setSavedId(null), 1500);
-      setEditing(null);
-    } catch (e) {}
-    setSavingId(null);
+    setItems(prev => prev.map(i => i.id === editing.id ? { ...i, ...payload } : i));
+    setSavedId(editing.id);
+    setTimeout(() => setSavedId(null), 1500);
+    setEditing(null);
   };
 
   return (
@@ -120,11 +117,6 @@ export default function CropReedit() {
         />
       )}
 
-      {savingId && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[70] aged-card rounded-full px-5 py-2.5 flex items-center gap-2 text-sm text-amber-light">
-          <Loader2 size={16} className="animate-spin" /> Saving adjustments…
-        </div>
-      )}
     </Layout>
   );
 }
