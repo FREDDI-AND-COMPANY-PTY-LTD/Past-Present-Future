@@ -8,6 +8,7 @@ import ContentCard from '@/components/ContentCard';
 import UploadHelperBanner from '@/components/UploadHelperBanner';
 import { useBranchRoot } from '@/hooks/useBranchRoot';
 import { useArchivePhotos } from '@/hooks/useArchivePhotos';
+import CropImage from '@/components/CropImage';
 
 export default function Home() {
   const [recentItems, setRecentItems] = useState([]);
@@ -42,21 +43,6 @@ export default function Home() {
       <section className="relative h-[70vh] min-h-[500px] flex items-center justify-center">
         <div className="absolute inset-0 overflow-hidden">
           {(() => {
-            const fx = heroPhoto?.focal_point_x ?? 0.5;
-            const fy = heroPhoto?.focal_point_y ?? 0.4;
-            const b = heroPhoto?.crop_bounds;
-            const hasFrame = b && ((b.x_max - b.x_min) < 0.95 || (b.y_max - b.y_min) < 0.95);
-            let heroStyle;
-            if (hasFrame) {
-              const scale = Math.max(1 / (b.x_max - b.x_min), 1 / (b.y_max - b.y_min));
-              heroStyle = {
-                objectPosition: `${fx * 100}% ${fy * 100}%`,
-                transform: `scale(${scale})`,
-                transformOrigin: `${fx * 100}% ${fy * 100}%`,
-              };
-            } else {
-              heroStyle = { objectPosition: `${fx * 100}% ${fy * 100}%` };
-            }
             if (!heroPhoto) {
               return (
                 <div
@@ -71,11 +57,14 @@ export default function Home() {
               );
             }
             return (
-              <img
+              <CropImage
                 src={heroPhoto.file_url}
                 alt={heroPhoto.title || 'Family archive'}
-                className="w-full h-full object-cover sepia-tint"
-                style={heroStyle}
+                focalX={heroPhoto.focal_point_x}
+                focalY={heroPhoto.focal_point_y}
+                cropBounds={heroPhoto.crop_bounds}
+                className="w-full h-full"
+                imgClassName="sepia-tint"
               />
             );
           })()}

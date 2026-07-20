@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { MapPin, Calendar, Flag, FileText, Image, Newspaper, Video, Award, BookUser, IdCard, Mail, Heart, HelpCircle, Play, Music } from 'lucide-react';
+import CropImage from '@/components/CropImage';
 
 const typeIcons = {
   photo: Image,
@@ -38,27 +39,6 @@ export default function ContentCard({ item, ancestors = [] }) {
     .map(id => ancestors.find(a => a.id === id))
     .filter(Boolean);
 
-  const focalX = item.focal_point_x ?? 0.5;
-  const focalY = item.focal_point_y ?? 0.4;
-
-  const bounds = item.crop_bounds;
-  const hasInnerFrame = bounds && (bounds.x_max - bounds.x_min) < 0.95 || (bounds && bounds.y_max - bounds.y_min < 0.95);
-
-  let imgStyle;
-  if (hasInnerFrame) {
-    const contentW = bounds.x_max - bounds.x_min;
-    const contentH = bounds.y_max - bounds.y_min;
-    const scale = Math.max(1 / contentW, 1 / contentH);
-    imgStyle = {
-      objectFit: 'cover',
-      objectPosition: `${focalX * 100}% ${focalY * 100}%`,
-      transform: `scale(${scale})`,
-      transformOrigin: `${focalX * 100}% ${focalY * 100}%`,
-    };
-  } else {
-    imgStyle = { objectPosition: `${focalX * 100}% ${focalY * 100}%` };
-  }
-
   const showImage = item.file_url && imageTypes.includes(item.content_type);
   const isMedia = (item.content_type === 'audio' || item.content_type === 'video') && item.file_url && !item.external_url;
 
@@ -84,11 +64,14 @@ export default function ContentCard({ item, ancestors = [] }) {
       )}
       {showImage && (
         <div className="relative h-48 overflow-hidden bg-black/40">
-          <img
+          <CropImage
             src={item.file_url}
             alt={item.title}
-            className="w-full h-full object-cover sepia-tint group-hover:scale-105 transition-transform duration-500"
-            style={imgStyle}
+            focalX={item.focal_point_x}
+            focalY={item.focal_point_y}
+            cropBounds={item.crop_bounds}
+            className="w-full h-full"
+            imgClassName="sepia-tint"
           />
           <div className="absolute top-3 right-3 bg-charcoal/80 backdrop-blur-sm px-2.5 py-1 rounded-full flex items-center gap-1.5 border border-[rgba(201,145,58,0.2)]">
             <Icon size={12} className="text-gold" />

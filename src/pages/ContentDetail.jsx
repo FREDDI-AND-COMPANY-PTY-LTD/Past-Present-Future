@@ -10,6 +10,7 @@ import EditEventDialog from '@/components/EditEventDialog';
 import TranslatedText from '@/components/TranslatedText';
 import HistoricalBackground from '@/components/HistoricalBackground';
 import MediaPlayer from '@/components/MediaPlayer';
+import CropImage from '@/components/CropImage';
 
 const imageTypes = ['photo', 'uncategorized', 'certificate', 'passport', 'identity_document', 'press_clipping', 'narrative', 'correspondence', 'memorial'];
 
@@ -100,22 +101,17 @@ export default function ContentDetail() {
           {item.file_url && imageTypes.includes(item.content_type) && (
             <div className="relative bg-black/40 h-[400px] md:h-[550px] overflow-hidden">
               {(() => {
-                const fx = item.focal_point_x ?? 0.5;
-                const fy = item.focal_point_y ?? 0.4;
-                const b = item.crop_bounds;
-                const hasFrame = b && ((b.x_max - b.x_min) < 0.95 || (b.y_max - b.y_min) < 0.95);
-                let detailStyle;
-                if (hasFrame) {
-                  const scale = Math.max(1 / (b.x_max - b.x_min), 1 / (b.y_max - b.y_min));
-                  detailStyle = {
-                    objectPosition: `${fx * 100}% ${fy * 100}%`,
-                    transform: `scale(${scale})`,
-                    transformOrigin: `${fx * 100}% ${fy * 100}%`,
-                  };
-                } else {
-                  detailStyle = { objectPosition: `${fx * 100}% ${fy * 100}%` };
-                }
-                return <img src={item.file_url} alt={item.title} className="w-full h-full object-cover sepia-tint" style={detailStyle} />;
+                return (
+                  <CropImage
+                    src={item.file_url}
+                    alt={item.title}
+                    focalX={item.focal_point_x}
+                    focalY={item.focal_point_y}
+                    cropBounds={item.crop_bounds}
+                    className="w-full h-full"
+                    imgClassName="sepia-tint"
+                  />
+                );
               })()}
             </div>
           )}

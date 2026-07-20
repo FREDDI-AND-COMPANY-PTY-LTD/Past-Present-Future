@@ -4,25 +4,9 @@ import { Crop, ChevronLeft, Loader2, Check, AlertCircle } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import FocalPointEditor from '@/components/FocalPointEditor';
+import CropImage from '@/components/CropImage';
 
 const IMAGE_TYPES = ['photo', 'uncategorized', 'certificate', 'passport', 'identity_document', 'press_clipping', 'narrative', 'correspondence', 'memorial'];
-
-const isFullFrame = (b) => !b || ((b.x_max - b.x_min) >= 0.95 && (b.y_max - b.y_min) >= 0.95);
-
-// Mirrors the production card/detail cropping so the thumbnail reflects real rendering.
-function thumbStyle(item) {
-  const fx = item.focal_point_x ?? 0.5;
-  const fy = item.focal_point_y ?? 0.4;
-  const b = isFullFrame(item.crop_bounds) ? null : item.crop_bounds;
-  if (!b) return { objectPosition: `${fx * 100}% ${fy * 100}%` };
-  const scale = Math.max(1 / (b.x_max - b.x_min), 1 / (b.y_max - b.y_min));
-  return {
-    objectFit: 'cover',
-    objectPosition: `${fx * 100}% ${fy * 100}%`,
-    transform: `scale(${scale})`,
-    transformOrigin: `${fx * 100}% ${fy * 100}%`,
-  };
-}
 
 export default function CropReedit() {
   const [items, setItems] = useState([]);
@@ -83,11 +67,12 @@ export default function CropReedit() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {items.map(item => {
-              const framed = !isFullFrame(item.crop_bounds);
+              const cb = item.crop_bounds;
+              const framed = cb && ((cb.x_max - cb.x_min) < 0.95 || (cb.y_max - cb.y_min) < 0.95);
               return (
                 <div key={item.id} className="aged-card rounded-xl overflow-hidden flex flex-col">
-                  <div className="relative h-48 bg-black/40 overflow-hidden">
-                    <img src={item.file_url} alt={item.title} className="w-full h-full object-cover sepia-tint" style={thumbStyle(item)} draggable={false} />
+                  <div className="h-48 bg-black/40 overflow-hidden">
+                    <CropImage src={item.file_url} alt={item.title} focalX={item.focal_point_x} focalY={item.focal_point_y} cropBounds={item.crop_bounds} className="w-full h-full" imgClassName="sepia-tint" />
                     {framed && (
                       <span className="absolute top-2 left-2 text-[10px] px-2 py-0.5 rounded-full bg-[rgba(201,145,58,0.15)] border border-[rgba(201,145,58,0.3)] text-amber-light">crop box set</span>
                     )}

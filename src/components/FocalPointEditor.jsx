@@ -2,6 +2,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Crop, Check, Loader2, X, Sparkles, Scan, Crosshair, Maximize } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import CropBoxOverlay from '@/components/CropBoxOverlay';
+import CropImage from '@/components/CropImage';
 
 const FULL = { x_min: 0, y_min: 0, x_max: 1, y_max: 1 };
 const isFullFrame = (b) => !b || ((b.x_max - b.x_min) >= 0.95 && (b.y_max - b.y_min) >= 0.95);
@@ -70,18 +71,7 @@ export default function FocalPointEditor({ itemId, fileUrl, title, focalX, focal
     setSaving(false);
   };
 
-  // Preview style mirrors the production ContentCard rendering (scale + object-position)
-  const previewStyle = (() => {
-    const b = isFullFrame(crop) ? null : crop;
-    if (!b) return { objectPosition: `${posX * 100}% ${posY * 100}%` };
-    const scale = Math.max(1 / (b.x_max - b.x_min), 1 / (b.y_max - b.y_min));
-    return {
-      objectFit: 'cover',
-      objectPosition: `${posX * 100}% ${posY * 100}%`,
-      transform: `scale(${scale})`,
-      transformOrigin: `${posX * 100}% ${posY * 100}%`,
-    };
-  })();
+  const liveBounds = isFullFrame(crop) ? null : crop;
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 animate-fade-in" onClick={onClose}>
@@ -177,20 +167,20 @@ export default function FocalPointEditor({ itemId, fileUrl, title, focalX, focal
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <p className="text-xs text-parchment/40 mb-1.5">Card (3:2)</p>
-                <div className="relative h-28 rounded-lg overflow-hidden bg-black/40 border border-[rgba(201,145,58,0.15)]">
-                  <img src={fileUrl} alt="preview" className="w-full h-full object-cover sepia-tint" style={previewStyle} />
+                <div className="h-28 rounded-lg overflow-hidden bg-black/40 border border-[rgba(201,145,58,0.15)]">
+                  <CropImage src={fileUrl} alt="preview" focalX={posX} focalY={posY} cropBounds={liveBounds} className="w-full h-full" imgClassName="sepia-tint" />
                 </div>
               </div>
               <div>
                 <p className="text-xs text-parchment/40 mb-1.5">Square</p>
-                <div className="relative h-28 w-28 mx-auto rounded-lg overflow-hidden bg-black/40 border border-[rgba(201,145,58,0.15)]">
-                  <img src={fileUrl} alt="preview" className="w-full h-full object-cover sepia-tint" style={previewStyle} />
+                <div className="h-28 w-28 mx-auto rounded-lg overflow-hidden bg-black/40 border border-[rgba(201,145,58,0.15)]">
+                  <CropImage src={fileUrl} alt="preview" focalX={posX} focalY={posY} cropBounds={liveBounds} className="w-full h-full" imgClassName="sepia-tint" />
                 </div>
               </div>
               <div>
                 <p className="text-xs text-parchment/40 mb-1.5">Banner (16:9)</p>
-                <div className="relative h-28 rounded-lg overflow-hidden bg-black/40 border border-[rgba(201,145,58,0.15)]">
-                  <img src={fileUrl} alt="preview" className="w-full h-full object-cover sepia-tint" style={previewStyle} />
+                <div className="h-28 rounded-lg overflow-hidden bg-black/40 border border-[rgba(201,145,58,0.15)]">
+                  <CropImage src={fileUrl} alt="preview" focalX={posX} focalY={posY} cropBounds={liveBounds} className="w-full h-full" imgClassName="sepia-tint" />
                 </div>
               </div>
             </div>
