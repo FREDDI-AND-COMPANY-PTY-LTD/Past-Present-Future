@@ -5,6 +5,7 @@ import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import FocalPointEditor from '@/components/FocalPointEditor';
 import CropImage from '@/components/CropImage';
+import { isPdfUrl } from '@/lib/pdfThumbnail';
 
 const IMAGE_TYPES = ['photo', 'uncategorized', 'certificate', 'passport', 'identity_document', 'press_clipping', 'narrative', 'correspondence', 'memorial'];
 
@@ -19,7 +20,11 @@ export default function CropReedit() {
     (async () => {
       try {
         const all = await base44.entities.ContentItem.list('-created_date', 200);
-        setItems((all || []).filter(i => i.file_url && IMAGE_TYPES.includes(i.content_type)));
+        // Only items whose preview can actually be rendered as an image by the
+        // cropper: real image files, or PDFs that already have a generated
+        // first-page thumbnail. PDFs without a thumbnail are excluded (they'd
+        // render as a black box in an <img> tag).
+        setItems((all || []).filter(i => i.file_url && IMAGE_TYPES.includes(i.content_type) && (i.thumbnail_url || !isPdfUrl(i.file_url))));
       } catch (e) {}
       setLoading(false);
     })();
@@ -72,7 +77,7 @@ export default function CropReedit() {
               return (
                 <div key={item.id} className="aged-card rounded-xl overflow-hidden flex flex-col">
                   <div className="h-48 bg-black/40 overflow-hidden">
-                    <CropImage src={item.file_url} alt={item.title} focalX={item.focal_point_x} focalY={item.focal_point_y} cropBounds={item.crop_bounds} className="w-full h-full" imgClassName="sepia-tint" />
+                    <CropImage src={item.thumbnail_url || item.file_url} alt={item.title} focalX={item.focal_point_x} focalY={item.focal_point_y} cropBounds={item.crop_bounds} className="w-full h-full" imgClassName="sepia-tint" />
                     {framed && (
                       <span className="absolute top-2 left-2 text-[10px] px-2 py-0.5 rounded-full bg-[rgba(201,145,58,0.15)] border border-[rgba(201,145,58,0.3)] text-amber-light">crop box set</span>
                     )}
@@ -105,7 +110,7 @@ export default function CropReedit() {
       {editing && (
         <FocalPointEditor
           itemId={editing.id}
-          fileUrl={editing.file_url}
+          fileUrl={editing.thumbnail_url || editing.file_url}
           title={editing.title}
           focalX={editing.focal_point_x}
           focalY={editing.focal_point_y}
