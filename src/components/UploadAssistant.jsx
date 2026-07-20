@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, X, Send, Loader2, MessageCircle } from 'lucide-react';
+import { Sparkles, X, Send, Loader2, MessageCircle, Volume2, Square, Mic } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { getMessages, setMessages, subscribe } from '@/lib/assistantStore';
 
@@ -156,6 +156,11 @@ export default function UploadAssistant({ rootAncestor }) {
   const [archiveContext, setArchiveContext] = useState(null);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  const recognitionRef = useRef(null);
+  const [speakingIdx, setSpeakingIdx] = useState(null);
+  const [listening, setListening] = useState(false);
+  const speechSupported = typeof window !== 'undefined' && 'speechSynthesis' in window;
+  const sttSupported = typeof window !== 'undefined' && (window.SpeechRecognition || window.webkitSpeechRecognition);
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -237,6 +242,50 @@ export default function UploadAssistant({ rootAncestor }) {
     setLoading(false);
   };
 
+  const stripForSpeech = (text) => (text || '').replace(/[#*_`>~|-]/g, ' ').replace(/\s+/g, ' ').trim();
+
+  const speakMessage = (i, text) => {
+    if (!speechSupported) return;
+    window.speechSynthesis.cancel();
+    if (speakingIdx === i) { setSpeakingIdx(null); return; }
+    const u = new SpeechSynthesisUtterance(stripForSpeech(text));
+    u.rate = 0.95; u.pitch = 1;
+    u.onend = () => setSpeakingIdx(null);
+    u.onerror = () => setSpeakingIdx(null);
+    window.speechSynthesis.speak(u);
+    setSpeakingIdx(i);
+  };
+
+  const stopSpeaking = () => {
+    if (!speechSupported) return;
+    window.speechSynthesis.cancel();
+    setSpeakingIdx(null);
+  };
+
+  const toggleListen = () => {
+    if (!sttSupported || loading) return;
+    if (listening) { recognitionRef.current?.stop(); return; }
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const rec = new SR();
+    rec.lang = 'en-AU';
+    rec.interimResults = false;
+    rec.maxAlternatives = 1;
+    rec.onstart = () => setListening(true);
+    rec.onend = () => setListening(false);
+    rec.onerror = () => setListening(false);
+    rec.onresult = (e) => {
+      const transcript = e.results[0]?.[0]?.transcript || '';
+      if (transcript) {
+        setInput(transcript);
+        setTimeout(() => sendQuestion(transcript), 50);
+      }
+    };
+    recognitionRef.current = rec;
+    rec.start();
+  };
+
+  useEffect(() => () => { if (speechSupported) window.speechSynthesis.cancel(); }, []);
+
   return (
     <>
       {/* Floating button */}
@@ -297,6 +346,15 @@ export default function UploadAssistant({ rootAncestor }) {
                   }`}
                 >
                   <div className="whitespace-pre-wrap">{msg.content}</div>
+                  {msg.role === 'assistant' && speechSupported && (
+                    <button
+                      onClick={() => speakingIdx === i ? stopSpeaking() : speakMessage(i, msg.content)}
+                      className="mt-1.5 flex items-center gap-1 text-[11px] text-amber-light/60 hover:text-amber-light transition-colors"
+                      title={speakingIdx === i ? 'Stop reading' : 'Read aloud'}
+                    >
+                      {speakingIdx === i ? <><Square size={11} /> Stop</> : <><Volume2 size={11} /> Read aloud</>}
+                    </button>
+                  )}
                   {msg.role === 'assistant' && msg.actions && msg.actions.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {msg.actions.map((a, ai) => (
@@ -335,6 +393,16 @@ export default function UploadAssistant({ rootAncestor }) {
                 className="flex-1 bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-3 py-2 text-sm text-parchment focus:outline-none focus:border-[#C9913A] disabled:opacity-50 placeholder:text-parchment/30"
                 placeholder="Ask about migrations, ancestors, events, uploads..."
               />
+              {sttSupported && (
+                <button
+                  onClick={toggleListen}
+                  disabled={loading}
+                  title={listening ? 'Stop listening' : 'Speak your question'}
+                  className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors flex-shrink-0 disabled:opacity-40 ${listening ? 'bg-red-500/80 text-white animate-pulse' : 'bg-[rgba(201,145,58,0.15)] text-amber-light hover:bg-[rgba(201,145,58,0.25)]'}`}
+                >
+                  <Mic size={16} />
+                </button>
+              )}
               <button
                 onClick={() => sendQuestion()}
                 disabled={loading || !input.trim()}
