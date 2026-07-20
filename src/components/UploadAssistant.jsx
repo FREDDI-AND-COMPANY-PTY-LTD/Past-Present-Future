@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Sparkles, X, Send, Loader2, MessageCircle } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { getMessages, setMessages, subscribe } from '@/lib/assistantStore';
@@ -50,6 +51,21 @@ SEARCHABLE DATABASE:
 - The Family Tree page shows ancestor relationships.
 - AI-extracted data powers the searchable fields — the more accurate the upload data, the better the search results.
 
+EXPLORATION & DATA ACCESS (for younger family members exploring their heritage):
+- You are given a live snapshot of the archive below ("ARCHIVE DATA"): the ancestor bank (every ancestor profile with id, name, dates, birth place, nationality, bloodline), the migration map (every migration route with its ordered waypoint places and dates), and the timeline (reviewed content items with title, type, date, location).
+- Use this data to answer exploratory questions with REAL, SPECIFIC information — name the actual people, places, and dates from the data. Never invent records or ids that aren't in the snapshot.
+- When a user asks to "show" or "see" something — e.g. "show me the migration from Venice to Geelong", "show me the timeline", "open Nonno's profile" — include one or more navigation actions in the "actions" array so they can jump straight there:
+  - Migration map → { "label": "Open Migration Map", "path": "/map" }
+  - Timeline → { "label": "Open Timeline", "path": "/timeline" }
+  - Ancestor bank → { "label": "Open Ancestors", "path": "/ancestors" }
+  - A specific ancestor → { "label": "Open <Name>", "path": "/ancestor/<id>" }  (use the real id from the snapshot)
+  - A specific event → { "label": "Open <title>", "path": "/content/<id>" }  (use the real id from the snapshot)
+  - Family tree → { "label": "Open Family Tree", "path": "/family-tree" }
+- Include at most 3 actions, picking the most relevant destination(s) for the question. Always pair a "show me..." request with at least one action.
+- For migration questions, identify the route whose waypoints include the named places (match loosely — "Venice" matches a waypoint label containing "Venice"/"Venezia"), list the journey in order (place → place → place with dates), name the ancestor it belongs to, and add the "Open Migration Map" action.
+- Keep replies warm and accessible — younger family members use this to explore their heritage. Tell the story behind the data: who moved where, when, and (if the data hints at it) why. Use plain language and short sentences.
+- If the snapshot doesn't contain what they asked for, say so plainly and suggest the closest related thing that IS in the archive, with an action to view it.
+
 DATA STORAGE & SOVEREIGNTY:
 - All uploaded files are stored securely in the cloud.
 - The archive is fully portable — members can download the complete dataset (JSON + media) at any time.
@@ -71,21 +87,55 @@ APP IMPROVEMENT DETECTION:
 - Only set "improvement_suggestion" when you genuinely believe the app creator would benefit from knowing about this — do not set it for routine how-to questions that the app already handles well.`;
 
 const SUGGESTED_QUESTIONS = [
+  "Show me the migration from Venice to Geelong",
+  "Who are our earliest ancestors?",
+  "What events happened in Geelong?",
   "How does the camera upload work?",
-  "What happens after I upload a file?",
-  "Where are my uploaded photos stored?",
-  "How do I tag a family member in a comment?",
   "What's the difference between a comment and a query?",
-  "How does the searchable database work?",
+  "How do I turn an email into an archive entry?",
 ];
+
+function buildArchiveContext(ancestors, routes, items) {
+  const ancLines = (ancestors || []).map(a => {
+    const life = [
+      a.birth_date ? String(new Date(a.birth_date).getFullYear()) : '',
+      a.death_date ? String(new Date(a.death_date).getFullYear()) : (a.living ? 'present' : ''),
+    ].filter(Boolean).join('–');
+    return `• ${a.full_name} (id:${a.id})${life ? ' ' + life : ''}${a.birth_place ? ', born: ' + a.birth_place : ''}${a.nationality ? ', ' + a.nationality : ''}${a.bloodline ? ', bloodline: ' + a.bloodline : ''}`;
+  }).join('\n');
+
+  const routeLines = (routes || []).map(r => {
+    const wps = (r.waypoints || [])
+      .map(w => `${w.label || 'unnamed'}${w.date ? ' (' + w.date + ')' : ''}`)
+      .join(' → ');
+    return `• ${r.name} (id:${r.id}, ancestor_id:${r.ancestor_id || 'n/a'})${wps ? ': ' + wps : ''}`;
+  }).join('\n');
+
+  const itemList = (items || []).slice(0, 250);
+  const itemLines = itemList.map(i =>
+    `• ${i.title} (id:${i.id})${i.content_type ? ' [' + i.content_type + ']' : ''}${i.date ? ' ' + i.date : ''}${i.location_name ? ' @ ' + i.location_name : ''}`
+  ).join('\n');
+
+  return `ARCHIVE DATA (live snapshot — use this to answer exploratory questions with real people, places and dates):
+ANCESTORS (${(ancestors || []).length}):
+${ancLines || '(none yet)'}
+
+MIGRATION ROUTES (${(routes || []).length}):
+${routeLines || '(none yet)'}
+
+CONTENT ITEMS (${(items || []).length} total, showing up to ${itemList.length}):
+${itemLines || '(none yet)'}`;
+}
 
 export default function UploadAssistant() {
   const [messages, setLocalMessages] = useState(getMessages());
   useEffect(() => subscribe(setLocalMessages), []);
 
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [archiveContext, setArchiveContext] = useState(null);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -111,22 +161,49 @@ export default function UploadAssistant() {
     setLoading(true);
 
     try {
+      // Lazily load a compact snapshot of the archive so the assistant can answer
+      // data-driven, exploratory questions (migration map, timeline, ancestor bank).
+      let ctx = archiveContext;
+      if (!ctx) {
+        const [ancestors, routes, items] = await Promise.all([
+          base44.entities.Ancestor.list().catch(() => []),
+          base44.entities.MigrationRoute.filter({}).catch(() => []),
+          base44.entities.ContentItem.filter({ review_status: 'reviewed' }).catch(() => []),
+        ]);
+        ctx = buildArchiveContext(ancestors, routes, items);
+        setArchiveContext(ctx);
+      }
+
       const conversationHistory = newMessages
         .map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
         .join('\n\n');
 
       const result = await base44.integrations.Core.InvokeLLM({
-        prompt: `${SYSTEM_CONTEXT}\n\n--- Conversation so far ---\n${conversationHistory}\n\nAssistant:`,
+        prompt: `${SYSTEM_CONTEXT}\n\n${ctx}\n\n--- Conversation so far ---\n${conversationHistory}\n\nAssistant:`,
         response_json_schema: {
           type: 'object',
           properties: {
             reply: { type: 'string' },
+            actions: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  label: { type: 'string' },
+                  path: { type: 'string' },
+                },
+              },
+            },
             improvement_suggestion: { type: 'string' },
           },
         },
       });
 
-      setMessages(prev => [...prev, { role: 'assistant', content: result.reply || 'Sorry, I could not generate a response. Please try again.' }]);
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: result.reply || 'Sorry, I could not generate a response. Please try again.',
+        actions: Array.isArray(result.actions) ? result.actions.filter(a => a && a.label && a.path) : [],
+      }]);
 
       // If the AI detected a potential app improvement, forward it to the app creator
       if (result.improvement_suggestion && result.improvement_suggestion.trim()) {
@@ -164,7 +241,7 @@ export default function UploadAssistant() {
               </div>
               <div>
                 <p className="font-display text-sm text-parchment leading-tight">Archive Assistant</p>
-                <p className="text-[10px] text-amber-light/50 leading-tight">AI help for uploads & the archive</p>
+                <p className="text-[10px] text-amber-light/50 leading-tight">Explore your family archive</p>
               </div>
             </div>
             <button onClick={() => setIsOpen(false)} className="text-parchment/40 hover:text-parchment transition-colors">
@@ -177,7 +254,7 @@ export default function UploadAssistant() {
             {messages.length === 0 && (
               <div className="text-center py-4">
                 <MessageCircle size={28} className="text-gold/40 mx-auto mb-2" />
-                <p className="text-sm text-parchment/60 mb-3">Hi! I'm here to help with the upload form and the archive.</p>
+                <p className="text-sm text-parchment/60 mb-3">Hi! Ask me about your family's journey — migrations, ancestors, timeline events, or how to upload.</p>
                 <p className="text-xs text-parchment/40 mb-3">Try asking:</p>
                 <div className="space-y-1.5">
                   {SUGGESTED_QUESTIONS.map((q, i) => (
@@ -201,7 +278,20 @@ export default function UploadAssistant() {
                       : 'bg-[rgba(201,145,58,0.08)] text-parchment border border-[rgba(201,145,58,0.15)] rounded-bl-sm'
                   }`}
                 >
-                  {msg.content}
+                  <div className="whitespace-pre-wrap">{msg.content}</div>
+                  {msg.role === 'assistant' && msg.actions && msg.actions.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {msg.actions.map((a, ai) => (
+                        <button
+                          key={ai}
+                          onClick={() => { navigate(a.path); setIsOpen(false); }}
+                          className="text-xs text-charcoal bg-gradient-to-r from-[#C9913A] to-[#E8C97A] rounded-md px-2.5 py-1 font-semibold hover:opacity-90 transition-opacity flex items-center gap-1"
+                        >
+                          {a.label} →
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -225,7 +315,7 @@ export default function UploadAssistant() {
                 onKeyDown={e => { if (e.key === 'Enter') sendQuestion(); }}
                 disabled={loading}
                 className="flex-1 bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-3 py-2 text-sm text-parchment focus:outline-none focus:border-[#C9913A] disabled:opacity-50 placeholder:text-parchment/30"
-                placeholder="Ask about uploads, storage, the database..."
+                placeholder="Ask about migrations, ancestors, events, uploads..."
               />
               <button
                 onClick={() => sendQuestion()}
