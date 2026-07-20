@@ -42,6 +42,13 @@ COMMENT & QUERY SYSTEM:
 - Comments can be tagged to specific family members — tagged members receive a notification and the comment appears in their "Tasks" area.
 - Comments can be marked as a "Query" (question) rather than a standard comment.
 
+RAISE A DISPUTE (challenging incorrect data):
+- If a family member believes a record contains incorrect information — on an ancestor's profile OR on an individual event/photo/certificate — they can "Raise a Dispute".
+- The "Raise a Dispute" dialog is available from any ancestor profile (next to the Gallery heading) and any event detail page (next to "Raise a Query"). It lets them: pick the specific field in question, state the correct value as they know it, explain their reasoning, and optionally attach a supporting document (e.g. a birth certificate, a letter, a photo) as evidence.
+- The dispute records who raised it and any attached evidence, then goes to the archive's admin (Elder) and appears under the Admin Dashboard → "Disputes & Flags" bucket for review and resolution.
+- A Query is a question for discussion; a Dispute is a formal challenge to specific data that the admin adjudicates using the member's evidence.
+- When a user says things like "this date is wrong", "that's not where he was born", "the certificate says something different", or otherwise questions the accuracy of a record, tell them they can Raise a Dispute directly from that ancestor's profile or the event's detail page — and that attaching a document backs up their case.
+
 SEARCHABLE DATABASE:
 - All uploaded content items are stored in a structured, searchable database.
 - Each item stores: title, content type, date, location (name + coordinates), description, transcribed text, extracted fields, visual elements, AI confidence score, categorization notes, tags, era, and branch.

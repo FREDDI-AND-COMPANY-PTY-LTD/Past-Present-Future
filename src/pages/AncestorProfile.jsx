@@ -7,6 +7,7 @@ import AncestorAvatar from '@/components/AncestorAvatar';
 import ContentCard from '@/components/ContentCard';
 import SourcedField from '@/components/SourcedField';
 import AncestorEditDialog from '@/components/AncestorEditDialog';
+import RaiseDisputeDialog from '@/components/RaiseDisputeDialog';
 import { formatAncestorName } from '@/lib/ancestorName';
 
 export default function AncestorProfile() {
@@ -17,9 +18,7 @@ export default function AncestorProfile() {
   const [contentItems, setContentItems] = useState([]);
   const [allAncestors, setAllAncestors] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showFlagForm, setShowFlagForm] = useState(false);
-  const [flagText, setFlagText] = useState('');
-  const [flagSubmitted, setFlagSubmitted] = useState(false);
+  const [showDispute, setShowDispute] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [editOpen, setEditOpen] = useState(false);
 
@@ -47,21 +46,6 @@ export default function AncestorProfile() {
     }).catch(() => {}).finally(() => setLoading(false));
   }, [id]);
 
-  const handleFlagSubmit = async () => {
-    if (!flagText.trim()) return;
-    try {
-      await base44.entities.ConflictFlag.create({
-        ancestor_id: id,
-        dispute_description: flagText,
-        status: 'open',
-        bloodline: ancestor?.bloodline || '',
-      });
-      setFlagSubmitted(true);
-      setFlagText('');
-    } catch (e) {
-      // error
-    }
-  };
 
   if (loading) {
     return (
@@ -214,33 +198,22 @@ export default function AncestorProfile() {
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-display text-2xl text-parchment">Gallery</h2>
             <button
-              onClick={() => setShowFlagForm(!showFlagForm)}
+              onClick={() => setShowDispute(true)}
               className="flex items-center gap-1.5 text-sm text-amber-light/70 hover:text-amber-light transition-colors"
             >
-              <Flag size={14} /> Flag a Conflict
+              <Flag size={14} /> Raise a Dispute
             </button>
           </div>
 
-          {showFlagForm && (
-            <div className="aged-card rounded-xl p-6 mb-6">
-              {flagSubmitted ? (
-                <p className="text-amber-light text-sm">✓ Conflict flag submitted. The Elder of this bloodline and Admin will review it.</p>
-              ) : (
-                <div>
-                  <p className="text-parchment/60 text-sm mb-3">Describe what you believe is incorrect about this ancestor's data:</p>
-                  <textarea
-                    value={flagText}
-                    onChange={e => setFlagText(e.target.value)}
-                    rows={3}
-                    className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-3 text-parchment text-sm focus:outline-none focus:border-[#C9913A]"
-                    placeholder="What is the correct information?"
-                  />
-                  <button onClick={handleFlagSubmit} className="mt-3 px-5 py-2 rounded-lg bg-[#C9913A] text-charcoal text-sm font-semibold hover:opacity-90 transition-opacity">
-                    Submit Flag
-                  </button>
-                </div>
-              )}
-            </div>
+          {showDispute && (
+            <RaiseDisputeDialog
+              entityType="Ancestor"
+              entityId={id}
+              ancestorId={id}
+              bloodline={ancestor?.bloodline || ''}
+              onClose={() => setShowDispute(false)}
+              onSubmitted={() => setShowDispute(false)}
+            />
           )}
 
           {contentItems.length > 0 ? (

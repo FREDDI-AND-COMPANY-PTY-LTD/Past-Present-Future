@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { MapPin, Calendar, Flag, ChevronLeft, ExternalLink, FileText, Award, Edit3, HelpCircle, FileBadge, RefreshCw, Loader2, Users, MapPinned, BookOpen } from 'lucide-react';
 import RaiseQueryDialog from '@/components/RaiseQueryDialog';
+import RaiseDisputeDialog from '@/components/RaiseDisputeDialog';
 import ContestedFieldBadge from '@/components/ContestedFieldBadge';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
@@ -20,9 +21,7 @@ export default function ContentDetail() {
   const [item, setItem] = useState(null);
   const [ancestors, setAncestors] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showFlagForm, setShowFlagForm] = useState(false);
-  const [flagText, setFlagText] = useState('');
-  const [flagSubmitted, setFlagSubmitted] = useState(false);
+  const [showDispute, setShowDispute] = useState(false);
   const [showQueryDialog, setShowQueryDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [user, setUser] = useState(null);
@@ -75,18 +74,6 @@ export default function ContentDetail() {
     .map(aid => ancestors.find(a => a.id === aid))
     .filter(Boolean);
 
-  const handleFlagSubmit = async () => {
-    if (!flagText.trim()) return;
-    try {
-      await base44.entities.ConflictFlag.create({
-        content_item_id: id,
-        dispute_description: flagText,
-        status: 'open',
-      });
-      setFlagSubmitted(true);
-      setFlagText('');
-    } catch (e) {}
-  };
 
   if (loading) {
     return <Layout><div className="px-6 lg:px-12 py-12 max-w-4xl mx-auto"><div className="aged-card rounded-xl h-96 animate-pulse" /></div></Layout>;
@@ -319,29 +306,26 @@ export default function ContentDetail() {
           />
         )}
 
-        {/* Flag conflict / Raise query */}
+        {/* Raise a dispute / Raise a query */}
         <div className="aged-card rounded-xl p-6 flex flex-wrap gap-4">
-          <button onClick={() => setShowFlagForm(!showFlagForm)} className="flex items-center gap-2 text-amber-light/70 hover:text-amber-light transition-colors text-sm">
-            <Flag size={16} /> Flag a Conflict on this item
+          <button onClick={() => setShowDispute(true)} className="flex items-center gap-2 text-amber-light/70 hover:text-amber-light transition-colors text-sm">
+            <Flag size={16} /> Raise a Dispute
           </button>
           <button onClick={() => setShowQueryDialog(true)} className="flex items-center gap-2 text-amber-light/70 hover:text-amber-light transition-colors text-sm">
             <HelpCircle size={16} /> Raise a Query
           </button>
-          {showFlagForm && (
-            <div className="mt-4">
-              {flagSubmitted ? (
-                <p className="text-amber-light text-sm">✓ Conflict flag submitted for review.</p>
-              ) : (
-                <div>
-                  <textarea value={flagText} onChange={e => setFlagText(e.target.value)} rows={3}
-                    className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-3 text-parchment text-sm focus:outline-none focus:border-[#C9913A]"
-                    placeholder="What is disputed? What is the correct information?" />
-                  <button onClick={handleFlagSubmit} className="mt-3 px-5 py-2 rounded-lg bg-[#C9913A] text-charcoal text-sm font-semibold hover:opacity-90">Submit Flag</button>
-                </div>
-              )}
-            </div>
-          )}
         </div>
+
+        {showDispute && (
+          <RaiseDisputeDialog
+            entityType="ContentItem"
+            entityId={id}
+            ancestorId={taggedAncestors[0]?.id || null}
+            bloodline={taggedAncestors[0]?.bloodline || ''}
+            onClose={() => setShowDispute(false)}
+            onSubmitted={() => setShowDispute(false)}
+          />
+        )}
       </div>
     </Layout>
   );
