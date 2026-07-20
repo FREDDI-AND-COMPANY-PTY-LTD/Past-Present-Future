@@ -80,15 +80,6 @@ export default function AdminDashboard() {
     }).catch(() => {}).finally(() => setLoading(false));
   }, [refreshKey]);
 
-  const resolveFlag = async (flagId, resolution) => {
-    try {
-      await base44.entities.ConflictFlag.update(flagId, {
-        status: resolution,
-        resolution_note: resolution === 'resolved' ? 'Resolved by admin' : 'Dismissed by admin',
-      });
-      setFlags(prev => prev.filter(f => f.id !== flagId));
-    } catch (e) {}
-  };
 
   const reviewCounts = {
     uploads: uploadCount,
@@ -190,7 +181,7 @@ export default function AdminDashboard() {
                 {reviewFilter === 'problems' && <AdminProblems refreshKey={refreshKey} />}
               </>
             )}
-            {tab === 'disputes' && <AdminDisputesList flags={flags} onResolve={resolveFlag} />}
+            {tab === 'disputes' && <AdminDisputesList flags={flags} onResolved={() => setRefreshKey(k => k + 1)} />}
             {tab === 'duplicates' && (
               <>
                 {dupFilter === 'content' && <AdminDuplicateReview duplicates={[]} onResolved={() => setRefreshKey(k => k + 1)} />}

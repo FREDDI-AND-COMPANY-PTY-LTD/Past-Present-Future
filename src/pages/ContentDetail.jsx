@@ -68,6 +68,11 @@ export default function ContentDetail() {
     base44.auth.me().then(setUser).catch(() => {});
   }, [id]);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('edit') === '1') setShowEditDialog(true);
+  }, []);
+
   const flagsForField = (fieldName) => contestedFlags.filter(f => f.field_name === fieldName);
 
   const taggedAncestors = (item?.ancestor_ids || [])

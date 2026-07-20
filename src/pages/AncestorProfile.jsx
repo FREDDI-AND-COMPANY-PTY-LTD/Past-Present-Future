@@ -27,6 +27,11 @@ export default function AncestorProfile() {
   }, []);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('edit') === '1') setEditOpen(true);
+  }, []);
+
+  useEffect(() => {
     Promise.all([
       base44.entities.Ancestor.get(id),
       base44.entities.Ancestor.list(),

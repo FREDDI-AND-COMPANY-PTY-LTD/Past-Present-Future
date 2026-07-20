@@ -67,9 +67,14 @@
       "default": "open",
       "description": "Status of the conflict flag"
     },
+    "admin_engaged": {
+      "type": "boolean",
+      "default": false,
+      "description": "True once an admin has opened the disputed record's edit form \u2014 gates the Resolve/Dismiss actions so the admin must review the record before determining the dispute"
+    },
     "resolution_note": {
       "type": "string",
-      "description": "Note from Elder/Admin on resolution"
+      "description": "Note from Elder/Admin on resolution \u2014 the how and why of the determination, sent to the raiser's inbox"
     },
     "resolved_by_id": {
       "type": "string",
