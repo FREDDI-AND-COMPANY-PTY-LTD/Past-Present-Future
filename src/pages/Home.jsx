@@ -9,8 +9,6 @@ import UploadHelperBanner from '@/components/UploadHelperBanner';
 import { useBranchRoot } from '@/hooks/useBranchRoot';
 import { useArchivePhotos } from '@/hooks/useArchivePhotos';
 
-const FALLBACK_HERO = 'https://images.unsplash.com/photo-1599256871679-6d46a4ee676a?w=1920&q=80';
-
 export default function Home() {
   const [recentItems, setRecentItems] = useState([]);
   const [ancestors, setAncestors] = useState([]);
@@ -59,10 +57,23 @@ export default function Home() {
             } else {
               heroStyle = { objectPosition: `${fx * 100}% ${fy * 100}%` };
             }
+            if (!heroPhoto) {
+              return (
+                <div
+                  className="w-full h-full"
+                  style={{
+                    background:
+                      'radial-gradient(ellipse at 30% 20%, rgba(201,145,58,0.18), transparent 55%),' +
+                      'radial-gradient(ellipse at 75% 80%, rgba(232,201,122,0.10), transparent 60%),' +
+                      'linear-gradient(135deg, #1A1614 0%, #0D0B0A 70%)',
+                  }}
+                />
+              );
+            }
             return (
               <img
-                src={heroPhoto?.file_url || FALLBACK_HERO}
-                alt={heroPhoto?.title || 'Family archive'}
+                src={heroPhoto.file_url}
+                alt={heroPhoto.title || 'Family archive'}
                 className="w-full h-full object-cover sepia-tint"
                 style={heroStyle}
               />
