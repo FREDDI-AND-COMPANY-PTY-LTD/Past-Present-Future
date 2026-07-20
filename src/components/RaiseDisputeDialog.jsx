@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Flag, X, Loader2, Check, Upload, FileText, Paperclip } from 'lucide-react';
+import { Flag, X, Loader2, Check, Upload, FileText, Paperclip, Tag } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
 const ANCESTOR_FIELDS = [
@@ -41,10 +41,17 @@ export default function RaiseDisputeDialog({ entityType, entityId, ancestorId, b
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+  const [users, setUsers] = useState([]);
+  const [selectedUserIds, setSelectedUserIds] = useState([]);
 
   useEffect(() => {
     base44.auth.me().then(setCurrentUser).catch(() => {});
+    base44.entities.User.list().then(setUsers).catch(() => {});
   }, []);
+
+  const toggleUser = (uid) => {
+    setSelectedUserIds(prev => prev.includes(uid) ? prev.filter(id => id !== uid) : [...prev, uid]);
+  };
 
   const handleFile = (e) => {
     const f = e.target.files?.[0];
@@ -63,9 +70,18 @@ export default function RaiseDisputeDialog({ entityType, entityId, ancestorId, b
         setUploading(false);
       }
 
-      const description = correctValue.trim()
+      const fieldLabel = (entityType === 'Ancestor' ? ANCESTOR_FIELDS : CONTENT_FIELDS).find(f => f.key === fieldName)?.label || fieldName;
+      const selectedNames = (selectedUserIds || [])
+        .map(uid => users.find(u => u.id === uid))
+        .filter(Boolean)
+        .map(u => u.full_name || u.email);
+
+      let description = correctValue.trim()
         ? `${explanation.trim()}\n\nCorrect value as I know it: ${correctValue.trim()}`
         : explanation.trim();
+      if (selectedUserIds.length > 0 && selectedNames.length > 0) {
+        description += `\n\nRouted to family for input: ${selectedNames.join(', ')}. See the comments on this record.`;
+      }
 
       const payload = {
         dispute_description: description,
@@ -86,10 +102,30 @@ export default function RaiseDisputeDialog({ entityType, entityId, ancestorId, b
       }
 
       await base44.entities.ConflictFlag.create(payload);
+
+      // Optional: route the disputed data point to selected family members as a query comment
+      if (selectedUserIds.length > 0) {
+        const queryContent = `Query about "${fieldLabel}" — ${explanation.trim()}${correctValue.trim() ? ` (Suggested correct value: ${correctValue.trim()})` : ''}`;
+        try {
+          await base44.entities.Comment.create({
+            entity_type: entityType,
+            entity_id: entityId,
+            field_name: fieldName,
+            content: queryContent,
+            author_id: currentUser?.id || null,
+            author_name: currentUser?.full_name || currentUser?.email || 'Family Member',
+            tagged_user_ids: selectedUserIds,
+            is_query: true,
+            acknowledged_by: [],
+          });
+        } catch (e) {}
+      }
+
       setSubmitted(true);
       setExplanation('');
       setCorrectValue('');
       setFile(null);
+      setSelectedUserIds([]);
       onSubmitted?.();
     } catch (e) {}
     setSubmitting(false);
@@ -178,6 +214,33 @@ export default function RaiseDisputeDialog({ entityType, entityId, ancestorId, b
                   Attach a document (certificate, letter, photo...)
                   <input type="file" onChange={handleFile} className="hidden" accept="image/*,application/pdf" />
                 </label>
+              )}
+            </div>
+
+            {/* Ask a family member first (optional) */}
+            <div>
+              <label className="text-sm text-parchment/60 mb-2 flex items-center gap-1.5">
+                <Tag size={14} /> Ask a family member first <span className="text-parchment/30">(optional)</span>
+              </label>
+              <p className="text-xs text-parchment/40 mb-2">Route this disputed data point to a family member for their input. They'll be notified and can reply in the comments — the admin will see the discussion when reviewing the dispute.</p>
+              {users.length <= 1 ? (
+                <p className="text-xs text-parchment/40">No other registered family members found to ask.</p>
+              ) : (
+                <div className="max-h-32 overflow-y-auto rounded-lg border border-[rgba(201,145,58,0.15)] bg-[#0D0B0A]">
+                  {users.filter(u => u.id !== currentUser?.id).slice(0, 20).map(u => (
+                    <button
+                      key={u.id}
+                      onClick={() => toggleUser(u.id)}
+                      className={`w-full flex items-center gap-2 px-4 py-2 text-left transition-colors ${selectedUserIds.includes(u.id) ? 'bg-[rgba(201,145,58,0.1)]' : 'hover:bg-[rgba(201,145,58,0.05)]'}`}
+                    >
+                      <div className="w-6 h-6 rounded-full bg-[rgba(201,145,58,0.1)] border border-[rgba(201,145,58,0.2)] flex items-center justify-center text-xs text-gold">
+                        {(u.full_name || u.email).charAt(0)}
+                      </div>
+                      <span className="text-sm text-parchment">{u.full_name || u.email}</span>
+                      {selectedUserIds.includes(u.id) && <span className="ml-auto text-gold text-xs">✓</span>}
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
 
