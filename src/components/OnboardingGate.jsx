@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Outlet } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import OnboardingPage from '@/pages/OnboardingPage';
 
@@ -33,5 +34,6 @@ export default function OnboardingGate({ user, children }) {
     return <OnboardingPage user={user} onCompleted={() => { setStatus('ok'); window.location.href = '/'; }} />;
   }
 
-  return children;
+  // When used as a layout route element there are no children — render the matched child route.
+  return children ?? <Outlet />;
 }

@@ -23,6 +23,10 @@ import NewsletterDetail from '@/pages/NewsletterDetail';
 import Tasks from '@/pages/Tasks';
 import OnboardingGate from '@/components/OnboardingGate';
 import WelcomeAuthPopup from '@/components/WelcomeAuthPopup';
+import Login from '@/pages/Login';
+import Register from '@/pages/Register';
+import ForgotPassword from '@/pages/ForgotPassword';
+import ResetPassword from '@/pages/ResetPassword';
 
 const AuthenticatedApp = () => {
   const { user, isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -35,17 +39,22 @@ const AuthenticatedApp = () => {
     );
   }
 
-  if (authError) {
-    if (authError.type === 'user_not_registered') {
-      return <UserNotRegisteredError />;
-    } else if (authError.type === 'auth_required') {
-      return <WelcomeAuthPopup onContinue={navigateToLogin} />;
-    }
+  if (authError?.type === 'user_not_registered') {
+    return <UserNotRegisteredError />;
   }
 
+  const authRequired = authError?.type === 'auth_required';
+
   return (
-    <OnboardingGate user={user}>
-      <Routes>
+    <Routes>
+      {/* Public auth routes — always accessible, even when the auth-required gate is active */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+
+      {/* Gated application routes — behind the welcome popup (if auth required) and the onboarding gate */}
+      <Route element={authRequired ? <WelcomeAuthPopup onContinue={navigateToLogin} /> : <OnboardingGate user={user} />}>
         <Route path="/" element={<Home />} />
         <Route path="/ancestors" element={<Ancestors />} />
         <Route path="/ancestor/:id" element={<AncestorProfile />} />
@@ -61,9 +70,10 @@ const AuthenticatedApp = () => {
         <Route path="/newsletters" element={<Newsletters />} />
         <Route path="/newsletter/:id" element={<NewsletterDetail />} />
         <Route path="/tasks" element={<Tasks />} />
-        <Route path="*" element={<PageNotFound />} />
-      </Routes>
-    </OnboardingGate>
+      </Route>
+
+      <Route path="*" element={<PageNotFound />} />
+    </Routes>
   );
 };
 
