@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Activity, Flag, Upload, Edit, Trash2, GitBranch, UserPlus, CheckCircle, Clock, XCircle, Users, Loader2, Save, AlertCircle, ExternalLink, Edit3, ChevronDown, ChevronUp, Copy } from 'lucide-react';
+import { Activity, Flag, Upload, Edit, Trash2, GitBranch, UserPlus, CheckCircle, Clock, XCircle, Users, Loader2, Save, AlertCircle, ExternalLink, Edit3, ChevronDown, ChevronUp, Copy, Crop, Rocket, ArrowRight, Settings } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import AdminEditRequests from '@/components/admin/AdminEditRequests';
 import AdminEventEditor from '@/components/admin/AdminEventEditor';
 import AdminDuplicateReview from '@/components/admin/AdminDuplicateReview';
+import GoLiveTaskCard from '@/components/GoLiveTaskCard';
 
 const actionIcons = {
   upload: Upload,
@@ -175,6 +176,10 @@ export default function AdminDashboard() {
           <button onClick={() => setTab('duplicates')}
             className={`px-4 py-2 rounded-lg text-sm transition-all border ${tab === 'duplicates' ? 'bg-[rgba(201,145,58,0.12)] text-gold border-[rgba(201,145,58,0.3)]' : 'text-parchment/50 border-[rgba(201,145,58,0.1)]'}`}>
             Merge Duplicates
+          </button>
+          <button onClick={() => setTab('setup')}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm transition-all border ${tab === 'setup' ? 'bg-[rgba(201,145,58,0.12)] text-gold border-[rgba(201,145,58,0.3)]' : 'text-parchment/50 border-[rgba(201,145,58,0.1)]'}`}>
+            <Settings size={14} /> Setup
           </button>
         </div>
 
@@ -378,6 +383,26 @@ export default function AdminDashboard() {
                 <p className="text-parchment/50">No new ancestors awaiting review.</p>
               </div>
             )}
+          </div>
+        ) : tab === 'setup' ? (
+          <div className="space-y-5">
+            <GoLiveTaskCard />
+            <Link to="/crop-reedit" className="block aged-card rounded-xl p-5 hover:border-[rgba(201,145,58,0.45)] transition-colors group">
+              <div className="flex items-start gap-4">
+                <div className="w-11 h-11 rounded-xl bg-[rgba(201,145,58,0.12)] border border-[rgba(201,145,58,0.25)] flex items-center justify-center flex-shrink-0">
+                  <Crop size={20} className="text-gold" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-[rgba(201,145,58,0.12)] text-amber-light border border-[rgba(201,145,58,0.2)] font-medium">ADMIN SETUP</span>
+                    <span className="text-xs text-parchment/30">Permanent tool</span>
+                  </div>
+                  <p className="text-sm text-parchment font-medium mb-1">Re-edit Image Cropping</p>
+                  <p className="text-xs text-parchment/50">Re-adjust the focal point and crop box for any image across the archive so cards and hero displays frame subjects correctly.</p>
+                </div>
+                <ArrowRight size={18} className="text-gold/50 group-hover:text-gold transition-colors flex-shrink-0 mt-1" />
+              </div>
+            </Link>
           </div>
         ) : (
           <div className="space-y-4">
