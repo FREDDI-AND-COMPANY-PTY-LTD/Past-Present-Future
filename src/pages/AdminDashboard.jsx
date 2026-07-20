@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Activity, Flag, Upload, Edit, Trash2, GitBranch, UserPlus, CheckCircle, Clock, XCircle, Users, Loader2, Save, AlertCircle, ExternalLink, Edit3, ChevronDown, ChevronUp, Copy, Crop, Rocket, ArrowRight, Settings } from 'lucide-react';
+import { Activity, Flag, Upload, Edit, Trash2, GitBranch, UserPlus, CheckCircle, Clock, XCircle, Users, AlertCircle, ExternalLink, Edit3, ChevronDown, ChevronUp, Copy, Crop, Rocket, ArrowRight, Settings } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import AdminEditRequests from '@/components/admin/AdminEditRequests';
@@ -33,9 +33,6 @@ export default function AdminDashboard() {
   const [editRequestCount, setEditRequestCount] = useState(0);
   const [tab, setTab] = useState('activity');
   const [loading, setLoading] = useState(true);
-  const [editingId, setEditingId] = useState(null);
-  const [editForm, setEditForm] = useState({});
-  const [savingEdit, setSavingEdit] = useState(false);
   const [expandedFlaggedId, setExpandedFlaggedId] = useState(null);
 
   useEffect(() => {
@@ -53,44 +50,6 @@ export default function AdminDashboard() {
       setEditRequestCount((er || []).length);
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
-
-  const startEdit = (ancestor) => {
-    setEditingId(ancestor.id);
-    setEditForm({
-      full_name: ancestor.full_name || '',
-      birth_date: ancestor.birth_date || '',
-      birth_place: ancestor.birth_place || '',
-      death_date: ancestor.death_date || '',
-      death_place: ancestor.death_place || '',
-      nationality: ancestor.nationality || '',
-      biography: ancestor.biography || '',
-      living: ancestor.living !== false,
-    });
-  };
-
-  const cancelEdit = () => {
-    setEditingId(null);
-    setEditForm({});
-  };
-
-  const handleSaveEdit = async (ancestorId) => {
-    setSavingEdit(true);
-    try {
-      const surname = editForm.full_name.trim().split(/\s+/).pop().toUpperCase();
-      const givenNames = editForm.full_name.trim().split(/\s+/).slice(0, -1).join(' ');
-      const formattedName = `${givenNames} ${surname}`.trim();
-
-      await base44.entities.Ancestor.update(ancestorId, {
-        ...editForm,
-        full_name: formattedName,
-        review_status: 'overwritten',
-      });
-      setNewAncestors(prev => prev.filter(a => a.id !== ancestorId));
-      setEditingId(null);
-      setEditForm({});
-    } catch (e) {}
-    setSavingEdit(false);
-  };
 
   const handleVerify = async (ancestorId) => {
     try {
@@ -279,102 +238,40 @@ export default function AdminDashboard() {
             {newAncestors.length > 0 ? (
               newAncestors.map(ancestor => (
                 <div key={ancestor.id} className="aged-card rounded-xl p-5">
-                  {editingId === ancestor.id ? (
-                    /* ── Inline edit form ── */
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Edit size={16} className="text-gold" />
-                        <span className="text-sm text-parchment font-medium">Overwrite Ancestor Details</span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="text-xs text-parchment/40 mb-1 block">Full Name</label>
-                          <input value={editForm.full_name} onChange={e => setEditForm({ ...editForm, full_name: e.target.value })}
-                            className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-3 py-2 text-sm text-parchment focus:outline-none focus:border-[#C9913A]" />
-                        </div>
-                        <div>
-                          <label className="text-xs text-parchment/40 mb-1 block">Nationality</label>
-                          <input value={editForm.nationality} onChange={e => setEditForm({ ...editForm, nationality: e.target.value })}
-                            className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-3 py-2 text-sm text-parchment focus:outline-none focus:border-[#C9913A]" />
-                        </div>
-                        <div>
-                          <label className="text-xs text-parchment/40 mb-1 block">Birth Date</label>
-                          <input type="date" value={editForm.birth_date} onChange={e => setEditForm({ ...editForm, birth_date: e.target.value })}
-                            className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-3 py-2 text-sm text-parchment focus:outline-none focus:border-[#C9913A]" />
-                        </div>
-                        <div>
-                          <label className="text-xs text-parchment/40 mb-1 block">Death Date</label>
-                          <input type="date" value={editForm.death_date} onChange={e => setEditForm({ ...editForm, death_date: e.target.value })}
-                            className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-3 py-2 text-sm text-parchment focus:outline-none focus:border-[#C9913A]" />
-                        </div>
-                        <div>
-                          <label className="text-xs text-parchment/40 mb-1 block">Birth Place</label>
-                          <input value={editForm.birth_place} onChange={e => setEditForm({ ...editForm, birth_place: e.target.value })}
-                            className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-3 py-2 text-sm text-parchment focus:outline-none focus:border-[#C9913A]" />
-                        </div>
-                        <div>
-                          <label className="text-xs text-parchment/40 mb-1 block">Death Place</label>
-                          <input value={editForm.death_place} onChange={e => setEditForm({ ...editForm, death_place: e.target.value })}
-                            className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-3 py-2 text-sm text-parchment focus:outline-none focus:border-[#C9913A]" />
-                        </div>
+                  <div className="flex items-start justify-between gap-4 mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-[rgba(201,145,58,0.1)] border border-[rgba(201,145,58,0.2)] flex items-center justify-center text-sm text-gold font-medium">
+                        {ancestor.full_name.charAt(0)}
                       </div>
                       <div>
-                        <label className="text-xs text-parchment/40 mb-1 block">Biography</label>
-                        <textarea value={editForm.biography} onChange={e => setEditForm({ ...editForm, biography: e.target.value })} rows={2}
-                          className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-3 py-2 text-sm text-parchment focus:outline-none focus:border-[#C9913A]" />
-                      </div>
-                      <div className="flex items-center justify-end gap-2 pt-1">
-                        <button onClick={cancelEdit} className="px-3 py-1.5 rounded-lg text-xs text-parchment/50 border border-[rgba(245,236,215,0.1)] hover:bg-[rgba(245,236,215,0.05)] transition-colors">
-                          Cancel
-                        </button>
-                        <button onClick={() => handleSaveEdit(ancestor.id)} disabled={savingEdit || !editForm.full_name.trim()}
-                          className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-[#C9913A] text-charcoal text-xs font-semibold disabled:opacity-50 hover:opacity-90 transition-opacity">
-                          {savingEdit ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Save Overwrite
-                        </button>
+                        <p className="text-sm text-parchment font-medium">{ancestor.full_name}</p>
+                        <div className="flex items-center gap-2 text-xs text-parchment/40 mt-0.5">
+                          {ancestor.birth_date && <span>b. {new Date(ancestor.birth_date).getFullYear()}</span>}
+                          {ancestor.birth_place && <span>· {ancestor.birth_place}</span>}
+                          {ancestor.nationality && <span>· {ancestor.nationality}</span>}
+                        </div>
                       </div>
                     </div>
-                  ) : (
-                    /* ── Ancestor summary card ── */
-                    <>
-                      <div className="flex items-start justify-between gap-4 mb-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-[rgba(201,145,58,0.1)] border border-[rgba(201,145,58,0.2)] flex items-center justify-center text-sm text-gold font-medium">
-                            {ancestor.full_name.charAt(0)}
-                          </div>
-                          <div>
-                            <p className="text-sm text-parchment font-medium">{ancestor.full_name}</p>
-                            <div className="flex items-center gap-2 text-xs text-parchment/40 mt-0.5">
-                              {ancestor.birth_date && <span>b. {new Date(ancestor.birth_date).getFullYear()}</span>}
-                              {ancestor.birth_place && <span>· {ancestor.birth_place}</span>}
-                              {ancestor.nationality && <span>· {ancestor.nationality}</span>}
-                            </div>
-                          </div>
-                        </div>
-                        <span className="text-xs px-2 py-0.5 rounded-full border bg-[rgba(201,145,58,0.08)] text-amber-light border-[rgba(201,145,58,0.2)]">
-                          Auto-approved
-                        </span>
-                      </div>
-                      {ancestor.biography && (
-                        <p className="text-xs text-parchment/50 mb-3">{ancestor.biography}</p>
-                      )}
-                      <div className="flex items-center gap-2 text-xs text-parchment/40 mb-3">
-                        <UserPlus size={12} />
-                        Added by <span className="text-amber-light/70">{ancestor.created_by_name || 'Unknown'}</span>
-                        {ancestor.created_date && <span>· {new Date(ancestor.created_date).toLocaleDateString('en-AU')}</span>}
-                      </div>
-                      <div className="flex gap-2">
-                        <Link to={`/ancestor/${ancestor.id}`} className="px-3 py-1.5 rounded-lg bg-[rgba(201,145,58,0.06)] border border-[rgba(201,145,58,0.15)] text-amber-light/80 text-xs hover:border-[rgba(201,145,58,0.35)] transition-colors">
-                          View Profile
-                        </Link>
-                        <button onClick={() => startEdit(ancestor)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(201,145,58,0.1)] border border-[rgba(201,145,58,0.2)] text-amber-light text-xs font-medium hover:bg-[rgba(201,145,58,0.15)] transition-colors">
-                          <Edit size={14} /> Overwrite
-                        </button>
-                        <button onClick={() => handleVerify(ancestor.id)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-900/20 text-green-400 text-xs border border-green-800/30 hover:bg-green-900/30 transition-colors">
-                          <CheckCircle size={14} /> Verify
-                        </button>
-                      </div>
-                    </>
+                    <span className="text-xs px-2 py-0.5 rounded-full border bg-[rgba(201,145,58,0.08)] text-amber-light border-[rgba(201,145,58,0.2)]">
+                      Auto-approved
+                    </span>
+                  </div>
+                  {ancestor.biography && (
+                    <p className="text-xs text-parchment/50 mb-3">{ancestor.biography}</p>
                   )}
+                  <div className="flex items-center gap-2 text-xs text-parchment/40 mb-3">
+                    <UserPlus size={12} />
+                    Added by <span className="text-amber-light/70">{ancestor.created_by_name || 'Unknown'}</span>
+                    {ancestor.created_date && <span>· {new Date(ancestor.created_date).toLocaleDateString('en-AU')}</span>}
+                  </div>
+                  <div className="flex gap-2">
+                    <Link to={`/ancestor/${ancestor.id}`} className="px-3 py-1.5 rounded-lg bg-[rgba(201,145,58,0.06)] border border-[rgba(201,145,58,0.15)] text-amber-light/80 text-xs hover:border-[rgba(201,145,58,0.35)] transition-colors">
+                      View Profile
+                    </Link>
+                    <button onClick={() => handleVerify(ancestor.id)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-900/20 text-green-400 text-xs border border-green-800/30 hover:bg-green-900/30 transition-colors">
+                      <CheckCircle size={14} /> Verify
+                    </button>
+                  </div>
                 </div>
               ))
             ) : (
