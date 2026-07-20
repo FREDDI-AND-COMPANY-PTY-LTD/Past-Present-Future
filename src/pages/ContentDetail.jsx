@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { MapPin, Calendar, Flag, ChevronLeft, ExternalLink, FileText, Award, Edit3, HelpCircle } from 'lucide-react';
+import { MapPin, Calendar, Flag, ChevronLeft, ExternalLink, FileText, Award, Edit3, HelpCircle, FileBadge, RefreshCw, Loader2, Users, MapPinned, BookOpen } from 'lucide-react';
 import RaiseQueryDialog from '@/components/RaiseQueryDialog';
 import ContestedFieldBadge from '@/components/ContestedFieldBadge';
 import { base44 } from '@/api/base44Client';
@@ -25,6 +25,21 @@ export default function ContentDetail() {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [user, setUser] = useState(null);
   const [contestedFlags, setContestedFlags] = useState([]);
+  const [reanalysingText, setReanalysingText] = useState(false);
+
+  const reanalyseText = async () => {
+    if (reanalysingText) return;
+    setReanalysingText(true);
+    try {
+      const res = await base44.functions.invoke('analyzeContentText', { content_item_id: id });
+      if (res.data?.narrative_extraction) {
+        setItem(prev => ({ ...prev, narrative_extraction: res.data.narrative_extraction }));
+      }
+    } catch (e) {
+      // ignore — button simply returns to idle
+    }
+    setReanalysingText(false);
+  };
 
   useEffect(() => {
     Promise.all([
@@ -127,6 +142,14 @@ export default function ContentDetail() {
               {item.era && <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[rgba(201,145,58,0.08)] text-amber-light/70 text-xs">{item.era} <ContestedFieldBadge flags={flagsForField('era')} /></span>}
             </div>
 
+            {(item.publication_date || item.publication_location_name) && (
+              <div className="flex flex-wrap items-center gap-4 text-sm text-parchment/50 mb-4 pb-4 border-b border-[rgba(201,145,58,0.1)]">
+                <span className="text-xs text-gold/70 uppercase tracking-wider flex items-center gap-1"><FileBadge size={12} /> Issued / Published</span>
+                {item.publication_date && <span className="flex items-center gap-1.5"><Calendar size={13} className="text-parchment/30" /> {new Date(item.publication_date).toLocaleDateString('en-AU', { year: 'numeric', month: 'long', day: 'numeric' })}</span>}
+                {item.publication_location_name && <span className="flex items-center gap-1.5"><MapPin size={13} className="text-parchment/30" /> {item.publication_location_name}</span>}
+              </div>
+            )}
+
             {item.description && (
               <div className="mb-6">
                 <div className="flex items-center gap-2 mb-1">
@@ -174,6 +197,68 @@ export default function ContentDetail() {
             )}
           </div>
         </div>
+
+        {/* Narrative extraction — chronicle-ready analysis of the text body */}
+        {item.narrative_extraction && (
+          <div className="aged-card rounded-2xl p-6 mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <BookOpen size={18} className="text-gold" />
+                <h3 className="font-display text-lg text-parchment">Narrative Extraction</h3>
+                <span className="text-xs text-parchment/30">chronicle-ready</span>
+              </div>
+              <button
+                onClick={reanalyseText}
+                disabled={reanalysingText}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(201,145,58,0.1)] border border-[rgba(201,145,58,0.2)] text-amber-light text-xs font-medium hover:bg-[rgba(201,145,58,0.15)] transition-colors disabled:opacity-50"
+              >
+                {reanalysingText ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
+                Re-analyse Text
+              </button>
+            </div>
+            {item.narrative_extraction.event_description && (
+              <p className="text-parchment/75 leading-relaxed mb-4">{item.narrative_extraction.event_description}</p>
+            )}
+            <div className="flex flex-wrap gap-4 text-sm text-parchment/60 mb-4">
+              {item.narrative_extraction.event_date_display && (
+                <span className="flex items-center gap-1.5"><Calendar size={13} className="text-gold/60" /> {item.narrative_extraction.event_date_display}</span>
+              )}
+              {item.narrative_extraction.event_type && (
+                <span className="px-2 py-0.5 rounded-full bg-[rgba(201,145,58,0.08)] text-amber-light/70 text-xs capitalize">{item.narrative_extraction.event_type}</span>
+              )}
+            </div>
+            {item.narrative_extraction.named_people?.length > 0 && (
+              <div className="mb-3">
+                <p className="text-xs text-parchment/40 mb-1.5 flex items-center gap-1"><Users size={11} className="text-gold/60" /> Named People</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {item.narrative_extraction.named_people.map((p, i) => (
+                    <span key={i} className="text-xs text-amber-light/80 bg-[rgba(201,145,58,0.08)] px-2 py-0.5 rounded-full">
+                      {p.name}{p.role ? <span className="text-parchment/40 ml-1">· {p.role}</span> : ''}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {item.narrative_extraction.named_places?.length > 0 && (
+              <div className="mb-3">
+                <p className="text-xs text-parchment/40 mb-1.5 flex items-center gap-1"><MapPinned size={11} className="text-gold/60" /> Named Places</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {item.narrative_extraction.named_places.map((p, i) => (
+                    <span key={i} className="text-xs text-amber-light/80 bg-[rgba(201,145,58,0.08)] px-2 py-0.5 rounded-full">
+                      {p.place}{p.context ? <span className="text-parchment/40 ml-1">· {p.context}</span> : ''}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {item.narrative_extraction.chronicle_snippet && (
+              <div className="pt-3 border-t border-[rgba(201,145,58,0.1)]">
+                <p className="text-xs text-parchment/40 mb-1">Chronicle Snippet</p>
+                <p className="text-sm text-parchment/70 italic leading-relaxed">{item.narrative_extraction.chronicle_snippet}</p>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Historical Background — AI-generated, researched via web search */}
         <div className="mb-6">

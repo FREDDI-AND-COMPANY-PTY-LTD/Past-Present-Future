@@ -35,19 +35,36 @@
     "date": {
       "type": "string",
       "format": "date",
-      "description": "Date associated with this content"
+      "description": "Date the EVENT itself took place (e.g. date of birth, the historic event, the day a photo was taken) \u2014 NOT the date the document was issued or published"
     },
     "location_name": {
       "type": "string",
-      "description": "Place name where this content is set"
+      "description": "Place where the EVENT took place (e.g. where a photo was taken, where a birth was registered) \u2014 NOT where the document was issued or published"
     },
     "latitude": {
       "type": "number",
-      "description": "Latitude for map pin"
+      "description": "Latitude for the event location map pin"
     },
     "longitude": {
       "type": "number",
-      "description": "Longitude for map pin"
+      "description": "Longitude for the event location map pin"
+    },
+    "publication_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the document/record was ISSUED or PUBLISHED (e.g. a certificate's date of issue, a newspaper's publication date, an interview's recording date) \u2014 distinct from the event date above. Only applies to document-shaped content types."
+    },
+    "publication_location_name": {
+      "type": "string",
+      "description": "Place where the document/record was issued or published (e.g. the registry office city, the newspaper's city of publication) \u2014 distinct from the event location above"
+    },
+    "publication_latitude": {
+      "type": "number",
+      "description": "Latitude for the publication/issue location"
+    },
+    "publication_longitude": {
+      "type": "number",
+      "description": "Longitude for the publication/issue location"
     },
     "description": {
       "type": "string",
@@ -73,6 +90,70 @@
     "translation_language": {
       "type": "string",
       "description": "Detected source language of the transcribed text"
+    },
+    "narrative_extraction": {
+      "type": "object",
+      "description": "Structured analysis of the body of text (transcribed text, narrative, article, interview) tuned for the chronicle/newsletter. Extracted by the analyzeContentText function: the event the text describes, everyone named, every place named, and a ready-to-paste chronicle snippet.",
+      "properties": {
+        "event_date": {
+          "type": "string",
+          "description": "The date the described event occurred (ISO date when determinable, otherwise free text)"
+        },
+        "event_date_display": {
+          "type": "string",
+          "description": "Human-readable event date label (e.g. 'circa 1948', 'summer of 1953', '14 March 1956')"
+        },
+        "event_description": {
+          "type": "string",
+          "description": "1-3 sentence plain-English summary of the event the text describes"
+        },
+        "event_type": {
+          "type": "string",
+          "description": "Category of the event (birth, marriage, death, migration, arrival, military, occupation, family gathering, travel, milestone, other)"
+        },
+        "named_people": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "role": {
+                "type": "string"
+              },
+              "relationship": {
+                "type": "string"
+              }
+            }
+          },
+          "description": "Everyone named in the body \u2014 ancestors AND other people"
+        },
+        "named_places": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "place": {
+                "type": "string"
+              },
+              "context": {
+                "type": "string"
+              }
+            }
+          },
+          "description": "Every place named, with context (e.g. 'born in', 'arrived at', 'married in')"
+        },
+        "chronicle_snippet": {
+          "type": "string",
+          "description": "A ready-to-paste 1-2 sentence line for a newsletter/chronicle entry summarising this item"
+        },
+        "generated_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When this narrative extraction was generated"
+        }
+      }
     },
     "extracted_fields": {
       "type": "object",

@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Camera, Upload, FileText, Image as ImageIcon, Award, Loader2, Check, Sparkles, Newspaper, Tag, Link2, Search, UserPlus, BookUser, IdCard, Mail, Heart, HelpCircle, Eye, MessageSquare, AlertCircle, MapPin, Calendar, RefreshCw, X, Video, Music } from 'lucide-react';
+import PublicationFields from '@/components/PublicationFields';
+import MissingFieldPrompts from '@/components/MissingFieldPrompts';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import { getMessages, subscribe } from '@/lib/assistantStore';
@@ -42,6 +44,10 @@ const INITIAL_FORM = {
   location_name: '',
   latitude: '',
   longitude: '',
+  publication_date: '',
+  publication_location_name: '',
+  publication_latitude: '',
+  publication_longitude: '',
   ancestor_ids: [],
   era: '',
   external_url: '',
@@ -49,6 +55,10 @@ const INITIAL_FORM = {
   is_query: false,
   tagged_user_ids: [],
 };
+
+// Content types where the record itself (issue/publication) is distinct from
+// the event it documents — these get the "The Document" form section.
+const DOCUMENT_TYPES = ['certificate', 'press_clipping', 'passport', 'identity_document', 'correspondence', 'memorial'];
 
 export default function UploadEvent() {
   const [step, setStep] = useState(STEPS.CAPTURE);
@@ -305,12 +315,22 @@ Return JSON with this structure:
     });
     setDismissedFields({});
 
+    // Publication / issue date + location \u2014 distinct from the event.
+    // For certificates/IDs: date_of_issue / place_of_issue.
+    // For press clippings: the masthead publication date / newspaper city
+    //   (often not in extracted_fields, so fall back to event_location only if
+    //   it's clearly a publication city \u2014 otherwise leave blank for the user).
+    const publicationDate = result.extracted_fields?.date_of_issue || '';
+    const publicationLocation = result.extracted_fields?.place_of_issue || '';
+
     setFormData(f => ({
       ...f,
       title: result.suggested_title || (selectedFile?.name ? selectedFile.name.replace(/\.[^.]+$/, '') : ''),
       description: eventDescription,
       date: eventDate,
       location_name: eventLocation,
+      publication_date: publicationDate,
+      publication_location_name: publicationLocation,
       ancestor_ids: autoTaggedIds,
     }));
 
@@ -475,6 +495,10 @@ Return JSON with this structure:
         location_name: formData.location_name,
         latitude: formData.latitude ? parseFloat(formData.latitude) : null,
         longitude: formData.longitude ? parseFloat(formData.longitude) : null,
+        publication_date: formData.publication_date || null,
+        publication_location_name: formData.publication_location_name || null,
+        publication_latitude: formData.publication_latitude ? parseFloat(formData.publication_latitude) : null,
+        publication_longitude: formData.publication_longitude ? parseFloat(formData.publication_longitude) : null,
         ancestor_ids: selectedAncestorId && !formData.ancestor_ids.includes(selectedAncestorId)
           ? [...formData.ancestor_ids, selectedAncestorId]
           : formData.ancestor_ids,
@@ -541,6 +565,13 @@ Return JSON with this structure:
       // Auto-extract family relationships from certificate-type documents
       if (['certificate', 'passport', 'identity_document'].includes(contentType)) {
         await base44.functions.invoke('generateFamilyLinks', { content_item_id: createdItem.id }).catch(() => {});
+      }
+
+      // Run the narrative text analysis (chronicle/newsletter extraction) for
+      // any item that carries transcribed text \u2014 fire-and-forget; results land
+      // on the ContentDetail page when ready.
+      if (transcribedText) {
+        base44.functions.invoke('analyzeContentText', { content_item_id: createdItem.id }).catch(() => {});
       }
 
       setStep(STEPS.SAVED);
@@ -742,99 +773,14 @@ Return JSON with this structure:
             </div>
 
             {/* ── MISSING FIELD PROMPTS ── */}
-            {/* These are controlled by missingFields + dismissedFields only. */}
-            {/* Typing in any input NEVER causes these to disappear. */}
-
-            {isPromptVisible('location') && (
-              <div className="aged-card rounded-xl p-4 border-[rgba(201,145,58,0.25)]">
-                <div className="flex items-center gap-2 mb-2">
-                  <MapPin size={18} className="text-gold" />
-                  <p className="text-sm text-parchment font-medium">Event location not identified</p>
-                  <button onClick={() => dismissField('location')} className="ml-auto text-parchment/30 hover:text-parchment transition-colors">
-                    <X size={16} />
-                  </button>
-                </div>
-                <p className="text-xs text-parchment/40 mb-3">The AI couldn't determine where this event took place. Can you help? Enter the city, state, or address where the photo was taken or the event occurred — not your current location.</p>
-                <div className="flex gap-2">
-                  <LocationAutocompleteInput
-                    value={formData.location_name}
-                    onChange={({ location_name, latitude, longitude }) => setFormData(f => ({
-                      ...f,
-                      location_name,
-                      latitude: latitude !== undefined ? latitude : f.latitude,
-                      longitude: longitude !== undefined ? longitude : f.longitude,
-                    }))}
-                    placeholder="e.g. Melbourne, Victoria, Australia"
-                    className="flex-1 bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setLocationPickerOpen(true)}
-                    className="flex items-center gap-1.5 px-3 rounded-lg bg-[rgba(201,145,58,0.1)] border border-[rgba(201,145,58,0.2)] text-amber-light text-sm font-medium hover:bg-[rgba(201,145,58,0.15)] transition-colors flex-shrink-0"
-                  >
-                    <MapPin size={14} /> Map
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {isPromptVisible('date') && (
-              <div className="aged-card rounded-xl p-4 border-[rgba(201,145,58,0.25)]">
-                <div className="flex items-center gap-2 mb-2">
-                  <Calendar size={18} className="text-gold" />
-                  <p className="text-sm text-parchment font-medium">Event date not identified</p>
-                  <button onClick={() => dismissField('date')} className="ml-auto text-parchment/30 hover:text-parchment transition-colors">
-                    <X size={16} />
-                  </button>
-                </div>
-                <p className="text-xs text-parchment/40 mb-3">The AI couldn't determine when this event took place. If you know the exact date, enter it below. If not sure, use the "Era" field for an approximation (e.g. "circa 1950").</p>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs text-parchment/50 mb-1 block">Exact date (if known)</label>
-                    <DateSelectInput value={formData.date} onChange={v => setFormData(f => ({ ...f, date: v }))} className="w-full" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-parchment/50 mb-1 block">Approximate era</label>
-                    <input value={formData.era} onChange={e => setFormData(f => ({ ...f, era: e.target.value }))}
-                      className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]" placeholder="e.g. circa 1950" />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {isPromptVisible('description') && (
-              <div className="aged-card rounded-xl p-4 border-[rgba(201,145,58,0.25)]">
-                <div className="flex items-center gap-2 mb-2">
-                  <HelpCircle size={18} className="text-gold" />
-                  <p className="text-sm text-parchment font-medium">Event description not identified</p>
-                  <button onClick={() => dismissField('description')} className="ml-auto text-parchment/30 hover:text-parchment transition-colors">
-                    <X size={16} />
-                  </button>
-                </div>
-                <p className="text-xs text-parchment/40 mb-3">The AI couldn't confidently describe what this event or item is. Please enter a title and description so the archive can categorise it properly.</p>
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-xs text-parchment/50 mb-1 block">Title</label>
-                    <input
-                      value={formData.title}
-                      onChange={e => setFormData(f => ({ ...f, title: e.target.value }))}
-                      className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]"
-                      placeholder="e.g. Birth Certificate — Giuseppe Freddi (1898)"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-parchment/50 mb-1 block">Description</label>
-                    <textarea
-                      value={formData.description}
-                      onChange={e => setFormData(f => ({ ...f, description: e.target.value }))}
-                      rows={2}
-                      className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]"
-                      placeholder="What is this item? (e.g. A photograph of the family home in Venice, circa 1920)"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
+            {/* Controlled by missingFields + dismissedFields only; typing never hides them. */}
+            <MissingFieldPrompts
+              isVisible={isPromptVisible}
+              dismissField={dismissField}
+              form={formData}
+              setForm={setFormData}
+              openLocationPicker={() => setLocationPickerOpen(true)}
+            />
 
             {/* Attach certificate to profile */}
             {canAttachToProfile && (
@@ -958,7 +904,10 @@ Return JSON with this structure:
 
             {/* Event details form */}
             <div className="aged-card rounded-xl p-6 space-y-4">
-              <h3 className="font-display text-lg text-parchment">Event Details</h3>
+              <div>
+                <h3 className="font-display text-lg text-parchment">The Event</h3>
+                <p className="text-xs text-parchment/40 mt-0.5">The date and place the event itself took place — a birth, a historic occasion, the day a photo was taken.</p>
+              </div>
               <div>
                 <label className="text-sm text-parchment/60 mb-1 block flex items-center gap-1">
                   Title <span className="text-[#C9913A] text-xs">*</span>
@@ -1132,6 +1081,11 @@ Return JSON with this structure:
                 </div>
               </div>
             </div>
+
+            {/* The Document — issue/publication date + location (distinct from the event) */}
+            {DOCUMENT_TYPES.includes(classification) && (
+              <PublicationFields form={formData} onChange={(k, v) => setFormData(f => ({ ...f, [k]: v }))} />
+            )}
 
             {/* Duplicate warning — pre-save detection */}
             {duplicateCheck && (

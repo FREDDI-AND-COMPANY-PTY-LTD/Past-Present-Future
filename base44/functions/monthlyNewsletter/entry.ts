@@ -75,6 +75,25 @@ Deno.serve(async (req) => {
           `   Era: ${item.era || 'unknown'}`,
         ];
         if (taggedAncestors) parts.push(`   Tagged Ancestor(s): ${taggedAncestors}`);
+        // Chronicle-ready narrative extraction (event the text describes,
+        // named people/places, ready-to-paste snippet)
+        const ne = item.narrative_extraction;
+        if (ne && (ne.event_description || ne.chronicle_snippet)) {
+          if (ne.event_date_display) parts.push(`   Event Date (narrative): ${ne.event_date_display}`);
+          if (ne.event_description) parts.push(`   Event Description: ${ne.event_description}`);
+          if (ne.event_type) parts.push(`   Event Type: ${ne.event_type}`);
+          if (ne.named_people && ne.named_people.length > 0) {
+            parts.push(`   Named People: ${ne.named_people.map(p => p.name + (p.role ? ` (${p.role})` : '')).join(', ')}`);
+          }
+          if (ne.named_places && ne.named_places.length > 0) {
+            parts.push(`   Named Places: ${ne.named_places.map(p => p.place + (p.context ? ` (${p.context})` : '')).join(', ')}`);
+          }
+          if (ne.chronicle_snippet) parts.push(`   ⚡ Chronicle Snippet: ${ne.chronicle_snippet}`);
+        }
+        // Issue / publication info (distinct from the event)
+        if (item.publication_date || item.publication_location_name) {
+          parts.push(`   Issued/Published: ${item.publication_date || ''}${item.publication_date && item.publication_location_name ? ', ' : ''}${item.publication_location_name || ''}`);
+        }
         if (item.historical_background) parts.push(`   ⚡ AI-Researched Historical Background: ${item.historical_background.substring(0, 600)}`);
         if (item.transcribed_text) parts.push(`   Transcribed Text: ${item.transcribed_text.substring(0, 500)}`);
         if (commentText) parts.push(`   Family Discussion:\n${commentText}`);
