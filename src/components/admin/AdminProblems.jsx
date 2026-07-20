@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { AlertCircle, Loader2, Check, Clock, User } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { AlertCircle, Loader2, Check, Clock, User, Sparkles } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+
+const actionFromDesc = (desc) => {
+  const m = (desc || '').match(/Suggested action:\s*(\/[^\s\n]+)/);
+  return m ? m[1] : null;
+};
 
 const statusConfig = {
   open: { label: 'Open', color: 'text-amber-light', bg: 'bg-[rgba(201,145,58,0.12)]', border: 'border-[rgba(201,145,58,0.25)]' },
@@ -67,8 +73,20 @@ export default function AdminProblems({ refreshKey }) {
           <div key={problem.id} className="aged-card rounded-xl p-5">
             <div className="flex items-start justify-between gap-4 mb-3">
               <div className="flex-1">
-                <h3 className="font-display text-lg text-parchment">{problem.title}</h3>
-                <p className="text-sm text-parchment/60 mt-1">{problem.description}</p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="font-display text-lg text-parchment">{problem.title}</h3>
+                  {String(problem.title).startsWith('AI Handoff:') && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-[rgba(201,145,58,0.12)] text-amber-light border border-[rgba(201,145,58,0.25)] font-medium flex items-center gap-1">
+                      <Sparkles size={9} /> AI Handoff
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-parchment/60 mt-1 whitespace-pre-wrap">{problem.description}</p>
+                {actionFromDesc(problem.description) && (
+                  <Link to={actionFromDesc(problem.description)} className="inline-flex items-center gap-1 mt-2 text-xs text-amber-light hover:text-gold transition-colors">
+                    Open suggested action →
+                  </Link>
+                )}
               </div>
               <span className={`px-2.5 py-1 rounded-full text-xs ${cfg.bg} ${cfg.color} ${cfg.border} border whitespace-nowrap`}>
                 {cfg.label}

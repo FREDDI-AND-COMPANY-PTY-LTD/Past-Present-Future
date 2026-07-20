@@ -91,7 +91,16 @@ APP IMPROVEMENT DETECTION:
 - Use your intelligence to assess whether the user's line of questioning or feedback points to a possible improvement in the app's functionality, usability, or features.
 - This includes (but is not limited to): the user expressing frustration about a missing feature, a confusing workflow, a bug-like behavior, a repeated question about something that doesn't exist, or a suggestion for a new capability.
 - If you detect a potential improvement, summarize it clearly and concisely in the "improvement_suggestion" field of your response JSON (a short paragraph describing the issue and the suggested improvement). Leave this field as an empty string if no improvement is detected.
-- Only set "improvement_suggestion" when you genuinely believe the app creator would benefit from knowing about this — do not set it for routine how-to questions that the app already handles well.`;
+- Only set "improvement_suggestion" when you genuinely believe the app creator would benefit from knowing about this — do not set it for routine how-to questions that the app already handles well.
+
+ADMIN HANDOFF (when you cannot resolve the user's request):
+- Some user requests are outside your power — e.g. editing the app's layout or banner images, re-cropping a photo across the archive, changing a record you can't edit directly, fixing a bug, or performing an action the interface doesn't expose to you.
+- When you genuinely cannot resolve the request yourself, do NOT just say "I can't do that." Instead set the "admin_handoff" field with:
+  - summary: a one-line gist of what the user wants.
+  - proposed_solution: the intelligence to resolve it — a concrete, actionable recommendation for the admin (what to do, where, and how). If a specific app feature or page resolves it (e.g. the "Re-edit Image Cropping" tool at /crop-reedit, an ancestor's profile at /ancestor/<id>, the Admin Dashboard at /admin), name it explicitly.
+  - action_path: the app route the admin can open to resolve it directly (e.g. "/crop-reedit", "/ancestor/<id>", "/admin"), or empty string if none applies.
+- In your reply to the user, still respond warmly: acknowledge the request, briefly explain it needs the admin's touch, and tell them you've sent it to the admin to action. Do not expose internal field names or mention "admin_handoff".
+- Only set admin_handoff when you truly cannot resolve the request. For routine how-to or exploratory questions you CAN answer, leave it null.`;
 
 const SUGGESTED_QUESTIONS = [
   "Show me the migration from Venice to Geelong",
@@ -225,6 +234,14 @@ export default function UploadAssistant({ rootAncestor }) {
               },
             },
             improvement_suggestion: { type: 'string' },
+            admin_handoff: {
+              type: 'object',
+              properties: {
+                summary: { type: 'string' },
+                proposed_solution: { type: 'string' },
+                action_path: { type: 'string' },
+              },
+            },
           },
         },
       });
@@ -242,6 +259,23 @@ export default function UploadAssistant({ rootAncestor }) {
           category: 'AI Detected',
           current_page: window.location.pathname,
         }).catch(() => {});
+      }
+
+      // If the AI could not resolve the request, hand the gist + a proposed solution to the admin inbox
+      if (result.admin_handoff && result.admin_handoff.summary && result.admin_handoff.summary.trim()) {
+        const h = result.admin_handoff;
+        try {
+          const me = await base44.auth.me().catch(() => null);
+          const actionLine = h.action_path && h.action_path.trim() ? `\n\nSuggested action: ${h.action_path.trim()}` : '';
+          const desc = `User asked: "${question}"\n\nProposed solution: ${h.proposed_solution || '(none)'}${actionLine}\n\n(Page: ${window.location.pathname})`;
+          await base44.entities.ProblemReport.create({
+            title: `AI Handoff: ${h.summary.trim()}`.slice(0, 200),
+            description: desc,
+            status: 'open',
+            reported_by_id: me?.id || null,
+            reported_by_name: me?.full_name || me?.email || 'Family Member',
+          });
+        } catch (e) {}
       }
     } catch (e) {
       setMessages(prev => [...prev, { role: 'assistant', content: 'I encountered an error. Please try again in a moment.' }]);
