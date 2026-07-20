@@ -14,6 +14,12 @@ export default function CropReedit() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(null); // item being edited
   const [savedId, setSavedId] = useState(null);
+  const [user, setUser] = useState(null);
+  const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    base44.auth.me().then(setUser).catch(() => {}).finally(() => setChecking(false));
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -39,6 +45,27 @@ export default function CropReedit() {
     setTimeout(() => setSavedId(null), 1500);
     setEditing(null);
   };
+
+  if (checking) {
+    return <Layout><div className="px-6 lg:px-12 py-12 max-w-7xl mx-auto"><div className="aged-card rounded-xl h-64 animate-pulse" /></div></Layout>;
+  }
+
+  if (user?.role !== 'admin') {
+    return (
+      <Layout>
+        <div className="px-6 lg:px-12 py-12 max-w-3xl mx-auto text-center">
+          <div className="aged-card rounded-xl p-10">
+            <AlertCircle size={32} className="text-gold/40 mx-auto mb-3" />
+            <p className="text-parchment font-medium mb-1">Admins only</p>
+            <p className="text-parchment/50 text-sm mb-5">Re-editing image cropping is restricted to archive administrators.</p>
+            <Link to="/" className="inline-flex items-center gap-1 text-amber-light hover:text-gold text-sm">
+              <ChevronLeft size={16} /> Back to Home
+            </Link>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>

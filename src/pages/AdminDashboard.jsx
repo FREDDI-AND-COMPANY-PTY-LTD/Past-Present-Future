@@ -45,6 +45,7 @@ export default function AdminDashboard() {
   const [dupFilter, setDupFilter] = useState('content');
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [user, setUser] = useState(null);
 
   const [logs, setLogs] = useState([]);
   const [flags, setFlags] = useState([]);
@@ -57,6 +58,7 @@ export default function AdminDashboard() {
   const [problemCount, setProblemCount] = useState(0);
 
   useEffect(() => {
+    base44.auth.me().then(setUser).catch(() => {});
     Promise.all([
       base44.entities.ActivityLog.list('-created_date', 50),
       base44.entities.ConflictFlag.filter({ status: 'open' }),
@@ -192,6 +194,7 @@ export default function AdminDashboard() {
             {tab === 'setup' && (
               <div className="space-y-5">
                 <GoLiveTaskCard />
+                {user?.role === 'admin' && (
                 <Link to="/crop-reedit" className="block aged-card rounded-xl p-5 hover:border-[rgba(201,145,58,0.45)] transition-colors group">
                   <div className="flex items-start gap-4">
                     <div className="w-11 h-11 rounded-xl bg-[rgba(201,145,58,0.12)] border border-[rgba(201,145,58,0.25)] flex items-center justify-center flex-shrink-0">
@@ -208,6 +211,7 @@ export default function AdminDashboard() {
                     <ArrowRight size={18} className="text-gold/50 group-hover:text-gold transition-colors flex-shrink-0 mt-1" />
                   </div>
                 </Link>
+                )}
               </div>
             )}
           </>
