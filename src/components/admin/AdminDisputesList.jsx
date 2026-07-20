@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Flag, CheckCircle, XCircle, Pencil, ExternalLink, Loader2, MessageSquare, Mail, Paperclip } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
@@ -27,11 +28,12 @@ export default function AdminDisputesList({ flags, onResolved }) {
   const [redirect, setRedirect] = useState({});
   const [resolvingId, setResolvingId] = useState(null);
 
+  const navigate = useNavigate();
   useEffect(() => { base44.auth.me().then(setAdmin).catch(() => {}); }, []);
 
   const editTarget = (flag) => {
-    if (flag.content_item_id) return { path: `/content/${flag.content_item_id}?edit=1`, label: 'Edit event record' };
-    if (flag.ancestor_id) return { path: `/ancestor/${flag.ancestor_id}?edit=1`, label: 'Edit ancestor profile' };
+    if (flag.content_item_id) return { editPath: `/content/${flag.content_item_id}?edit=1`, viewPath: `/content/${flag.content_item_id}`, label: 'Edit event record' };
+    if (flag.ancestor_id) return { editPath: `/ancestor/${flag.ancestor_id}?edit=1`, viewPath: `/ancestor/${flag.ancestor_id}`, label: 'Edit ancestor profile' };
     return null;
   };
 
@@ -43,7 +45,7 @@ export default function AdminDisputesList({ flags, onResolved }) {
     setEngagingId(flag.id);
     try { await base44.entities.ConflictFlag.update(flag.id, { admin_engaged: true }); } catch (e) {}
     setEngagingId(null);
-    if (target) window.open(target.path, '_blank', 'noopener');
+    if (target) navigate(target.editPath);
   };
 
   const handleResolve = async (flag, status) => {
@@ -176,7 +178,7 @@ export default function AdminDisputesList({ flags, onResolved }) {
                 <span className="text-xs text-parchment/40">No specific record linked to this dispute.</span>
               )}
               {target && (
-                <a href={target.path} target="_blank" rel="noreferrer" className="text-xs text-parchment/40 hover:text-amber-light">Open record →</a>
+                <Link to={target.viewPath} className="text-xs text-parchment/40 hover:text-amber-light">Open record →</Link>
               )}
             </div>
 
