@@ -21,6 +21,7 @@ import ArchiveDataset from '@/pages/ArchiveDataset';
 import Newsletters from '@/pages/Newsletters';
 import NewsletterDetail from '@/pages/NewsletterDetail';
 import Tasks from '@/pages/Tasks';
+import CropReedit from '@/pages/CropReedit';
 import OnboardingGate from '@/components/OnboardingGate';
 import WelcomeAuthPopup from '@/components/WelcomeAuthPopup';
 import Login from '@/pages/Login';
@@ -72,6 +73,7 @@ const AuthenticatedApp = () => {
         <Route path="/newsletters" element={<Newsletters />} />
         <Route path="/newsletter/:id" element={<NewsletterDetail />} />
         <Route path="/tasks" element={<Tasks />} />
+        <Route path="/crop-reedit" element={<CropReedit />} />
       </Route>
 
       <Route path="*" element={<PageNotFound />} />

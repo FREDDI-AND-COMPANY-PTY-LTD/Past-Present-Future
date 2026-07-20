@@ -1,0 +1,140 @@
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { Crop, ChevronLeft, Loader2, Check, AlertCircle } from 'lucide-react';
+import { base44 } from '@/api/base44Client';
+import Layout from '@/components/Layout';
+import FocalPointEditor from '@/components/FocalPointEditor';
+
+const IMAGE_TYPES = ['photo', 'uncategorized', 'certificate', 'passport', 'identity_document', 'press_clipping', 'narrative', 'correspondence', 'memorial'];
+
+const isFullFrame = (b) => !b || ((b.x_max - b.x_min) >= 0.95 && (b.y_max - b.y_min) >= 0.95);
+
+// Mirrors the production card/detail cropping so the thumbnail reflects real rendering.
+function thumbStyle(item) {
+  const fx = item.focal_point_x ?? 0.5;
+  const fy = item.focal_point_y ?? 0.4;
+  const b = isFullFrame(item.crop_bounds) ? null : item.crop_bounds;
+  if (!b) return { objectPosition: `${fx * 100}% ${fy * 100}%` };
+  const scale = Math.max(1 / (b.x_max - b.x_min), 1 / (b.y_max - b.y_min));
+  return {
+    objectFit: 'cover',
+    objectPosition: `${fx * 100}% ${fy * 100}%`,
+    transform: `scale(${scale})`,
+    transformOrigin: `${fx * 100}% ${fy * 100}%`,
+  };
+}
+
+export default function CropReedit() {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(null); // item being edited
+  const [savingId, setSavingId] = useState(null);
+  const [savedId, setSavedId] = useState(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const all = await base44.entities.ContentItem.list('-created_date', 200);
+        setItems((all || []).filter(i => i.file_url && IMAGE_TYPES.includes(i.content_type)));
+      } catch (e) {}
+      setLoading(false);
+    })();
+  }, []);
+
+  const handleApprove = async (payload) => {
+    if (!editing) return;
+    setSavingId(editing.id);
+    try {
+      await base44.entities.ContentItem.update(editing.id, payload);
+      setItems(prev => prev.map(i => i.id === editing.id ? { ...i, ...payload } : i));
+      setSavedId(editing.id);
+      setTimeout(() => setSavedId(null), 1500);
+      setEditing(null);
+    } catch (e) {}
+    setSavingId(null);
+  };
+
+  return (
+    <Layout>
+      <div className="px-6 lg:px-12 py-12 max-w-7xl mx-auto">
+        <div className="flex items-center justify-between mb-6">
+          <Link to="/admin" className="inline-flex items-center gap-1 text-parchment/50 hover:text-gold transition-colors text-sm">
+            <ChevronLeft size={16} /> Admin
+          </Link>
+          <span className="text-xs text-amber-light/60 flex items-center gap-1.5"><AlertCircle size={12} /> Temporary tool — re-edit crop &amp; focal point across the archive</span>
+        </div>
+
+        <div className="flex items-center gap-3 mb-8">
+          <Crop size={28} className="text-gold" />
+          <div>
+            <h1 className="font-display text-3xl text-parchment">Re-edit Image Cropping</h1>
+            <p className="text-parchment/50 text-sm mt-1">{loading ? 'Loading…' : `${items.length} image item${items.length === 1 ? '' : 's'} in the archive`}</p>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1,2,3,4,5,6].map(i => <div key={i} className="aged-card rounded-xl h-72 animate-pulse" />)}
+          </div>
+        ) : items.length === 0 ? (
+          <div className="aged-card rounded-xl p-12 text-center">
+            <p className="text-parchment/50">No image items found to re-edit.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {items.map(item => {
+              const framed = !isFullFrame(item.crop_bounds);
+              return (
+                <div key={item.id} className="aged-card rounded-xl overflow-hidden flex flex-col">
+                  <div className="relative h-48 bg-black/40 overflow-hidden">
+                    <img src={item.file_url} alt={item.title} className="w-full h-full object-cover sepia-tint" style={thumbStyle(item)} draggable={false} />
+                    {framed && (
+                      <span className="absolute top-2 left-2 text-[10px] px-2 py-0.5 rounded-full bg-[rgba(201,145,58,0.15)] border border-[rgba(201,145,58,0.3)] text-amber-light">crop box set</span>
+                    )}
+                    {savedId === item.id && (
+                      <div className="absolute inset-0 bg-[rgba(13,11,10,0.7)] flex items-center justify-center">
+                        <span className="flex items-center gap-1.5 text-amber-light text-sm font-semibold"><Check size={16} /> Saved</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-4 flex-1 flex flex-col">
+                    <h3 className="font-display text-base text-parchment leading-snug line-clamp-2">{item.title}</h3>
+                    <p className="text-xs text-parchment/40 mt-1">
+                      focal {(item.focal_point_x ?? 0.5).toFixed(2)}, {(item.focal_point_y ?? 0.4).toFixed(2)}
+                      {framed ? ' · framed' : ' · full frame'}
+                    </p>
+                    <button
+                      onClick={() => setEditing(item)}
+                      className="mt-3 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-gradient-to-r from-[#C9913A] to-[#E8C97A] text-charcoal text-sm font-semibold hover:opacity-90 transition-opacity"
+                    >
+                      <Crop size={16} /> Edit Crop &amp; Focal
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {editing && (
+        <FocalPointEditor
+          itemId={editing.id}
+          fileUrl={editing.file_url}
+          title={editing.title}
+          focalX={editing.focal_point_x}
+          focalY={editing.focal_point_y}
+          cropBounds={editing.crop_bounds}
+          onApprove={handleApprove}
+          onClose={() => setEditing(null)}
+        />
+      )}
+
+      {savingId && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[70] aged-card rounded-full px-5 py-2.5 flex items-center gap-2 text-sm text-amber-light">
+          <Loader2 size={16} className="animate-spin" /> Saving adjustments…
+        </div>
+      )}
+    </Layout>
+  );
+}

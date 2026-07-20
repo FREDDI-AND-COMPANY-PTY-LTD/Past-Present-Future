@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Users, Map, Clock, Network, GitBranch, Upload, Shield, Search, Menu, X, Sparkles, Database, Inbox, AlertCircle, Newspaper, CheckSquare, UserPlus } from 'lucide-react';
+import { Home, Users, Map, Clock, Network, GitBranch, Upload, Shield, Search, Menu, X, Sparkles, Database, Inbox, AlertCircle, Newspaper, CheckSquare, UserPlus, Crop } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import ReportProblemDialog from '@/components/ReportProblemDialog';
 import InviteUserDialog from '@/components/InviteUserDialog';
@@ -50,7 +50,7 @@ export default function Layout({ children }) {
   const isAdmin = user?.role === 'admin';
 
   const navItemsWithAdmin = isAdmin
-    ? [...navItems, { label: 'Admin', path: '/admin', icon: Shield }, { label: 'Admin Inbox', path: '/admin-inbox', icon: Inbox }]
+    ? [...navItems, { label: 'Admin', path: '/admin', icon: Shield }, { label: 'Admin Inbox', path: '/admin-inbox', icon: Inbox }, { label: 'Re-edit Crops', path: '/crop-reedit', icon: Crop }]
     : navItems;
 
   return (
