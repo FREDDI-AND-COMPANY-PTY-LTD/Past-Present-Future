@@ -46,27 +46,34 @@ export default function CropImage({
     // Cover-fit the box to the frame.
     const s = Math.max(fw / bw, fh / bh);
 
-    const vOverflow = s * bh > fh + 0.5;
-    const hOverflow = s * bw > fw + 0.5;
-
-    // Vertical position
-    let dy;
-    const centreY = fh / 2 - s * focalY * nh;
-    if (vOverflow) {
-      // Can't fit the box vertically — keep the top (head) in view.
-      dy = isBox ? -s * box.y_min * nh : clamp(centreY, fh - s * nh, 0);
+    // Pick the visible slice (in image pixels) that centres on the focal point,
+    // then clamp it inside the crop box. This honours the focal point on BOTH
+    // axes and only anchors to an edge when the focal sits right at that edge —
+    // so the focal point always has an effect. (Previously, tall portraits that
+    // overflowed the frame vertically were force-top-anchored, which ignored
+    // focal_point_y entirely — the Armando FREDDI portrait hit exactly that.)
+    const sliceH = fh / s;
+    let y0 = focalY * nh - sliceH / 2;
+    const yTop = box.y_min * nh;
+    const yBot = box.y_max * nh - sliceH;
+    if (yBot >= yTop) {
+      y0 = Math.max(yTop, Math.min(yBot, y0));
     } else {
-      dy = clamp(centreY, fh - s * box.y_max * nh, -s * box.y_min * nh);
+      // Box shorter than the slice (guard only — s cover-fits the box): centre the box.
+      y0 = ((box.y_min + box.y_max) / 2) * nh - sliceH / 2;
     }
+    const dy = -s * y0;
 
-    // Horizontal position — centre the focal point, clamp to box edges when it fits.
-    const centreX = fw / 2 - s * focalX * nw;
-    let dx;
-    if (hOverflow) {
-      dx = centreX;
+    const sliceW = fw / s;
+    let x0 = focalX * nw - sliceW / 2;
+    const xLeft = box.x_min * nw;
+    const xRight = box.x_max * nw - sliceW;
+    if (xRight >= xLeft) {
+      x0 = Math.max(xLeft, Math.min(xRight, x0));
     } else {
-      dx = clamp(centreX, fw - s * box.x_max * nw, -s * box.x_min * nw);
+      x0 = ((box.x_min + box.x_max) / 2) * nw - sliceW / 2;
     }
+    const dx = -s * x0;
 
     setStyle({
       position: 'absolute',
