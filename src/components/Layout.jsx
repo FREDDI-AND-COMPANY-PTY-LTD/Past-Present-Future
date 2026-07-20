@@ -195,7 +195,7 @@ export default function Layout({ children }) {
         </footer>
       </div>
 
-      <UploadAssistant />
+      <UploadAssistant rootAncestor={rootAncestor} />
 
       <InviteUserDialog open={inviteOpen} onClose={() => setInviteOpen(false)} user={user} />
     </div>

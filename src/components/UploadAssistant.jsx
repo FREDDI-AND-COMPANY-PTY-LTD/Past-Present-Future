@@ -127,7 +127,25 @@ CONTENT ITEMS (${(items || []).length} total, showing up to ${itemList.length}):
 ${itemLines || '(none yet)'}`;
 }
 
-export default function UploadAssistant() {
+function buildPersona(ancestor) {
+  if (!ancestor || !ancestor.full_name) return '';
+  const birth = ancestor.birth_date ? new Date(ancestor.birth_date).getFullYear() : '';
+  const death = ancestor.death_date ? new Date(ancestor.death_date).getFullYear() : '';
+  const life = [birth, death || (ancestor.living ? 'present' : '')].filter(Boolean).join('–');
+  const facts = [
+    ancestor.birth_place ? `You were born in ${ancestor.birth_place}.` : '',
+    ancestor.nationality ? `You are ${ancestor.nationality}.` : '',
+    ancestor.bloodline ? `You belong to the ${ancestor.bloodline} bloodline.` : '',
+    ancestor.biography ? `Your life story, in brief: ${ancestor.biography}` : '',
+  ].filter(Boolean).join(' ');
+  return `PERSONA — YOU ARE ${ancestor.full_name.toUpperCase()}${life ? ` (${life})` : ''}, the founding ancestor of this family branch. ${facts} Your ancestor id is ${ancestor.id}; any MIGRATION ROUTE in the archive whose ancestor_id equals "${ancestor.id}" is YOUR OWN journey — describe it in the first person ("I left ... and arrived in ..."). Other ancestors in the archive are your descendants and relatives.
+
+Speak in the first person — "I", "my", "we", "our family". Place yourself inside the narrative: when a user asks about a migration, a place, or an event, tell it as your own experience or your family's, as a grandparent telling the story to a younger generation. Be warm, wise, a little nostalgic, and encouraging. If you don't remember a detail about your own life or relatives, say so humbly rather than inventing it. Stay helpful and concise for upload/form questions too — just answer in your own voice.
+
+`;
+}
+
+export default function UploadAssistant({ rootAncestor }) {
   const [messages, setLocalMessages] = useState(getMessages());
   useEffect(() => subscribe(setLocalMessages), []);
 
@@ -179,7 +197,7 @@ export default function UploadAssistant() {
         .join('\n\n');
 
       const result = await base44.integrations.Core.InvokeLLM({
-        prompt: `${SYSTEM_CONTEXT}\n\n${ctx}\n\n--- Conversation so far ---\n${conversationHistory}\n\nAssistant:`,
+        prompt: `${buildPersona(rootAncestor)}${SYSTEM_CONTEXT}\n\n${ctx}\n\n--- Conversation so far ---\n${conversationHistory}\n\nAssistant:`,
         response_json_schema: {
           type: 'object',
           properties: {
@@ -240,8 +258,8 @@ export default function UploadAssistant() {
                 <Sparkles size={16} className="text-charcoal" />
               </div>
               <div>
-                <p className="font-display text-sm text-parchment leading-tight">Archive Assistant</p>
-                <p className="text-[10px] text-amber-light/50 leading-tight">Explore your family archive</p>
+                <p className="font-display text-sm text-parchment leading-tight">{rootAncestor ? rootAncestor.full_name : 'Archive Assistant'}</p>
+                <p className="text-[10px] text-amber-light/50 leading-tight">{rootAncestor ? 'Branch ancestor · AI guide' : 'Explore your family archive'}</p>
               </div>
             </div>
             <button onClick={() => setIsOpen(false)} className="text-parchment/40 hover:text-parchment transition-colors">
@@ -254,7 +272,7 @@ export default function UploadAssistant() {
             {messages.length === 0 && (
               <div className="text-center py-4">
                 <MessageCircle size={28} className="text-gold/40 mx-auto mb-2" />
-                <p className="text-sm text-parchment/60 mb-3">Hi! Ask me about your family's journey — migrations, ancestors, timeline events, or how to upload.</p>
+                <p className="text-sm text-parchment/60 mb-3">{rootAncestor ? `I'm ${rootAncestor.full_name}. Ask me about our family's journey — our migrations, our ancestors, our timeline, or how to add to the archive.` : "Hi! Ask me about your family's journey — migrations, ancestors, timeline events, or how to upload."}</p>
                 <p className="text-xs text-parchment/40 mb-3">Try asking:</p>
                 <div className="space-y-1.5">
                   {SUGGESTED_QUESTIONS.map((q, i) => (
