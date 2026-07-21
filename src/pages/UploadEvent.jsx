@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, Upload, FileText, Image as ImageIcon, Award, Loader2, Check, Sparkles, Newspaper, Tag, Link2, Search, UserPlus, BookUser, IdCard, Mail, Heart, HelpCircle, Eye, MessageSquare, AlertCircle, MapPin, Calendar, RefreshCw, X, Video, Music } from 'lucide-react';
+import { Camera, Upload, FileText, Image as ImageIcon, Award, Loader2, Check, Sparkles, Newspaper, Tag, Link2, Search, UserPlus, BookUser, IdCard, Mail, Heart, HelpCircle, Eye, MessageSquare, AlertCircle, MapPin, Calendar, RefreshCw, X, Video, Music, Lock } from 'lucide-react';
 import PublicationFields from '@/components/PublicationFields';
 import MissingFieldPrompts from '@/components/MissingFieldPrompts';
 import { base44 } from '@/api/base44Client';
@@ -16,6 +16,8 @@ import LocationAutocompleteInput from '@/components/LocationAutocompleteInput';
 import DateSelectInput from '@/components/DateSelectInput';
 import { analyzeCrop } from '@/lib/cropAnalysis';
 import { generatePdfThumbnail } from '@/lib/pdfThumbnail';
+import { Link } from 'react-router-dom';
+import { useAccessRights } from '@/hooks/useAccessRights';
 
 const STEPS = {
   CAPTURE: 'capture',
@@ -107,6 +109,8 @@ export default function UploadEvent() {
   const imageInputRef = useRef(null);
   const cameraInputRef = useRef(null);
 
+  const access = useAccessRights();
+
 
   const filteredAncestors = ancestorSearch
     ? ancestors.filter(a => a.full_name.toLowerCase().includes(ancestorSearch.toLowerCase()))
@@ -126,6 +130,32 @@ export default function UploadEvent() {
   }, []);
 
   useEffect(() => subscribe(setAssistantMessages), []);
+
+  if (access.status === 'loading') {
+    return <Layout><div className="flex justify-center py-24"><Loader2 size={28} className="text-gold animate-spin" /></div></Layout>;
+  }
+  if (!access.canInteract) {
+    return (
+      <Layout>
+        <div className="px-6 lg:px-12 py-12 max-w-3xl mx-auto">
+          <h1 className="font-display text-4xl text-parchment mb-2">Upload an Event</h1>
+          <p className="text-parchment/50 text-sm mb-8">Share a piece of family history — the system will analyse it and help you tag it.</p>
+          <div className="aged-card rounded-2xl p-10 text-center">
+            <Lock size={36} className="text-gold/40 mx-auto mb-4" />
+            <h2 className="font-display text-xl text-parchment mb-2">Branch Access Required</h2>
+            <p className="text-parchment/50 text-sm mb-6 max-w-md mx-auto leading-relaxed">
+              {access.status === 'pending'
+                ? "Your branch membership is awaiting approval from the branch admin. You'll be able to upload once approved."
+                : "Uploading is reserved for approved branch members. Browse the branches and request access from a branch admin."}
+            </p>
+            <Link to="/branches" className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-lg bg-[#C9913A] text-charcoal text-sm font-semibold hover:opacity-90 transition-opacity">
+              View Branches
+            </Link>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   // ── Prompt visibility helpers ──
   // A prompt shows if AI flagged it as missing AND the user hasn't dismissed it.

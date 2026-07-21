@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, MessageCircle, Send, CornerDownRight, AtSign, X, HelpCircle, Heart } from 'lucide-react';
+import { Loader2, MessageCircle, Send, CornerDownRight, AtSign, X, HelpCircle, Heart, Lock } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import { useAccessRights } from '@/hooks/useAccessRights';
 
 const AVATAR_COLORS = ['#C9913A', '#8B6914', '#6B8E23', '#9B6B3E', '#7A5C3A', '#5A7A5A'];
 
@@ -36,6 +37,8 @@ export default function CommentThread({ entityType, entityId, fieldName, user: i
   const [replyTaggedIds, setReplyTaggedIds] = useState({});
   const [replyShowTagPicker, setReplyShowTagPicker] = useState({});
   const [likedComments, setLikedComments] = useState(new Set());
+  const access = useAccessRights();
+  const canInteract = access.canInteract;
 
   useEffect(() => {
     if (!initialUser) {
@@ -158,7 +161,8 @@ export default function CommentThread({ entityType, entityId, fieldName, user: i
         </span>
       </div>
 
-      {/* New comment input — social media style */}
+      {/* New comment input — gated by branch access */}
+      {canInteract ? (
       <div className="mb-5 flex gap-3">
         <Avatar name={myName} size="md" />
         <div className="flex-1">
@@ -222,6 +226,14 @@ export default function CommentThread({ entityType, entityId, fieldName, user: i
           )}
         </div>
       </div>
+      ) : (
+        <div className="mb-5 aged-card rounded-xl p-4 flex items-center gap-2 text-sm text-parchment/50">
+          <Lock size={14} className="text-gold/50" />
+          {access.status === 'pending'
+            ? "Your branch membership is awaiting approval — you can read the discussion and will be able to comment once approved."
+            : "Comments are reserved for approved branch members. Request branch access to join the conversation."}
+        </div>
+      )}
 
       {/* Comments list */}
       {loading ? (
@@ -256,6 +268,7 @@ export default function CommentThread({ entityType, entityId, fieldName, user: i
               setReplyShowTagPicker={setReplyShowTagPicker}
               likedComments={likedComments}
               toggleLike={toggleLike}
+              canInteract={canInteract}
             />
           ))}
         </div>
@@ -268,7 +281,7 @@ function CommentNode({
   comment, replies, formatTime, taggedUsers,
   replyTo, setReplyTo, replyText, setReplyText, handleReply, submitting,
   users, currentUser, replyTaggedIds, toggleReplyTag, replyShowTagPicker, setReplyShowTagPicker,
-  likedComments, toggleLike,
+  likedComments, toggleLike, canInteract,
 }) {
   const isLiked = likedComments.has(comment.id);
   const replyTags = replyTaggedIds[comment.id] || [];
@@ -308,12 +321,18 @@ function CommentNode({
             <Heart size={12} fill={isLiked ? 'currentColor' : 'none'} />
             {isLiked ? 'Liked' : 'Like'}
           </button>
-          <button
-            onClick={() => { setReplyTo(replyTo === comment.id ? null : comment.id); setReplyText(''); }}
-            className="flex items-center gap-1 text-[11px] text-parchment/40 hover:text-amber-light transition-colors"
-          >
-            <CornerDownRight size={12} /> Reply
-          </button>
+          {canInteract ? (
+            <button
+              onClick={() => { setReplyTo(replyTo === comment.id ? null : comment.id); setReplyText(''); }}
+              className="flex items-center gap-1 text-[11px] text-parchment/40 hover:text-amber-light transition-colors"
+            >
+              <CornerDownRight size={12} /> Reply
+            </button>
+          ) : (
+            <span className="flex items-center gap-1 text-[11px] text-parchment/25">
+              <CornerDownRight size={12} /> Reply
+            </span>
+          )}
         </div>
 
         {/* Replies */}
