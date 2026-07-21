@@ -10,9 +10,18 @@
       "type": "string",
       "description": "User ID of the member who started this branch"
     },
+    "admin_user_id": {
+      "type": "string",
+      "description": "User ID of the branch admin \u2014 the sole authority over this branch's data (edit, delete, approve uploads, grant/block access). Set when a member claims/creates the branch."
+    },
+    "is_claimed": {
+      "type": "boolean",
+      "default": false,
+      "description": "True once a member has claimed admin of this branch"
+    },
     "ancestor_id": {
       "type": "string",
-      "description": "Ancestor node this branch stems from"
+      "description": "Ancestor node this branch stems from \u2014 the senior-most ancestor of the line; the branch shows all descendants of this ancestor"
     },
     "accent_color": {
       "type": "string",

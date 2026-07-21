@@ -4,6 +4,7 @@ import { base44 } from '@/api/base44Client';
 import DateSelectInput from '@/components/DateSelectInput';
 import LocationAutocompleteInput from '@/components/LocationAutocompleteInput';
 import LocationPicker from '@/components/LocationPicker';
+import BranchNominationStep from '@/components/BranchNominationStep';
 
 export default function OnboardingPage({ user, onCompleted }) {
   const [form, setForm] = useState({
@@ -15,6 +16,9 @@ export default function OnboardingPage({ user, onCompleted }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [locationPickerOpen, setLocationPickerOpen] = useState(false);
+  const [showNomination, setShowNomination] = useState(false);
+  const [nominationInvite, setNominationInvite] = useState(null);
+  const [myAncestorId, setMyAncestorId] = useState(null);
 
   const handleRegister = async () => {
     if (!form.full_name.trim()) { setError('Full name is required'); return; }
@@ -30,6 +34,7 @@ export default function OnboardingPage({ user, onCompleted }) {
         a.full_name && a.full_name.trim().toLowerCase() === normalizedName.toLowerCase()
       );
 
+      let createdId;
       if (existing) {
         await base44.entities.Ancestor.update(existing.id, {
           user_account_id: user.id,
@@ -37,8 +42,9 @@ export default function OnboardingPage({ user, onCompleted }) {
           birth_place: form.birth_place || existing.birth_place || null,
           living: form.living,
         });
+        createdId = existing.id;
       } else {
-        await base44.entities.Ancestor.create({
+        const created = await base44.entities.Ancestor.create({
           full_name: normalizedName,
           birth_date: form.birth_date || null,
           birth_place: form.birth_place || null,
@@ -48,13 +54,33 @@ export default function OnboardingPage({ user, onCompleted }) {
           created_by_id: user.id,
           created_by_name: user?.full_name || null,
         });
+        createdId = created?.id;
       }
+
+      // If this user was invited to a branch, route them to the nomination step
+      // instead of finishing onboarding — so they declare their tree relationship
+      // for the branch admin's approval.
+      try {
+        const invites = await base44.entities.BranchInvite.filter({ invitee_email: user.email, status: 'pending' });
+        const invite = (invites || [])[0];
+        if (invite) {
+          setNominationInvite(invite);
+          setMyAncestorId(createdId);
+          setShowNomination(true);
+          setSaving(false);
+          return;
+        }
+      } catch (e) {}
       onCompleted();
     } catch (e) {
       setError(e.message || 'Failed to register ancestor');
     }
     setSaving(false);
   };
+
+  if (showNomination && nominationInvite) {
+    return <BranchNominationStep user={user} myAncestorId={myAncestorId} invite={nominationInvite} onCompleted={onCompleted} />;
+  }
 
   return (
     <div className="min-h-screen bg-charcoal flex items-center justify-center p-4">

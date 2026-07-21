@@ -1,0 +1,90 @@
+{
+  "name": "BranchInvite",
+  "type": "object",
+  "properties": {
+    "branch_id": {
+      "type": "string",
+      "description": "The branch this invitation grants access to"
+    },
+    "branch_name": {
+      "type": "string",
+      "description": "Denormalised branch name at time of invite"
+    },
+    "invitee_email": {
+      "type": "string",
+      "description": "Email address of the invited family member (lowercased)"
+    },
+    "invited_by_id": {
+      "type": "string",
+      "description": "User ID of the branch admin who sent the invitation"
+    },
+    "invited_by_name": {
+      "type": "string",
+      "description": "Display name of the branch admin who sent the invitation"
+    },
+    "registered_user_id": {
+      "type": "string",
+      "description": "User ID of the invitee once they have registered (set at nomination)"
+    },
+    "registered_ancestor_id": {
+      "type": "string",
+      "description": "The invitee's own Ancestor profile ID, tagged to the branch on nomination"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "nominated",
+        "approved",
+        "declined",
+        "blocked"
+      ],
+      "default": "pending",
+      "description": "pending = invite sent, awaiting registration; nominated = invitee registered + nominated their tree relationship, awaiting branch-admin approval; approved = access granted + staged ancestors integrated; declined = nomination rejected; blocked = access revoked by branch admin"
+    },
+    "nomination": {
+      "type": "object",
+      "description": "The invitee's declared relationship to the branch, captured at nomination",
+      "properties": {
+        "description": {
+          "type": "string",
+          "description": "Free-text relationship explanation"
+        },
+        "mother": {
+          "type": "object",
+          "description": "Mother link \u2014 { mode: 'existing'|'new'|'none', ancestor_id?, full_name?, birth_place? }",
+          "properties": {}
+        },
+        "father": {
+          "type": "object",
+          "description": "Father link \u2014 { mode: 'existing'|'new'|'none', ancestor_id?, full_name?, birth_place? }",
+          "properties": {}
+        }
+      }
+    },
+    "new_ancestor_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs of staged ancestor placeholders created from the nomination, awaiting branch-admin approval to integrate into the tree"
+    },
+    "reviewed_by_id": {
+      "type": "string",
+      "description": "User ID of the branch admin who reviewed the nomination"
+    },
+    "reviewed_by_name": {
+      "type": "string",
+      "description": "Display name of the reviewing branch admin"
+    },
+    "review_note": {
+      "type": "string",
+      "description": "Branch admin's note on the approval/decline decision"
+    }
+  },
+  "required": [
+    "branch_id",
+    "invitee_email",
+    "status"
+  ]
+}

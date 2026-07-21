@@ -6,6 +6,10 @@
       "type": "string",
       "description": "Full name of the ancestor"
     },
+    "branch_id": {
+      "type": "string",
+      "description": "The branch this ancestor belongs to. Set when an ancestor is created via branch nomination or assigned to a branch. Used with the branch-admin model so each line's records are owned and governed by that branch's admin."
+    },
     "birth_date": {
       "type": "string",
       "format": "date",
@@ -86,7 +90,7 @@
         "staged"
       ],
       "default": "auto_approved",
-      "description": "Review status \u2014 'staged' = auto-created placeholder from certificate extraction, hidden from family tree/map/timeline until admin-approved and integrated"
+      "description": "Review status \u2014 'staged' = auto-created placeholder from certificate extraction or branch nomination, hidden from family tree/map/timeline until admin-approved and integrated"
     },
     "created_by_id": {
       "type": "string",

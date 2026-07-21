@@ -29,6 +29,7 @@ export default function Layout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [user, setUser] = useState(null);
+  const [adminBranches, setAdminBranches] = useState([]);
   const location = useLocation();
   const navigate = useNavigate();
   const { rootAncestorId, rootAncestor } = useBranchRoot();
@@ -45,13 +46,18 @@ export default function Layout({ children }) {
 
   useEffect(() => {
     base44.auth.me().then(setUser).catch(() => {});
+    base44.entities.Branch.list().then(setAdminBranches).catch(() => {});
   }, []);
+
+  const isBranchAdmin = (adminBranches || []).some(b => b.admin_user_id && user && b.admin_user_id === user.id);
 
   const isAdmin = user?.role === 'admin';
 
-  const navItemsWithAdmin = isAdmin
-    ? [...navItems, { label: 'Admin', path: '/admin', icon: Shield }]
-    : navItems;
+  const navItemsWithAdmin = [
+    ...navItems,
+    ...(isAdmin ? [{ label: 'Admin', path: '/admin', icon: Shield }] : []),
+    ...(isBranchAdmin ? [{ label: 'Branch Admin', path: '/branch-admin', icon: Shield }] : []),
+  ];
 
   return (
     <div className="min-h-screen bg-charcoal flex flex-col lg:flex-row">
