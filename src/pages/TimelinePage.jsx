@@ -5,6 +5,7 @@ import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import EngageButton from '@/components/EngageButton';
 import { useBranchRoot } from '@/hooks/useBranchRoot';
+import BranchScopeToggle from '@/components/BranchScopeToggle';
 
 const typeIcons = {
   photo: Image,
@@ -24,6 +25,7 @@ export default function TimelinePage() {
   const [ancestors, setAncestors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [reverse, setReverse] = useState(true);
+  const [scope, setScope] = useState('branch');
   const [user, setUser] = useState(null);
   const { descendantIds, loading: branchLoading } = useBranchRoot();
 
@@ -40,11 +42,12 @@ export default function TimelinePage() {
 
   // Only show admin-reviewed content on the public timeline
   const reviewedItems = items.filter(i => i.review_status === 'reviewed');
-  const branchItems = descendantIds.size > 0
+  const branchScoped = scope === 'branch' && descendantIds.size > 0;
+  const branchItems = branchScoped
     ? reviewedItems.filter(i => (i.ancestor_ids || []).some(aid => descendantIds.has(aid)))
     : reviewedItems;
 
-  const branchAncestors = descendantIds.size > 0
+  const branchAncestors = branchScoped
     ? ancestors.filter(a => descendantIds.has(a.id))
     : ancestors;
 
@@ -62,13 +65,16 @@ export default function TimelinePage() {
             <h1 className="font-display text-4xl md:text-5xl text-parchment mb-2">Timeline</h1>
             <p className="text-parchment/50 text-sm">The Freddi family story, in chronological order.</p>
           </div>
-          <button
-            onClick={() => setReverse(!reverse)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-[rgba(201,145,58,0.25)] text-amber-light text-sm hover:bg-[rgba(201,145,58,0.08)] transition-colors"
-          >
-            <ArrowDownUp size={16} />
-            {reverse ? 'Present → Earliest' : 'Earliest → Present'}
-          </button>
+          <div className="flex items-center gap-3 flex-wrap">
+            <BranchScopeToggle value={scope} onChange={setScope} />
+            <button
+              onClick={() => setReverse(!reverse)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-[rgba(201,145,58,0.25)] text-amber-light text-sm hover:bg-[rgba(201,145,58,0.08)] transition-colors"
+            >
+              <ArrowDownUp size={16} />
+              {reverse ? 'Present → Earliest' : 'Earliest → Present'}
+            </button>
+          </div>
         </div>
 
         {(loading || branchLoading) ? (

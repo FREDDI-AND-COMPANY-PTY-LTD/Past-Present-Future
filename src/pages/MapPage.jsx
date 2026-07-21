@@ -4,6 +4,7 @@ import Layout from '@/components/Layout';
 import GoogleMap from '@/components/GoogleMap';
 import MigrationTimeline from '@/components/MigrationTimeline';
 import { useBranchRoot } from '@/hooks/useBranchRoot';
+import BranchScopeToggle from '@/components/BranchScopeToggle';
 
 const routeColors = ['#C9913A', '#E8C97A', '#8B6914', '#D4A04C'];
 
@@ -39,6 +40,7 @@ export default function MapPage() {
   const [ancestors, setAncestors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeWaypoint, setActiveWaypoint] = useState(null);
+  const [scope, setScope] = useState('branch');
   const { descendantIds, loading: branchLoading } = useBranchRoot();
 
   useEffect(() => {
@@ -55,13 +57,14 @@ export default function MapPage() {
 
   // Only show admin-reviewed content on the public map
   const reviewedItems = contentItems.filter(i => i.review_status === 'reviewed');
-  const branchItems = descendantIds.size > 0
+  const branchScoped = scope === 'branch' && descendantIds.size > 0;
+  const branchItems = branchScoped
     ? reviewedItems.filter(i => (i.ancestor_ids || []).some(aid => descendantIds.has(aid)))
     : reviewedItems;
-  const branchRoutes = descendantIds.size > 0
+  const branchRoutes = branchScoped
     ? routes.filter(r => !r.ancestor_id || descendantIds.has(r.ancestor_id))
     : routes;
-  const branchAncestors = descendantIds.size > 0
+  const branchAncestors = branchScoped
     ? ancestors.filter(a => descendantIds.has(a.id))
     : ancestors;
 
@@ -104,9 +107,12 @@ export default function MapPage() {
   return (
     <Layout>
       <div className="px-6 lg:px-12 py-8 max-w-7xl mx-auto">
-        <div className="mb-6">
-          <h1 className="font-display text-4xl text-parchment mb-2">Migration Map</h1>
-          <p className="text-parchment/50 text-sm">Trace the Freddi bloodlines from their international origins to Victoria. Click any numbered pin or use the timeline to follow the migration journey over time.</p>
+        <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="font-display text-4xl text-parchment mb-2">Migration Map</h1>
+            <p className="text-parchment/50 text-sm">Trace the Freddi bloodlines from their international origins to Victoria. Click any numbered pin or use the timeline to follow the migration journey over time.</p>
+          </div>
+          <BranchScopeToggle value={scope} onChange={setScope} />
         </div>
       </div>
 
