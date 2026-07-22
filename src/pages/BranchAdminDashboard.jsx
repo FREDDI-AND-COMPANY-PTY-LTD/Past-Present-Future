@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, UserPlus, Loader2, Check, X, GitBranch, Mail, Clock } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Shield, UserPlus, Loader2, Check, X, GitBranch, Mail, Clock, AlertCircle, Upload, Users, Flag } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import BranchAdminInviteDialog from '@/components/BranchAdminInviteDialog';
@@ -21,20 +22,52 @@ export default function BranchAdminDashboard() {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [busy, setBusy] = useState(null);
   const [notes, setNotes] = useState({});
+  const [pendingUploads, setPendingUploads] = useState([]);
+  const [newAncestors, setNewAncestors] = useState([]);
+  const [disputes, setDisputes] = useState([]);
 
   const load = async () => {
     try {
-      const [u, brs, anc, allInvites] = await Promise.all([
+      const [u, brs, anc, allInvites, items, flags] = await Promise.all([
         base44.auth.me().catch(() => null),
         base44.entities.Branch.list(),
         base44.entities.Ancestor.list(),
         base44.entities.BranchInvite.list('-created_date', 200),
+        base44.entities.ContentItem.list('-created_date', 200),
+        base44.entities.ConflictFlag.filter({ status: 'open' }),
       ]);
       setUser(u);
       setBranches(brs || []);
       setAllAncestors(anc || []);
-      const myBranchIds = (brs || []).filter(b => b.admin_user_id && u && b.admin_user_id === u.id).map(b => b.id);
+      const myBr = (brs || []).filter(b => b.admin_user_id && u && b.admin_user_id === u.id);
+      const myBranchIds = myBr.map(b => b.id);
       setInvites((allInvites || []).filter(i => myBranchIds.includes(i.branch_id)));
+
+      // Branch-scoped admin queues — descendants of this branch's root ancestor(s)
+      const rootIds = myBr.map(b => b.ancestor_id).filter(Boolean);
+      const descIds = new Set(rootIds);
+      let changed = true;
+      while (changed) {
+        changed = false;
+        for (const a of (anc || [])) {
+          if (descIds.has(a.id)) continue;
+          if ((a.mother_id && descIds.has(a.mother_id)) || (a.father_id && descIds.has(a.father_id))) {
+            descIds.add(a.id);
+            changed = true;
+          }
+        }
+      }
+      for (const a of (anc || [])) {
+        if (descIds.has(a.id) && a.partner_id) descIds.add(a.partner_id);
+      }
+      const branchContent = (items || []).filter(i =>
+        myBranchIds.includes(i.branch_id) || (i.ancestor_ids || []).some(aid => descIds.has(aid))
+      );
+      setPendingUploads(branchContent.filter(i => !i.review_status || i.review_status === 'pending'));
+      setNewAncestors((anc || []).filter(a => myBranchIds.includes(a.branch_id) && a.review_status === 'staged'));
+      setDisputes((flags || []).filter(f =>
+        (f.ancestor_id && descIds.has(f.ancestor_id)) || branchContent.some(i => i.id === f.content_item_id)
+      ));
     } catch (e) {}
     setLoading(false);
   };
@@ -136,8 +169,60 @@ export default function BranchAdminDashboard() {
           </button>
         </div>
 
-        {/* Nominations awaiting review */}
+        {/* Branch-scoped admin queues */}
         <div className="mt-8">
+          <h2 className="font-display text-xl text-parchment mb-4 flex items-center gap-2">
+            <AlertCircle size={18} className="text-gold" /> Branch Queues
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="aged-card rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Upload size={16} className="text-gold" />
+                <span className="text-sm text-parchment font-medium">Pending Uploads</span>
+                <span className="ml-auto px-2 py-0.5 rounded-full bg-[#8B6914] text-amber-light text-xs">{pendingUploads.length}</span>
+              </div>
+              {pendingUploads.length === 0 ? <p className="text-xs text-parchment/40">All uploads reviewed.</p> : (
+                <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                  {pendingUploads.slice(0, 6).map(i => (
+                    <Link key={i.id} to={`/content/${i.id}`} className="block text-xs text-parchment/70 hover:text-gold truncate">{i.title || 'Untitled'}</Link>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="aged-card rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Users size={16} className="text-gold" />
+                <span className="text-sm text-parchment font-medium">New Ancestors</span>
+                <span className="ml-auto px-2 py-0.5 rounded-full bg-[#8B6914] text-amber-light text-xs">{newAncestors.length}</span>
+              </div>
+              {newAncestors.length === 0 ? <p className="text-xs text-parchment/40">No staged ancestors.</p> : (
+                <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                  {newAncestors.slice(0, 6).map(a => (
+                    <Link key={a.id} to={`/ancestor/${a.id}`} className="block text-xs text-parchment/70 hover:text-gold truncate">{a.full_name}</Link>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="aged-card rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Flag size={16} className="text-gold" />
+                <span className="text-sm text-parchment font-medium">Open Disputes</span>
+                <span className="ml-auto px-2 py-0.5 rounded-full bg-[#8B6914] text-amber-light text-xs">{disputes.length}</span>
+              </div>
+              {disputes.length === 0 ? <p className="text-xs text-parchment/40">No open disputes.</p> : (
+                <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                  {disputes.slice(0, 6).map(f => (
+                    <div key={f.id} className="text-xs text-parchment/70 truncate" title={f.dispute_description}>{f.dispute_description}</div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+          <p className="text-xs text-parchment/30 mt-2">Queues are scoped to the branch(es) you administer. Full review tools are in the global Admin Dashboard.</p>
+        </div>
+
+        {/* Nominations awaiting review */}
+        <div className="mt-10">
           <h2 className="font-display text-xl text-parchment mb-4 flex items-center gap-2">
             <Clock size={18} className="text-gold" /> Nominations Awaiting Your Approval
             {nominations.length > 0 && <span className="px-2 py-0.5 rounded-full bg-[#8B6914] text-amber-light text-xs">{nominations.length}</span>}
