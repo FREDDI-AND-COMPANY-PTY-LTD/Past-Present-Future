@@ -136,7 +136,7 @@ export default function FamilyTree() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="font-display text-4xl text-parchment mb-2">Family Tree</h1>
-            <p className="text-parchment/50 text-sm">Most senior members appear at the top. Drag to pan, or use arrows to scroll across the extended tree.</p>
+            <p className="text-parchment/50 text-sm">Youngest members appear at the top. Drag to pan, or use arrows to scroll across the extended tree.</p>
           </div>
           <div className="flex gap-2">
             <button onClick={() => setPan(p => ({ ...p, x: p.x + 250 }))} className="w-10 h-10 rounded-lg aged-card flex items-center justify-center text-gold hover:border-[rgba(201,145,58,0.4)]" title="Scroll left">
@@ -199,17 +199,17 @@ export default function FamilyTree() {
                 const pos = positions.get(a.id);
                 if (!pos) return null;
                 const cx = pos.y * yGap + nodeWidth / 2;
-                const cy = (pos.level + 1) * levelGap;
+                const cy = (maxLevel - pos.level + 1) * levelGap;
                 const lines = [];
                 [a.mother_id, a.father_id].forEach(pid => {
                   if (pid && positions.has(pid)) {
                     const ppos = positions.get(pid);
                     const px = ppos.y * yGap + nodeWidth / 2;
-                    const py = (ppos.level + 1) * levelGap;
+                    const py = (maxLevel - ppos.level + 1) * levelGap;
                     lines.push(
                       <path
                         key={`${pid}-${a.id}`}
-                        d={`M ${px} ${py + nodeHeight} C ${px} ${py + nodeHeight + 50}, ${cx} ${cy - 50}, ${cx} ${cy}`}
+                        d={`M ${px} ${py} C ${px} ${py - 50}, ${cx} ${cy + nodeHeight + 50}, ${cx} ${cy + nodeHeight}`}
                         stroke="#C9913A"
                         strokeWidth="2"
                         fill="none"
@@ -226,7 +226,7 @@ export default function FamilyTree() {
                 const pos = positions.get(a.id);
                 if (!pos) return null;
                 const x = pos.y * yGap;
-                const y = (pos.level + 1) * levelGap;
+                const y = (maxLevel - pos.level + 1) * levelGap;
                 const isParent = parentAncestors?.some(p => p.id === a.id);
                 return (
                   <foreignObject key={a.id} x={x} y={y} width={nodeWidth} height={nodeHeight}>
