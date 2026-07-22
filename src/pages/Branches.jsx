@@ -5,7 +5,7 @@ import Layout from '@/components/Layout';
 import AncestorAvatar from '@/components/AncestorAvatar';
 import { useBranchRoot } from '@/hooks/useBranchRoot';
 import BranchAdminOnboardingIntro from '@/components/BranchAdminOnboardingIntro';
-import { getBranchAdminExplainer, explainerToHtml } from '@/lib/branchAdminExplainer';
+import { branchRoleEmailHtml, BRANCH_ROLE_EMAIL_SUBJECT } from '@/lib/branchAdminExplainer';
 
 const branchColors = ['#C9913A', '#E8C97A', '#8B6914', '#D4A04C', '#B8860B', '#CD853F'];
 
@@ -48,11 +48,10 @@ export default function Branches() {
       // Send the branch-admin role explainer email + show the in-app intro
       if (user?.email) {
         try {
-          const e = getBranchAdminExplainer(newBranch.name, user.full_name, window.location.origin);
           await base44.integrations.Core.SendEmail({
             to: user.email,
-            subject: e.subject,
-            body: explainerToHtml(e),
+            subject: BRANCH_ROLE_EMAIL_SUBJECT,
+            body: branchRoleEmailHtml({ userName: user.full_name, appUrl: window.location.origin, branchNames: [newBranch.name] }),
           });
         } catch (_) {}
       }
