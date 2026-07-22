@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, MessageCircle, Send, CornerDownRight, AtSign, X, HelpCircle, Heart, Lock } from 'lucide-react';
+import { Loader2, MessageCircle, Send, CornerDownRight, AtSign, X, HelpCircle, Heart, Lock, Paperclip } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { useAccessRights } from '@/hooks/useAccessRights';
+import CommentAttachInput from '@/components/CommentAttachInput';
+import { uploadCommentAttachments } from '@/lib/commentAttachments';
 
 const AVATAR_COLORS = ['#C9913A', '#8B6914', '#6B8E23', '#9B6B3E', '#7A5C3A', '#5A7A5A'];
 
@@ -37,6 +40,8 @@ export default function CommentThread({ entityType, entityId, fieldName, user: i
   const [replyTaggedIds, setReplyTaggedIds] = useState({});
   const [replyShowTagPicker, setReplyShowTagPicker] = useState({});
   const [likedComments, setLikedComments] = useState(new Set());
+  const [attachFiles, setAttachFiles] = useState([]);
+  const [replyFiles, setReplyFiles] = useState({});
   const access = useAccessRights();
   const canInteract = access.canInteract;
 
@@ -63,6 +68,10 @@ export default function CommentThread({ entityType, entityId, fieldName, user: i
     if (!newComment.trim()) return;
     setSubmitting(true);
     try {
+      let relatedIds = [];
+      if (attachFiles.length > 0) {
+        relatedIds = await uploadCommentAttachments(attachFiles, user);
+      }
       await base44.entities.Comment.create({
         entity_type: entityType,
         entity_id: entityId,
@@ -72,6 +81,7 @@ export default function CommentThread({ entityType, entityId, fieldName, user: i
         author_name: user?.full_name || user?.email || 'Family Member',
         parent_comment_id: null,
         tagged_user_ids: taggedUserIds.length > 0 ? taggedUserIds : null,
+        related_content_item_ids: relatedIds.length > 0 ? relatedIds : null,
         is_query: isQuery,
         acknowledged_by: [],
       });
@@ -79,6 +89,7 @@ export default function CommentThread({ entityType, entityId, fieldName, user: i
       setTaggedUserIds([]);
       setShowTagPicker(false);
       setIsQuery(false);
+      setAttachFiles([]);
       await loadComments();
     } catch (e) {}
     setSubmitting(false);
@@ -89,6 +100,11 @@ export default function CommentThread({ entityType, entityId, fieldName, user: i
     setSubmitting(true);
     try {
       const replyTags = replyTaggedIds[parentId] || [];
+      const files = replyFiles[parentId] || [];
+      let relatedIds = [];
+      if (files.length > 0) {
+        relatedIds = await uploadCommentAttachments(files, user);
+      }
       await base44.entities.Comment.create({
         entity_type: entityType,
         entity_id: entityId,
@@ -98,6 +114,7 @@ export default function CommentThread({ entityType, entityId, fieldName, user: i
         author_name: user?.full_name || user?.email || 'Family Member',
         parent_comment_id: parentId,
         tagged_user_ids: replyTags.length > 0 ? replyTags : null,
+        related_content_item_ids: relatedIds.length > 0 ? relatedIds : null,
         is_query: false,
         acknowledged_by: [],
       });
@@ -105,6 +122,7 @@ export default function CommentThread({ entityType, entityId, fieldName, user: i
       setReplyTo(null);
       setReplyTaggedIds({});
       setReplyShowTagPicker({});
+      setReplyFiles({});
       await loadComments();
     } catch (e) {}
     setSubmitting(false);
@@ -189,6 +207,7 @@ export default function CommentThread({ entityType, entityId, fieldName, user: i
             >
               <HelpCircle size={12} /> {isQuery ? 'Marked as Query' : 'Mark as Query'}
             </button>
+            <CommentAttachInput files={attachFiles} onChange={setAttachFiles} />
             {taggedUsers(taggedUserIds).map(u => (
               <span key={u.id} className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-[rgba(201,145,58,0.08)] text-amber-light/80 border border-[rgba(201,145,58,0.15)]">
                 {u.full_name || u.email}
@@ -266,6 +285,8 @@ export default function CommentThread({ entityType, entityId, fieldName, user: i
               toggleReplyTag={toggleReplyTag}
               replyShowTagPicker={replyShowTagPicker}
               setReplyShowTagPicker={setReplyShowTagPicker}
+              replyFiles={replyFiles}
+              setReplyFiles={setReplyFiles}
               likedComments={likedComments}
               toggleLike={toggleLike}
               canInteract={canInteract}
@@ -281,7 +302,7 @@ function CommentNode({
   comment, replies, formatTime, taggedUsers,
   replyTo, setReplyTo, replyText, setReplyText, handleReply, submitting,
   users, currentUser, replyTaggedIds, toggleReplyTag, replyShowTagPicker, setReplyShowTagPicker,
-  likedComments, toggleLike, canInteract,
+  likedComments, toggleLike, canInteract, replyFiles, setReplyFiles,
 }) {
   const isLiked = likedComments.has(comment.id);
   const replyTags = replyTaggedIds[comment.id] || [];
@@ -307,6 +328,15 @@ function CommentNode({
                 <span key={u.id} className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] bg-[rgba(201,145,58,0.06)] text-amber-light/60 border border-[rgba(201,145,58,0.1)]">
                   <AtSign size={8} />{u.full_name || u.email}
                 </span>
+              ))}
+            </div>
+          )}
+          {comment.related_content_item_ids?.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1">
+              {comment.related_content_item_ids.map(rid => (
+                <Link key={rid} to={`/content/${rid}`} className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] bg-[rgba(201,145,58,0.06)] text-amber-light/70 border border-[rgba(201,145,58,0.15)] hover:border-[rgba(201,145,58,0.4)] transition-colors">
+                  <Paperclip size={8} /> Attachment
+                </Link>
               ))}
             </div>
           )}
@@ -360,6 +390,15 @@ function CommentNode({
                           ))}
                         </div>
                       )}
+                      {reply.related_content_item_ids?.length > 0 && (
+                        <div className="mt-1.5 flex flex-wrap gap-1">
+                          {reply.related_content_item_ids.map(rid => (
+                            <Link key={rid} to={`/content/${rid}`} className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] bg-[rgba(201,145,58,0.06)] text-amber-light/70 border border-[rgba(201,145,58,0.15)] hover:border-[rgba(201,145,58,0.4)] transition-colors">
+                              <Paperclip size={8} /> Attachment
+                            </Link>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <button
                       onClick={() => toggleLike(reply.id)}
@@ -398,6 +437,7 @@ function CommentNode({
                 >
                   <AtSign size={10} /> Tag
                 </button>
+                <CommentAttachInput files={replyFiles[comment.id] || []} onChange={(f) => setReplyFiles(prev => ({ ...prev, [comment.id]: f }))} />
                 <button
                   onClick={() => handleReply(comment.id)}
                   disabled={submitting || !replyText.trim()}
