@@ -1,30 +1,50 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Crop, Check, Loader2, X, Sparkles, Scan, Crosshair, Maximize } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import Cropper from 'react-easy-crop';
 import CropBoxOverlay from '@/components/CropBoxOverlay';
 import CropImage from '@/components/CropImage';
-import ReactCrop from 'react-image-crop';
-import 'react-image-crop/dist/ReactCrop.css';
 
 const FULL = { x_min: 0, y_min: 0, x_max: 1, y_max: 1 };
 const isFullFrame = (b) => !b || ((b.x_max - b.x_min) >= 0.95 && (b.y_max - b.y_min) >= 0.95);
-const clamp01 = (v) => Math.max(0, Math.min(1, v));
-// react-image-crop works in percentages; our stored crop_bounds are normalized 0-1.
-const toPercentCrop = (b) => ({ unit: '%', x: b.x_min * 100, y: b.y_min * 100, width: (b.x_max - b.x_min) * 100, height: (b.y_max - b.y_min) * 100 });
-const toNormalized = (c) => (!c || c.width == null ? { ...FULL } : {
-  x_min: clamp01(c.x / 100), y_min: clamp01(c.y / 100),
-  x_max: clamp01((c.x + c.width) / 100), y_max: clamp01((c.y + c.height) / 100),
-});
+
+const ASPECTS = [
+  { label: 'Original', value: null },
+  { label: '1:1', value: 1 },
+  { label: '4:3', value: 4 / 3 },
+  { label: '3:2', value: 3 / 2 },
+  { label: '16:9', value: 16 / 9 },
+  { label: '3:4', value: 3 / 4 },
+  { label: '9:16', value: 9 / 16 },
+];
 
 export default function FocalPointEditor({ itemId, fileUrl, title, focalX, focalY, cropBounds, reasoning, onApprove, onClose }) {
   const [posX, setPosX] = useState(focalX);
   const [posY, setPosY] = useState(focalY);
   const [crop, setCrop] = useState(cropBounds && !isFullFrame(cropBounds) ? cropBounds : { ...FULL });
-  const [mode, setMode] = useState('focal'); // 'focal' | 'crop'
+  const [mode, setMode] = useState('focal');
   const [dragging, setDragging] = useState(false);
   const [saving, setSaving] = useState(false);
   const [changed, setChanged] = useState(false);
   const containerRef = useRef(null);
+
+  // Pan/zoom cropper state (Instagram-style — no drag handles)
+  const [naturalAspect, setNaturalAspect] = useState(null);
+  const [aspect, setAspect] = useState(null);
+  const [cropPos, setCropPos] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(() => (cropBounds && !isFullFrame(cropBounds)) ? Math.min(2, 1 / (cropBounds.x_max - cropBounds.x_min)) : 1);
+  const userInteracted = useRef(false);
+
+  useEffect(() => {
+    if (!fileUrl) return;
+    const img = new Image();
+    img.onload = () => {
+      const r = img.naturalWidth / img.naturalHeight;
+      setNaturalAspect(r);
+      setAspect(prev => prev ?? r);
+    };
+    img.src = fileUrl;
+  }, [fileUrl]);
 
   const updateFromClient = useCallback((clientX, clientY) => {
     if (!containerRef.current) return;
@@ -55,11 +75,33 @@ export default function FocalPointEditor({ itemId, fileUrl, title, focalX, focal
     };
   }, [dragging, updateFromClient]);
 
-  const handleCropChange = (next) => {
-    setCrop(next);
-    // Keep focal point inside the crop box
-    setPosX(x => Math.max(next.x_min, Math.min(next.x_max, x)));
-    setPosY(y => Math.max(next.y_min, Math.min(next.y_max, y)));
+  // onCropComplete fires on initial settle too — only persist once the user
+  // has actually panned/zoomed/picked an aspect, so opening the mode never
+  // silently wipes an existing trim.
+  const handleCropComplete = useCallback((area) => {
+    if (!userInteracted.current) return;
+    const n = {
+      x_min: area.x / 100, y_min: area.y / 100,
+      x_max: (area.x + area.width) / 100, y_max: (area.y + area.height) / 100,
+    };
+    setCrop(n);
+    setPosX(x => Math.max(n.x_min, Math.min(n.x_max, x)));
+    setPosY(y => Math.max(n.y_min, Math.min(n.y_max, y)));
+    setChanged(true);
+  }, []);
+
+  const pickAspect = (a) => {
+    userInteracted.current = true;
+    setAspect(a.value ?? naturalAspect ?? 1);
+    setZoom(1);
+    setCropPos({ x: 0, y: 0 });
+  };
+
+  const resetCrop = () => {
+    setAspect(naturalAspect ?? 1);
+    setZoom(1);
+    setCropPos({ x: 0, y: 0 });
+    setCrop({ ...FULL });
     setChanged(true);
   };
 
@@ -123,7 +165,7 @@ export default function FocalPointEditor({ itemId, fileUrl, title, focalX, focal
             <p className="text-sm text-parchment/60 mb-2">
               {mode === 'focal'
                 ? 'Drag the marker to set the focal point — the part that stays visible when cropped to any shape.'
-                : 'Set each of the four sides to frame the content (e.g. trim scanner borders or a frame). Adjust the sliders below the image.'}
+                : 'Drag to reposition and pinch (or use the slider) to zoom — just like your phone photo editor. Pick an aspect ratio to frame the content.'}
             </p>
             <div className="flex justify-center">
               {mode === 'focal' ? (
@@ -135,7 +177,6 @@ export default function FocalPointEditor({ itemId, fileUrl, title, focalX, focal
                   onTouchStart={(e) => { setDragging(true); updateFromClient(e.touches[0].clientX, e.touches[0].clientY); }}
                 >
                   <img src={fileUrl} alt={title} className="block max-w-full max-h-[400px] sepia-tint pointer-events-none" draggable={false} />
-                  {/* Non-interactive crop region preview (set in Crop Box mode) */}
                   <CropBoxOverlay bounds={crop} onChange={() => {}} containerRef={containerRef} interactive={false} />
                   <div
                     className="absolute pointer-events-none z-30"
@@ -149,35 +190,56 @@ export default function FocalPointEditor({ itemId, fileUrl, title, focalX, focal
                   </div>
                 </div>
               ) : (
-                <div className="rounded-lg overflow-hidden bg-black/40 max-w-full">
-                  <ReactCrop
-                    crop={toPercentCrop(crop)}
-                    keepSelection
-                    minWidth={5}
-                    onChange={(c) => {
-                      const n = toNormalized(c);
-                      setCrop(n);
-                      setPosX(x => Math.max(n.x_min, Math.min(n.x_max, x)));
-                      setPosY(y => Math.max(n.y_min, Math.min(n.y_max, y)));
-                      setChanged(true);
-                    }}
-                  >
-                    <img src={fileUrl} alt={title} className="block max-w-full max-h-[400px] sepia-tint" />
-                  </ReactCrop>
+                <div className="w-full">
+                  <div className="relative w-full bg-black rounded-lg overflow-hidden" style={{ height: 360 }}>
+                    {aspect != null && (
+                      <Cropper
+                        image={fileUrl}
+                        crop={cropPos}
+                        zoom={zoom}
+                        aspect={aspect}
+                        onCropChange={setCropPos}
+                        onZoomChange={setZoom}
+                        onCropComplete={handleCropComplete}
+                        onInteractionStart={() => { userInteracted.current = true; }}
+                      />
+                    )}
+                  </div>
+                  <div className="mt-3 flex flex-wrap justify-center gap-2">
+                    {ASPECTS.map(a => {
+                      const val = a.value ?? naturalAspect;
+                      const isActive = aspect != null && val != null && Math.abs(val - aspect) < 0.001;
+                      return (
+                        <button
+                          key={a.label}
+                          onClick={() => pickAspect(a)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${isActive ? 'border-[#C9913A] bg-[rgba(201,145,58,0.1)] text-gold' : 'border-[rgba(201,145,58,0.15)] text-parchment/50 hover:border-[rgba(201,145,58,0.3)]'}`}
+                        >
+                          {a.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-3 flex items-center gap-3">
+                    <span className="text-xs text-parchment/50 flex-shrink-0">Zoom</span>
+                    <input
+                      type="range" min={1} max={3} step={0.01} value={zoom}
+                      onChange={(e) => { userInteracted.current = true; setZoom(Number(e.target.value)); }}
+                      className="flex-1 accent-[#C9913A]"
+                    />
+                    <span className="text-xs text-amber-light/70 tabular-nums w-10 text-right">{zoom.toFixed(2)}×</span>
+                  </div>
+                  <div className="flex justify-center mt-3">
+                    <button
+                      onClick={resetCrop}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(201,145,58,0.1)] border border-[rgba(201,145,58,0.2)] text-amber-light text-xs font-medium hover:bg-[rgba(201,145,58,0.15)] transition-colors"
+                    >
+                      <Maximize size={14} /> Reset to Full Frame
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
-
-            {mode === 'crop' && (
-              <div className="flex justify-center mt-4">
-                <button
-                  onClick={() => { setCrop({ ...FULL }); setChanged(true); }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(201,145,58,0.1)] border border-[rgba(201,145,58,0.2)] text-amber-light text-xs font-medium hover:bg-[rgba(201,145,58,0.15)] transition-colors"
-                >
-                  <Maximize size={14} /> Reset to Full Frame
-                </button>
-              </div>
-            )}
           </div>
 
           <div>
@@ -206,8 +268,6 @@ export default function FocalPointEditor({ itemId, fileUrl, title, focalX, focal
 
           <div className="flex gap-3 pt-2">
             {itemId ? (
-              // Live-app context: the record already exists — write the crop/focal
-              // adjustment directly to the database.
               <button
                 onClick={handleSaveOverride}
                 disabled={!changed || saving}
@@ -217,8 +277,6 @@ export default function FocalPointEditor({ itemId, fileUrl, title, focalX, focal
                 Save My Adjustment
               </button>
             ) : (
-              // Upload-stage context: no record yet — hand the adjustment to the
-              // parent, which persists it when the new item is created.
               <button
                 onClick={handleApprove}
                 className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg border border-[rgba(201,145,58,0.3)] text-amber-light text-sm font-semibold hover:bg-[rgba(201,145,58,0.08)] transition-colors"
