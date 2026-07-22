@@ -3,9 +3,18 @@ import { Crop, Check, Loader2, X, Sparkles, Scan, Crosshair, Maximize } from 'lu
 import { base44 } from '@/api/base44Client';
 import CropBoxOverlay from '@/components/CropBoxOverlay';
 import CropImage from '@/components/CropImage';
+import ReactCrop from 'react-image-crop';
+import 'react-image-crop/dist/ReactCrop.css';
 
 const FULL = { x_min: 0, y_min: 0, x_max: 1, y_max: 1 };
 const isFullFrame = (b) => !b || ((b.x_max - b.x_min) >= 0.95 && (b.y_max - b.y_min) >= 0.95);
+const clamp01 = (v) => Math.max(0, Math.min(1, v));
+// react-image-crop works in percentages; our stored crop_bounds are normalized 0-1.
+const toPercentCrop = (b) => ({ unit: '%', x: b.x_min * 100, y: b.y_min * 100, width: (b.x_max - b.x_min) * 100, height: (b.y_max - b.y_min) * 100 });
+const toNormalized = (c) => (!c || c.width == null ? { ...FULL } : {
+  x_min: clamp01(c.x / 100), y_min: clamp01(c.y / 100),
+  x_max: clamp01((c.x + c.width) / 100), y_max: clamp01((c.y + c.height) / 100),
+});
 
 export default function FocalPointEditor({ itemId, fileUrl, title, focalX, focalY, cropBounds, reasoning, onApprove, onClose }) {
   const [posX, setPosX] = useState(focalX);
@@ -52,24 +61,6 @@ export default function FocalPointEditor({ itemId, fileUrl, title, focalX, focal
     setPosX(x => Math.max(next.x_min, Math.min(next.x_max, x)));
     setPosY(y => Math.max(next.y_min, Math.min(next.y_max, y)));
     setChanged(true);
-  };
-
-  // Simple 4-side crop control — set each edge as a percentage (0-100).
-  // More reliable on touch than drag handles.
-  const setSide = (side, pct) => {
-    const v = pct / 100;
-    const MIN_GAP = 0.05;
-    setCrop(prev => {
-      const next = { ...prev };
-      if (side === 'left') next.x_min = Math.min(v, prev.x_max - MIN_GAP);
-      else if (side === 'right') next.x_max = Math.max(v, prev.x_min + MIN_GAP);
-      else if (side === 'top') next.y_min = Math.min(v, prev.y_max - MIN_GAP);
-      else if (side === 'bottom') next.y_max = Math.max(v, prev.y_min + MIN_GAP);
-      setPosX(x => Math.max(next.x_min, Math.min(next.x_max, x)));
-      setPosY(y => Math.max(next.y_min, Math.min(next.y_max, y)));
-      setChanged(true);
-      return next;
-    });
   };
 
   const buildPayload = () => ({
@@ -135,25 +126,17 @@ export default function FocalPointEditor({ itemId, fileUrl, title, focalX, focal
                 : 'Set each of the four sides to frame the content (e.g. trim scanner borders or a frame). Adjust the sliders below the image.'}
             </p>
             <div className="flex justify-center">
-              <div
-                ref={containerRef}
-                className="relative inline-block rounded-lg overflow-hidden bg-black/40 select-none"
-                style={{ cursor: mode === 'focal' ? 'crosshair' : 'default' }}
-                onMouseDown={(e) => { if (mode === 'focal') { setDragging(true); updateFromClient(e.clientX, e.clientY); e.preventDefault(); } }}
-                onTouchStart={(e) => { if (mode === 'focal') { setDragging(true); updateFromClient(e.touches[0].clientX, e.touches[0].clientY); } }}
-              >
-                <img src={fileUrl} alt={title} className="block max-w-full max-h-[400px] sepia-tint pointer-events-none" draggable={false} />
-
-                {/* Crop box — visual display; sides are set via the sliders below */}
-                <CropBoxOverlay
-                  bounds={crop}
-                  onChange={handleCropChange}
-                  containerRef={containerRef}
-                  interactive={false}
-                />
-
-                {/* Focal point marker (draggable in focal mode) */}
-                {mode === 'focal' && (
+              {mode === 'focal' ? (
+                <div
+                  ref={containerRef}
+                  className="relative inline-block rounded-lg overflow-hidden bg-black/40 select-none"
+                  style={{ cursor: 'crosshair' }}
+                  onMouseDown={(e) => { setDragging(true); updateFromClient(e.clientX, e.clientY); e.preventDefault(); }}
+                  onTouchStart={(e) => { setDragging(true); updateFromClient(e.touches[0].clientX, e.touches[0].clientY); }}
+                >
+                  <img src={fileUrl} alt={title} className="block max-w-full max-h-[400px] sepia-tint pointer-events-none" draggable={false} />
+                  {/* Non-interactive crop region preview (set in Crop Box mode) */}
+                  <CropBoxOverlay bounds={crop} onChange={() => {}} containerRef={containerRef} interactive={false} />
                   <div
                     className="absolute pointer-events-none z-30"
                     style={{ left: `${posX * 100}%`, top: `${posY * 100}%`, transform: 'translate(-50%, -50%)' }}
@@ -164,26 +147,35 @@ export default function FocalPointEditor({ itemId, fileUrl, title, focalX, focal
                     <div className="absolute top-1/2 left-1/2 w-20 h-px bg-[#C9913A]/30 -translate-x-1/2 -translate-y-1/2" />
                     <div className="absolute top-1/2 left-1/2 h-20 w-px bg-[#C9913A]/30 -translate-x-1/2 -translate-y-1/2" />
                   </div>
-                )}
-              </div>
+                </div>
+              ) : (
+                <div className="rounded-lg overflow-hidden bg-black/40 max-w-full">
+                  <ReactCrop
+                    crop={toPercentCrop(crop)}
+                    keepSelection
+                    minWidth={5}
+                    onChange={(c) => {
+                      const n = toNormalized(c);
+                      setCrop(n);
+                      setPosX(x => Math.max(n.x_min, Math.min(n.x_max, x)));
+                      setPosY(y => Math.max(n.y_min, Math.min(n.y_max, y)));
+                      setChanged(true);
+                    }}
+                  >
+                    <img src={fileUrl} alt={title} className="block max-w-full max-h-[400px] sepia-tint" />
+                  </ReactCrop>
+                </div>
+              )}
             </div>
 
             {mode === 'crop' && (
-              <div className="mt-4 space-y-3">
-                <div className="grid grid-cols-2 gap-x-5 gap-y-3">
-                  <SideSlider label="Left" value={crop.x_min} onChange={(v) => setSide('left', v)} />
-                  <SideSlider label="Right" value={crop.x_max} onChange={(v) => setSide('right', v)} />
-                  <SideSlider label="Top" value={crop.y_min} onChange={(v) => setSide('top', v)} />
-                  <SideSlider label="Bottom" value={crop.y_max} onChange={(v) => setSide('bottom', v)} />
-                </div>
-                <div className="flex justify-center">
-                  <button
-                    onClick={() => { setCrop({ ...FULL }); setChanged(true); }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(201,145,58,0.1)] border border-[rgba(201,145,58,0.2)] text-amber-light text-xs font-medium hover:bg-[rgba(201,145,58,0.15)] transition-colors"
-                  >
-                    <Maximize size={14} /> Reset to Full Frame
-                  </button>
-                </div>
+              <div className="flex justify-center mt-4">
+                <button
+                  onClick={() => { setCrop({ ...FULL }); setChanged(true); }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(201,145,58,0.1)] border border-[rgba(201,145,58,0.2)] text-amber-light text-xs font-medium hover:bg-[rgba(201,145,58,0.15)] transition-colors"
+                >
+                  <Maximize size={14} /> Reset to Full Frame
+                </button>
               </div>
             )}
           </div>
@@ -238,26 +230,6 @@ export default function FocalPointEditor({ itemId, fileUrl, title, focalX, focal
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-function SideSlider({ label, value, onChange }) {
-  const pct = Math.round(value * 100);
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-1">
-        <label className="text-xs text-parchment/60">{label}</label>
-        <span className="text-xs text-amber-light/80 tabular-nums">{pct}%</span>
-      </div>
-      <input
-        type="range"
-        min={0}
-        max={100}
-        value={pct}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full accent-[#C9913A]"
-      />
     </div>
   );
 }
