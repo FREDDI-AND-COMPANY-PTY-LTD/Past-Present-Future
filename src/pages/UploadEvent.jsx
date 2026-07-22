@@ -12,7 +12,7 @@ import MultiPageCameraCapture from '@/components/MultiPageCameraCapture';
 import MentionTextarea from '@/components/MentionTextarea';
 import NewAncestorDialog from '@/components/NewAncestorDialog';
 import DuplicateResolutionDialog from '@/components/DuplicateResolutionDialog';
-import FocalPointEditor from '@/components/FocalPointEditor';
+import CropEditor from '@/components/CropEditor';
 import LocationAutocompleteInput from '@/components/LocationAutocompleteInput';
 import DateSelectInput from '@/components/DateSelectInput';
 import { analyzeCrop } from '@/lib/cropAnalysis';
@@ -101,7 +101,7 @@ export default function UploadEvent() {
   const [tagInput, setTagInput] = useState('');
   const [newAncestorOpen, setNewAncestorOpen] = useState(false);
   const [duplicateCheck, setDuplicateCheck] = useState(null);
-  const [focalPointReview, setFocalPointReview] = useState(null);
+  const [cropReview, setCropReview] = useState(null);
   const [cropData, setCropData] = useState(null);
   const [analyzingFocalPoint, setAnalyzingFocalPoint] = useState(false);
   const [thumbnailUrl, setThumbnailUrl] = useState(null);
@@ -433,7 +433,7 @@ Return JSON with this structure:
         analyzeCrop(url).then(crop => {
           if (crop) {
             setCropData(crop);
-            setFocalPointReview({
+            setCropReview({
               fileUrl: url,
               title: selectedFile?.name?.replace(/\.[^.]+$/, '') || '',
               focalX: crop.focal_point_x,
@@ -495,7 +495,7 @@ Return JSON with this structure:
     setMissingFields({});
     setDismissedFields({});
     setNewAncestorOpen(false);
-    setFocalPointReview(null);
+    setCropReview(null);
     setAnalyzingFocalPoint(false);
     setCropData(null);
     setDuplicateCheck(null);
@@ -1281,19 +1281,19 @@ Return JSON with this structure:
         user={user}
       />
 
-      {focalPointReview && (
-        <FocalPointEditor
-          fileUrl={focalPointReview.fileUrl}
-          title={focalPointReview.title}
-          focalX={focalPointReview.focalX}
-          focalY={focalPointReview.focalY}
-          cropBounds={focalPointReview.cropBounds}
-          reasoning={focalPointReview.reasoning}
+      {cropReview && (
+        <CropEditor
+          fileUrl={cropReview.fileUrl}
+          title={cropReview.title}
+          focalX={cropReview.focalX}
+          focalY={cropReview.focalY}
+          cropBounds={cropReview.cropBounds}
+          reasoning={cropReview.reasoning}
           onApprove={(coords) => {
             setCropData(prev => ({ ...prev, ...coords }));
-            setFocalPointReview(null);
+            setCropReview(null);
           }}
-          onClose={() => setFocalPointReview(null)}
+          onClose={() => setCropReview(null)}
         />
       )}
 
