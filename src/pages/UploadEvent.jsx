@@ -1003,13 +1003,13 @@ Return JSON with this structure:
                     className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-parchment focus:outline-none focus:border-[#C9913A]" placeholder="e.g. Early 1900s" />
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="col-span-1">
+              <div className="space-y-3">
+                <div>
                   <label className="text-sm text-parchment/60 mb-1 block flex items-center gap-1">
                     Event Location <span className="text-[#C9913A] text-xs">*</span>
                     {!requiredChecks.location && <span className="text-xs text-red-400/70 ml-1">required</span>}
                   </label>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <LocationAutocompleteInput
                       value={formData.location_name}
                       onChange={({ location_name, latitude, longitude }) => setFormData(f => ({
@@ -1024,21 +1024,23 @@ Return JSON with this structure:
                     <button
                       type="button"
                       onClick={() => setLocationPickerOpen(true)}
-                      className="flex items-center gap-1.5 px-3 rounded-lg bg-[rgba(201,145,58,0.1)] border border-[rgba(201,145,58,0.2)] text-amber-light text-sm font-medium hover:bg-[rgba(201,145,58,0.15)] transition-colors flex-shrink-0"
+                      className="flex items-center justify-center gap-1.5 px-3 rounded-lg bg-[rgba(201,145,58,0.1)] border border-[rgba(201,145,58,0.2)] text-amber-light text-sm font-medium hover:bg-[rgba(201,145,58,0.15)] transition-colors flex-shrink-0"
                     >
                       <MapPin size={14} /> Map
                     </button>
                   </div>
                 </div>
-                <div>
-                  <label className="text-sm text-parchment/60 mb-1 block">Latitude</label>
-                  <input type="number" step="any" value={formData.latitude} onChange={e => setFormData(f => ({ ...f, latitude: e.target.value }))}
-                    className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-parchment focus:outline-none focus:border-[#C9913A]" placeholder="-37.81" />
-                </div>
-                <div>
-                  <label className="text-sm text-parchment/60 mb-1 block">Longitude</label>
-                  <input type="number" step="any" value={formData.longitude} onChange={e => setFormData(f => ({ ...f, longitude: e.target.value }))}
-                    className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-parchment focus:outline-none focus:border-[#C9913A]" placeholder="144.96" />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-sm text-parchment/60 mb-1 block">Latitude</label>
+                    <input type="number" step="any" value={formData.latitude} onChange={e => setFormData(f => ({ ...f, latitude: e.target.value }))}
+                      className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-parchment focus:outline-none focus:border-[#C9913A]" placeholder="-37.81" />
+                  </div>
+                  <div>
+                    <label className="text-sm text-parchment/60 mb-1 block">Longitude</label>
+                    <input type="number" step="any" value={formData.longitude} onChange={e => setFormData(f => ({ ...f, longitude: e.target.value }))}
+                      className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-parchment focus:outline-none focus:border-[#C9913A]" placeholder="144.96" />
+                  </div>
                 </div>
               </div>
               {/* Comment section with hover tooltip */}

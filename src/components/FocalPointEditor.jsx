@@ -54,6 +54,24 @@ export default function FocalPointEditor({ itemId, fileUrl, title, focalX, focal
     setChanged(true);
   };
 
+  // Simple 4-side crop control — set each edge as a percentage (0-100).
+  // More reliable on touch than drag handles.
+  const setSide = (side, pct) => {
+    const v = pct / 100;
+    const MIN_GAP = 0.05;
+    setCrop(prev => {
+      const next = { ...prev };
+      if (side === 'left') next.x_min = Math.min(v, prev.x_max - MIN_GAP);
+      else if (side === 'right') next.x_max = Math.max(v, prev.x_min + MIN_GAP);
+      else if (side === 'top') next.y_min = Math.min(v, prev.y_max - MIN_GAP);
+      else if (side === 'bottom') next.y_max = Math.max(v, prev.y_min + MIN_GAP);
+      setPosX(x => Math.max(next.x_min, Math.min(next.x_max, x)));
+      setPosY(y => Math.max(next.y_min, Math.min(next.y_max, y)));
+      setChanged(true);
+      return next;
+    });
+  };
+
   const buildPayload = () => ({
     focal_point_x: posX,
     focal_point_y: posY,
@@ -114,7 +132,7 @@ export default function FocalPointEditor({ itemId, fileUrl, title, focalX, focal
             <p className="text-sm text-parchment/60 mb-2">
               {mode === 'focal'
                 ? 'Drag the marker to set the focal point — the part that stays visible when cropped to any shape.'
-                : 'Drag the gold box edges or corners to set the content borders (e.g. trim scanner borders or a frame). Drag inside the box to reposition it.'}
+                : 'Set each of the four sides to frame the content (e.g. trim scanner borders or a frame). Adjust the sliders below the image.'}
             </p>
             <div className="flex justify-center">
               <div
@@ -126,12 +144,12 @@ export default function FocalPointEditor({ itemId, fileUrl, title, focalX, focal
               >
                 <img src={fileUrl} alt={title} className="block max-w-full max-h-[400px] sepia-tint pointer-events-none" draggable={false} />
 
-                {/* Crop box (always visible; editable only in crop mode) */}
+                {/* Crop box — visual display; sides are set via the sliders below */}
                 <CropBoxOverlay
                   bounds={crop}
                   onChange={handleCropChange}
                   containerRef={containerRef}
-                  interactive={mode === 'crop'}
+                  interactive={false}
                 />
 
                 {/* Focal point marker (draggable in focal mode) */}
@@ -151,13 +169,21 @@ export default function FocalPointEditor({ itemId, fileUrl, title, focalX, focal
             </div>
 
             {mode === 'crop' && (
-              <div className="flex justify-center mt-3">
-                <button
-                  onClick={() => { setCrop({ ...FULL }); setChanged(true); }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(201,145,58,0.1)] border border-[rgba(201,145,58,0.2)] text-amber-light text-xs font-medium hover:bg-[rgba(201,145,58,0.15)] transition-colors"
-                >
-                  <Maximize size={14} /> Reset to Full Frame
-                </button>
+              <div className="mt-4 space-y-3">
+                <div className="grid grid-cols-2 gap-x-5 gap-y-3">
+                  <SideSlider label="Left" value={crop.x_min} onChange={(v) => setSide('left', v)} />
+                  <SideSlider label="Right" value={crop.x_max} onChange={(v) => setSide('right', v)} />
+                  <SideSlider label="Top" value={crop.y_min} onChange={(v) => setSide('top', v)} />
+                  <SideSlider label="Bottom" value={crop.y_max} onChange={(v) => setSide('bottom', v)} />
+                </div>
+                <div className="flex justify-center">
+                  <button
+                    onClick={() => { setCrop({ ...FULL }); setChanged(true); }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(201,145,58,0.1)] border border-[rgba(201,145,58,0.2)] text-amber-light text-xs font-medium hover:bg-[rgba(201,145,58,0.15)] transition-colors"
+                  >
+                    <Maximize size={14} /> Reset to Full Frame
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -212,6 +238,26 @@ export default function FocalPointEditor({ itemId, fileUrl, title, focalX, focal
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function SideSlider({ label, value, onChange }) {
+  const pct = Math.round(value * 100);
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1">
+        <label className="text-xs text-parchment/60">{label}</label>
+        <span className="text-xs text-amber-light/80 tabular-nums">{pct}%</span>
+      </div>
+      <input
+        type="range"
+        min={0}
+        max={100}
+        value={pct}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="w-full accent-[#C9913A]"
+      />
     </div>
   );
 }
