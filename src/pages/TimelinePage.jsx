@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowDownUp, MapPin, Image, FileText, Newspaper, Video, Award, Calendar, BookUser, IdCard, Mail, Heart } from 'lucide-react';
+import { ArrowDownUp, MapPin, Image, FileText, Newspaper, Video, Award, Calendar, BookUser, IdCard, Mail, Heart, Baby } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import EngageButton from '@/components/EngageButton';
@@ -18,6 +18,8 @@ const typeIcons = {
   identity_document: IdCard,
   correspondence: Mail,
   memorial: Heart,
+  ancestor_birth: Baby,
+  ancestor_death: Heart,
 };
 
 export default function TimelinePage() {
@@ -51,8 +53,24 @@ export default function TimelinePage() {
     ? ancestors.filter(a => descendantIds.has(a.id))
     : ancestors;
 
-  const sorted = [...branchItems]
-    .filter(i => i.date)
+  // Ancestor life events (birth/death) from existing genealogical data —
+  // populates the timeline alongside dated content items.
+  const lifeEvents = branchAncestors
+    .filter(a => a.birth_date || a.death_date)
+    .flatMap(a => {
+      const events = [];
+      if (a.birth_date) events.push({
+        id: `birth-${a.id}`, date: a.birth_date, title: `${a.full_name} — Born`,
+        location_name: a.birth_place, content_type: 'ancestor_birth', ancestor_id: a.id,
+      });
+      if (a.death_date) events.push({
+        id: `death-${a.id}`, date: a.death_date, title: `${a.full_name} — Passed Away`,
+        location_name: a.death_place, content_type: 'ancestor_death', ancestor_id: a.id,
+      });
+      return events;
+    });
+
+  const sorted = [...branchItems.filter(i => i.date), ...lifeEvents]
     .sort((a, b) => new Date(b.date) - new Date(a.date));
 
   if (!reverse) sorted.reverse();
@@ -86,8 +104,9 @@ export default function TimelinePage() {
 
             <div className="space-y-8">
               {sorted.map((item, idx) => {
+                const isLifeEvent = item.content_type === 'ancestor_birth' || item.content_type === 'ancestor_death';
                 const Icon = typeIcons[item.content_type] || FileText;
-                const tagged = (item.ancestor_ids || []).map(aid => branchAncestors.find(a => a.id === aid)).filter(Boolean);
+                const tagged = isLifeEvent ? [] : (item.ancestor_ids || []).map(aid => branchAncestors.find(a => a.id === aid)).filter(Boolean);
                 const isLeft = idx % 2 === 0;
 
                 return (
@@ -99,7 +118,7 @@ export default function TimelinePage() {
 
                     {/* Card */}
                     <div className="ml-12 md:ml-0 md:w-[calc(50%-2rem)]">
-                      <Link to={`/content/${item.id}`} className="block aged-card rounded-xl p-5 hover:border-[rgba(201,145,58,0.4)] transition-all duration-300 group">
+                      <Link to={isLifeEvent ? `/ancestor/${item.ancestor_id}` : `/content/${item.id}`} className="block aged-card rounded-xl p-5 hover:border-[rgba(201,145,58,0.4)] transition-all duration-300 group">
                         <div className="flex items-center gap-2 mb-2">
                           <div className="w-7 h-7 rounded-lg bg-[rgba(201,145,58,0.1)] flex items-center justify-center border border-[rgba(201,145,58,0.15)]">
                             <Icon size={14} className="text-gold" />
@@ -110,15 +129,17 @@ export default function TimelinePage() {
                           </span>
                         </div>
                         <h3 className="font-display text-lg text-parchment group-hover:text-gold transition-colors mb-1">{item.title}</h3>
-                        {item.description && <p className="text-sm text-parchment/50 line-clamp-2">{item.description}</p>}
+                        {!isLifeEvent && item.description && <p className="text-sm text-parchment/50 line-clamp-2">{item.description}</p>}
                         <div className="flex flex-wrap gap-3 mt-2 text-xs text-parchment/40">
                           {item.location_name && <span className="flex items-center gap-1"><MapPin size={11} /> {item.location_name}</span>}
                           {tagged.map(a => <span key={a.id} className="text-amber-light/60">{a.full_name}</span>)}
                         </div>
                       </Link>
-                      <div className="mt-2">
-                        <EngageButton item={item} user={user} />
-                      </div>
+                      {!isLifeEvent && (
+                        <div className="mt-2">
+                          <EngageButton item={item} user={user} />
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
