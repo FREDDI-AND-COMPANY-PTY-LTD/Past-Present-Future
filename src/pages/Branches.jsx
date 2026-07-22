@@ -4,6 +4,8 @@ import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import AncestorAvatar from '@/components/AncestorAvatar';
 import { useBranchRoot } from '@/hooks/useBranchRoot';
+import BranchAdminOnboardingIntro from '@/components/BranchAdminOnboardingIntro';
+import { getBranchAdminExplainer, explainerToHtml } from '@/lib/branchAdminExplainer';
 
 const branchColors = ['#C9913A', '#E8C97A', '#8B6914', '#D4A04C', '#B8860B', '#CD853F'];
 
@@ -13,6 +15,8 @@ export default function Branches() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: '', ancestor_id: '', description: '' });
+  const [user, setUser] = useState(null);
+  const [claimedBranch, setClaimedBranch] = useState(null);
   const { rootAncestorId, setBranchRoot } = useBranchRoot();
 
   useEffect(() => {
@@ -23,6 +27,7 @@ export default function Branches() {
       setBranches(brs || []);
       setAncestors(ancs || []);
     }).catch(() => {}).finally(() => setLoading(false));
+    base44.auth.me().then(setUser).catch(() => {});
   }, []);
 
   const handleCreate = async () => {
@@ -32,10 +37,26 @@ export default function Branches() {
       const newBranch = await base44.entities.Branch.create({
         ...form,
         accent_color: color,
+        admin_user_id: user?.id || null,
+        founder_id: user?.id || null,
+        is_claimed: true,
       });
       setBranches([newBranch, ...branches]);
       setForm({ name: '', ancestor_id: '', description: '' });
       setShowForm(false);
+
+      // Send the branch-admin role explainer email + show the in-app intro
+      if (user?.email) {
+        try {
+          const e = getBranchAdminExplainer(newBranch.name, user.full_name, window.location.origin);
+          await base44.integrations.Core.SendEmail({
+            to: user.email,
+            subject: e.subject,
+            body: explainerToHtml(e),
+          });
+        } catch (_) {}
+      }
+      setClaimedBranch(newBranch);
     } catch (e) {}
   };
 
@@ -127,6 +148,10 @@ export default function Branches() {
           </div>
         )}
       </div>
+
+      {claimedBranch && (
+        <BranchAdminOnboardingIntro branch={claimedBranch} user={user} onClose={() => setClaimedBranch(null)} />
+      )}
     </Layout>
   );
 }
