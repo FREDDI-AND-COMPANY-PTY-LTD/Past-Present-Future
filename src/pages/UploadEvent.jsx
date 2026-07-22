@@ -8,6 +8,7 @@ import { getMessages, subscribe } from '@/lib/assistantStore';
 import AncestorMatchDialog from '@/components/AncestorMatchDialog';
 import LocationPicker from '@/components/LocationPicker';
 import BulkUpload from '@/components/BulkUpload';
+import MultiPageCameraCapture from '@/components/MultiPageCameraCapture';
 import MentionTextarea from '@/components/MentionTextarea';
 import NewAncestorDialog from '@/components/NewAncestorDialog';
 import DuplicateResolutionDialog from '@/components/DuplicateResolutionDialog';
@@ -95,6 +96,7 @@ export default function UploadEvent() {
   const [refreshing, setRefreshing] = useState(false);
 
   const [bulkMode, setBulkMode] = useState(false);
+  const [bulkSubMode, setBulkSubMode] = useState('batch');
   const [activeTags, setActiveTags] = useState([]);
   const [tagInput, setTagInput] = useState('');
   const [newAncestorOpen, setNewAncestorOpen] = useState(false);
@@ -743,7 +745,23 @@ Return JSON with this structure:
               </div>
 
               {bulkMode ? (
-                <BulkUpload ancestors={ancestors} preselectedAncestorId={selectedAncestorId} user={user} />
+                <div>
+                  <div className="flex justify-center gap-2 mb-6">
+                    <button onClick={() => setBulkSubMode('batch')}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${bulkSubMode === 'batch' ? 'bg-[rgba(201,145,58,0.12)] text-gold border border-[rgba(201,145,58,0.3)]' : 'text-parchment/50 border border-transparent'}`}>
+                      Batch Separate Items
+                    </button>
+                    <button onClick={() => setBulkSubMode('multipage')}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${bulkSubMode === 'multipage' ? 'bg-[rgba(201,145,58,0.12)] text-gold border border-[rgba(201,145,58,0.3)]' : 'text-parchment/50 border border-transparent'}`}>
+                      Multi-Page Document (Camera)
+                    </button>
+                  </div>
+                  {bulkSubMode === 'batch' ? (
+                    <BulkUpload ancestors={ancestors} preselectedAncestorId={selectedAncestorId} user={user} />
+                  ) : (
+                    <MultiPageCameraCapture onComplete={handleFile} />
+                  )}
+                </div>
               ) : (
                 <>
               <p className="text-parchment/60 text-sm mb-6 text-center">Upload a file from your device, or use your camera to photograph a document.</p>
