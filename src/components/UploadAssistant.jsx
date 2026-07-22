@@ -175,6 +175,9 @@ export default function UploadAssistant({ rootAncestor }) {
   const recognitionRef = useRef(null);
   const [speakingIdx, setSpeakingIdx] = useState(null);
   const [listening, setListening] = useState(false);
+  const [voiceMode, setVoiceMode] = useState(false);
+  const [interimText, setInterimText] = useState('');
+  const finalTranscriptRef = useRef('');
   const speechSupported = typeof window !== 'undefined' && 'speechSynthesis' in window;
   const sttSupported = typeof window !== 'undefined' && (window.SpeechRecognition || window.webkitSpeechRecognition);
 
@@ -246,11 +249,15 @@ export default function UploadAssistant({ rootAncestor }) {
         },
       });
 
+      const replyText = result.reply || 'Sorry, I could not generate a response. Please try again.';
+      const assistantIdx = newMessages.length;
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: result.reply || 'Sorry, I could not generate a response. Please try again.',
+        content: replyText,
         actions: Array.isArray(result.actions) ? result.actions.filter(a => a && a.label && a.path) : [],
       }]);
+      // In voice-conversation mode, read the reply aloud automatically.
+      if (voiceMode && speechSupported) speakText(replyText, assistantIdx);
 
       // If the AI detected a potential app improvement, forward it to the app creator
       if (result.improvement_suggestion && result.improvement_suggestion.trim()) {
@@ -285,16 +292,21 @@ export default function UploadAssistant({ rootAncestor }) {
 
   const stripForSpeech = (text) => (text || '').replace(/[#*_`>~|-]/g, ' ').replace(/\s+/g, ' ').trim();
 
-  const speakMessage = (i, text) => {
-    if (!speechSupported) return;
+  const speakText = (text, idx = null) => {
+    if (!speechSupported || !text) return;
     window.speechSynthesis.cancel();
-    if (speakingIdx === i) { setSpeakingIdx(null); return; }
     const u = new SpeechSynthesisUtterance(stripForSpeech(text));
     u.rate = 0.95; u.pitch = 1;
     u.onend = () => setSpeakingIdx(null);
     u.onerror = () => setSpeakingIdx(null);
     window.speechSynthesis.speak(u);
-    setSpeakingIdx(i);
+    if (idx !== null) setSpeakingIdx(idx);
+  };
+
+  const speakMessage = (i, text) => {
+    if (!speechSupported) return;
+    if (speakingIdx === i) { window.speechSynthesis.cancel(); setSpeakingIdx(null); return; }
+    speakText(text, i);
   };
 
   const stopSpeaking = () => {
@@ -306,26 +318,63 @@ export default function UploadAssistant({ rootAncestor }) {
   const toggleListen = () => {
     if (!sttSupported || loading) return;
     if (listening) { recognitionRef.current?.stop(); return; }
+    // Interrupt any spoken reply so the user can jump in (natural conversation)
+    if (speechSupported) { window.speechSynthesis.cancel(); setSpeakingIdx(null); }
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     const rec = new SR();
     rec.lang = 'en-AU';
-    rec.interimResults = false;
+    rec.interimResults = true;
+    rec.continuous = true;
     rec.maxAlternatives = 1;
+    // Seed the transcript with any text already in the input so dictation appends.
+    finalTranscriptRef.current = input ? input.trim() + ' ' : '';
     rec.onstart = () => setListening(true);
-    rec.onend = () => setListening(false);
-    rec.onerror = () => setListening(false);
-    rec.onresult = (e) => {
-      const transcript = e.results[0]?.[0]?.transcript || '';
-      if (transcript) {
-        setInput(transcript);
-        setTimeout(() => sendQuestion(transcript), 50);
+    rec.onend = () => {
+      setListening(false);
+      setInterimText('');
+      const text = finalTranscriptRef.current.trim();
+      // In voice-conversation mode, send the spoken reply automatically so the
+      // dialogue flows: bot speaks → user presses mic, speaks, presses again → sent.
+      if (voiceMode && text) {
+        setTimeout(() => sendQuestion(text), 60);
       }
+    };
+    rec.onerror = () => { setListening(false); setInterimText(''); };
+    rec.onresult = (e) => {
+      let interim = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const r = e.results[i];
+        if (r.isFinal) {
+          finalTranscriptRef.current += r[0].transcript;
+        } else {
+          interim += r[0].transcript;
+        }
+      }
+      setInput(finalTranscriptRef.current.trim());
+      setInterimText(interim);
     };
     recognitionRef.current = rec;
     rec.start();
   };
 
   useEffect(() => () => { if (speechSupported) window.speechSynthesis.cancel(); }, []);
+
+  // Voice-conversation mode: the bot speaks first when the panel opens (and when
+  // the mode is switched on while the panel is open).
+  useEffect(() => {
+    if (!isOpen || !voiceMode || !speechSupported) return;
+    if (messages.length === 0) {
+      const greeting = rootAncestor
+        ? `I'm ${rootAncestor.full_name}. Ask me about our family's journey — our migrations, our ancestors, our timeline, or how to add to the archive.`
+        : "Hi! Ask me about your family's journey — migrations, ancestors, timeline events, or how to upload.";
+      speakText(greeting);
+    } else {
+      for (let i = messages.length - 1; i >= 0; i--) {
+        if (messages[i].role === 'assistant') { speakText(messages[i].content, i); break; }
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, voiceMode]);
 
   return (
     <>
@@ -352,9 +401,21 @@ export default function UploadAssistant({ rootAncestor }) {
                 <p className="text-[10px] text-amber-light/50 leading-tight">{rootAncestor ? 'Branch ancestor · AI guide' : 'Explore your family archive'}</p>
               </div>
             </div>
-            <button onClick={() => setIsOpen(false)} className="text-parchment/40 hover:text-parchment transition-colors">
-              <X size={18} />
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setVoiceMode(v => !v)}
+                title={voiceMode ? 'Voice conversation mode on — the bot speaks, you reply by voice' : 'Turn on voice conversation mode'}
+                className={`p-1.5 rounded-lg transition-colors ${voiceMode ? 'text-gold bg-[rgba(201,145,58,0.15)] gold-glow' : 'text-parchment/40 hover:text-parchment'}`}
+              >
+                <Volume2 size={16} />
+              </button>
+              <button
+                onClick={() => { if (speechSupported) { window.speechSynthesis.cancel(); } setSpeakingIdx(null); setIsOpen(false); }}
+                className="text-parchment/40 hover:text-parchment transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
           </div>
 
           {/* Messages */}
@@ -439,7 +500,7 @@ export default function UploadAssistant({ rootAncestor }) {
                   onClick={toggleListen}
                   disabled={loading}
                   title={listening ? 'Stop listening' : 'Speak your question'}
-                  className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors flex-shrink-0 disabled:opacity-40 ${listening ? 'bg-red-500/80 text-white animate-pulse' : 'bg-[rgba(201,145,58,0.15)] text-amber-light hover:bg-[rgba(201,145,58,0.25)]'}`}
+                  className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors flex-shrink-0 disabled:opacity-40 ${listening ? 'bg-red-500/80 text-white animate-pulse' : voiceMode && !speakingIdx && !loading ? 'bg-gradient-to-r from-[#C9913A] to-[#E8C97A] text-charcoal gold-pulse' : 'bg-[rgba(201,145,58,0.15)] text-amber-light hover:bg-[rgba(201,145,58,0.25)]'}`}
                 >
                   <Mic size={16} />
                 </button>
@@ -452,6 +513,16 @@ export default function UploadAssistant({ rootAncestor }) {
                 {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
               </button>
             </div>
+            {listening && (
+              <p className="text-xs text-parchment/50 italic mt-1.5 px-1 truncate">
+                {interimText ? `… ${interimText}` : 'Listening — speak your question'}
+              </p>
+            )}
+            {voiceMode && !listening && !loading && speechSupported && (
+              <p className="text-[10px] text-amber-light/50 mt-1.5 px-1">
+                Voice conversation mode — tap the mic to reply.
+              </p>
+            )}
           </div>
         </div>
       )}
