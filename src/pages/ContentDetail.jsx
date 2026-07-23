@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { MapPin, Calendar, Flag, ChevronLeft, ExternalLink, FileText, Award, Edit3, HelpCircle, FileBadge, RefreshCw, Loader2, Users, MapPinned, BookOpen } from 'lucide-react';
 import RaiseQueryDialog from '@/components/RaiseQueryDialog';
 import RaiseDisputeDialog from '@/components/RaiseDisputeDialog';
@@ -18,6 +18,7 @@ const imageTypes = ['photo', 'uncategorized', 'certificate', 'passport', 'identi
 
 export default function ContentDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [item, setItem] = useState(null);
   const [ancestors, setAncestors] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -298,8 +299,10 @@ export default function ContentDetail() {
         {showEditDialog && (
           <EditEventDialog
             item={item}
+            user={user}
             onClose={() => setShowEditDialog(false)}
             onSubmitted={() => setShowEditDialog(false)}
+            onDeleted={() => { setShowEditDialog(false); navigate('/timeline'); }}
           />
         )}
 

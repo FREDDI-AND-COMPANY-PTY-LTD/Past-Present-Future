@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Edit3, X, Save, Loader2, MapPin, Users, Image as ImageIcon, FileText, Award, BookUser, IdCard, Mail, Newspaper, HelpCircle, Heart, Video, Music, MessageCircle } from 'lucide-react';
+import { Edit3, X, Save, Loader2, MapPin, Users, Image as ImageIcon, FileText, Award, BookUser, IdCard, Mail, Newspaper, HelpCircle, Heart, Video, Music, MessageCircle, Trash2, AlertTriangle } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import LocationPicker from '@/components/LocationPicker';
 import CommentThread from '@/components/CommentThread';
 import DateSelectInput from '@/components/DateSelectInput';
+import { deleteContentItem } from '@/lib/deleteContentItem';
 
 const typeOptions = [
   { value: 'photo', label: 'Photo', icon: ImageIcon },
@@ -19,7 +20,7 @@ const typeOptions = [
   { value: 'uncategorized', label: 'Other', icon: HelpCircle },
 ];
 
-export default function EditEventDialog({ item, onClose, onSubmitted }) {
+export default function EditEventDialog({ item, onClose, onSubmitted, onDeleted, user }) {
   const [form, setForm] = useState({
     title: item.title || '',
     content_type: item.content_type || 'photo',
@@ -38,10 +39,27 @@ export default function EditEventDialog({ item, onClose, onSubmitted }) {
   const [saving, setSaving] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [locationPickerOpen, setLocationPickerOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
     base44.entities.Ancestor.list().then(setAncestors).catch(() => {});
   }, []);
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      const currentUser = user || await base44.auth.me().catch(() => null);
+      await deleteContentItem(item, currentUser);
+      setSubmitted(false);
+      if (onDeleted) onDeleted(item.id);
+    } catch (e) {
+      setConfirmDelete(false);
+    }
+    setDeleting(false);
+  };
 
   const handleFieldChange = (key, value) => {
     setForm(prev => ({ ...prev, [key]: value }));
@@ -342,18 +360,62 @@ export default function EditEventDialog({ item, onClose, onSubmitted }) {
 
             {/* Footer */}
             <div className="px-6 py-4 border-t border-[rgba(201,145,58,0.15)] flex items-center justify-between flex-shrink-0">
-              <button onClick={onClose} className="text-sm text-parchment/50 hover:text-parchment transition-colors">
-                Cancel
-              </button>
+              <div className="flex items-center gap-2">
+                {isAdmin && (
+                  <button
+                    onClick={() => setConfirmDelete(true)}
+                    disabled={saving || deleting}
+                    title="Delete this upload permanently"
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-900/30 border border-red-500/40 text-red-300 text-sm font-semibold hover:bg-red-900/50 transition-colors disabled:opacity-50"
+                  >
+                    <Trash2 size={15} /> Delete Upload
+                  </button>
+                )}
+                <button onClick={onClose} className="text-sm text-parchment/50 hover:text-parchment transition-colors">
+                  Cancel
+                </button>
+              </div>
               <button
                 onClick={handleSubmit}
-                disabled={saving || !hasChanges()}
+                disabled={saving || deleting || !hasChanges()}
                 className="flex items-center gap-2 px-5 py-2 rounded-lg bg-[#C9913A] text-charcoal text-sm font-semibold disabled:opacity-40 hover:opacity-90 transition-opacity"
               >
                 {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
                 {saving ? 'Submitting...' : 'Submit Changes for Review'}
               </button>
             </div>
+
+            {/* Delete confirmation */}
+            {confirmDelete && (
+              <div className="px-6 py-4 border-t border-red-500/30 bg-red-950/20 flex-shrink-0">
+                <div className="flex items-start gap-3 mb-3">
+                  <AlertTriangle size={18} className="text-red-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-display text-sm text-parchment mb-0.5">Delete this upload permanently?</p>
+                    <p className="text-xs text-parchment/50 leading-relaxed">
+                      "{item.title || 'Untitled'}" and all its comments, disputes, and extracted family links will be removed from the archive. This cannot be undone.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleDelete}
+                    disabled={deleting}
+                    className="flex-1 py-2 rounded-lg bg-red-600/80 text-white font-semibold disabled:opacity-50 hover:bg-red-600 transition-colors flex items-center justify-center gap-2 text-sm"
+                  >
+                    {deleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                    {deleting ? 'Deleting...' : 'Yes, Delete Permanently'}
+                  </button>
+                  <button
+                    onClick={() => setConfirmDelete(false)}
+                    disabled={deleting}
+                    className="px-5 py-2 rounded-lg border border-[rgba(245,236,215,0.15)] text-parchment/70 font-medium hover:bg-[rgba(245,236,215,0.05)] transition-colors disabled:opacity-50 text-sm"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
           </>
         )}
         <LocationPicker

@@ -67,6 +67,11 @@ export default function AdminUploads({ refreshKey }) {
     }
   };
 
+  const handleDeleted = (id) => {
+    setItems(prev => prev.filter(i => i.id !== id));
+    setReviewingItem(null);
+  };
+
   const handleUndo = async (toast) => {
     try {
       await base44.entities.ContentItem.update(toast.itemId, { review_status: toast.originalStatus });
@@ -164,6 +169,7 @@ export default function AdminUploads({ refreshKey }) {
           item={reviewingItem}
           onClose={() => setReviewingItem(null)}
           onApproved={handleApproved}
+          onDeleted={handleDeleted}
         />
       )}
 

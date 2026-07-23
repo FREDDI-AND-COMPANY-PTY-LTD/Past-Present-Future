@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, Check, MapPin, Tag, Award, FileText, Eye, Calendar, Image as ImageIcon, Newspaper, BookUser, IdCard, Mail, Heart, HelpCircle, X, Network, User, Users, Video, Music, Link2, MessageSquare, UserPlus } from 'lucide-react';
+import { Loader2, Check, MapPin, Tag, Award, FileText, Eye, Calendar, Image as ImageIcon, Newspaper, BookUser, IdCard, Mail, Heart, HelpCircle, X, Network, User, Users, Video, Music, Link2, MessageSquare, UserPlus, Trash2, AlertTriangle } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import LocationPicker from '@/components/LocationPicker';
 import MentionTextarea from '@/components/MentionTextarea';
@@ -7,6 +7,7 @@ import LocationAutocompleteInput from '@/components/LocationAutocompleteInput';
 import NewAncestorDialog from '@/components/NewAncestorDialog';
 import AutoGrowTextarea from '@/components/AutoGrowTextarea';
 import DateSelectInput from '@/components/DateSelectInput';
+import { deleteContentItem } from '@/lib/deleteContentItem';
 
 const typeOptions = [
   { value: 'photo', label: 'Photograph', icon: ImageIcon },
@@ -22,13 +23,15 @@ const typeOptions = [
   { value: 'uncategorized', label: 'Uncategorized', icon: HelpCircle },
 ];
 
-export default function AdminEventEditor({ item, onApproved }) {
+export default function AdminEventEditor({ item, onApproved, onDeleted }) {
   const [formData, setFormData] = useState({});
   const [extractedFields, setExtractedFields] = useState({});
   const [transcribedText, setTranscribedText] = useState('');
   const [tags, setTags] = useState([]);
   const [ancestors, setAncestors] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [locationPickerOpen, setLocationPickerOpen] = useState(false);
   const [newTag, setNewTag] = useState('');
   const [familyLink, setFamilyLink] = useState(null);
@@ -148,6 +151,17 @@ export default function AdminEventEditor({ item, onApproved }) {
       if (onApproved) onApproved(item.id);
     } catch (e) {}
     setSaving(false);
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await deleteContentItem(item, currentUser);
+      if (onDeleted) onDeleted(item.id);
+    } catch (e) {
+      setConfirmDelete(false);
+    }
+    setDeleting(false);
   };
 
   const getAncestor = (id) => ancestors.find(a => a.id === id);
@@ -461,15 +475,57 @@ export default function AdminEventEditor({ item, onApproved }) {
         </div>
       )}
 
-      {/* Approve button */}
-      <button
-        onClick={handleApprove}
-        disabled={saving || !formData.title?.trim()}
-        className="w-full py-3 rounded-lg bg-gradient-to-r from-green-600 to-green-500 text-white font-semibold disabled:opacity-50 hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
-      >
-        {saving ? <Loader2 size={20} className="animate-spin" /> : <Check size={20} />}
-        {saving ? 'Saving...' : familyLink && familyLink.status === 'pending' ? 'Approve & Integrate Family Tree' : 'Approve & Save'}
-      </button>
+      {/* Approve + Delete buttons */}
+      <div className="flex gap-3">
+        <button
+          onClick={handleApprove}
+          disabled={saving || deleting || !formData.title?.trim()}
+          className="flex-1 py-3 rounded-lg bg-gradient-to-r from-green-600 to-green-500 text-white font-semibold disabled:opacity-50 hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+        >
+          {saving ? <Loader2 size={20} className="animate-spin" /> : <Check size={20} />}
+          {saving ? 'Saving...' : familyLink && familyLink.status === 'pending' ? 'Approve & Integrate Family Tree' : 'Approve & Save'}
+        </button>
+        <button
+          onClick={() => setConfirmDelete(true)}
+          disabled={saving || deleting}
+          title="Delete this upload permanently"
+          className="px-4 py-3 rounded-lg bg-red-900/40 border border-red-500/40 text-red-300 text-sm font-semibold hover:bg-red-900/60 transition-colors disabled:opacity-50 flex items-center gap-2"
+        >
+          <Trash2 size={18} /> Delete
+        </button>
+      </div>
+
+      {/* Delete confirmation */}
+      {confirmDelete && (
+        <div className="aged-card rounded-xl p-5 border-red-500/40">
+          <div className="flex items-start gap-3 mb-4">
+            <AlertTriangle size={20} className="text-red-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-display text-base text-parchment mb-1">Delete this upload permanently?</p>
+              <p className="text-xs text-parchment/50 leading-relaxed">
+                "{item.title || 'Untitled'}" and all its comments, disputes, and extracted family links will be removed from the archive. This cannot be undone.
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="flex-1 py-2.5 rounded-lg bg-red-600/80 text-white font-semibold disabled:opacity-50 hover:bg-red-600 transition-colors flex items-center justify-center gap-2"
+            >
+              {deleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+              {deleting ? 'Deleting...' : 'Yes, Delete Permanently'}
+            </button>
+            <button
+              onClick={() => setConfirmDelete(false)}
+              disabled={deleting}
+              className="px-5 py-2.5 rounded-lg border border-[rgba(245,236,215,0.15)] text-parchment/70 font-medium hover:bg-[rgba(245,236,215,0.05)] transition-colors disabled:opacity-50"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       <NewAncestorDialog
         open={newAncestorOpen}

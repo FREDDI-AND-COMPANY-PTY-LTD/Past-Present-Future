@@ -2,7 +2,7 @@ import React from 'react';
 import { X, FileText } from 'lucide-react';
 import AdminEventEditor from '@/components/admin/AdminEventEditor';
 
-export default function AdminReviewModal({ item, onClose, onApproved }) {
+export default function AdminReviewModal({ item, onClose, onApproved, onDeleted }) {
   if (!item) return null;
 
   return (
@@ -22,7 +22,7 @@ export default function AdminReviewModal({ item, onClose, onApproved }) {
 
           {/* Body — full editable form, identical to the user upload form */}
           <div className="p-5">
-            <AdminEventEditor item={item} onApproved={onApproved} />
+            <AdminEventEditor item={item} onApproved={onApproved} onDeleted={onDeleted} />
           </div>
         </div>
       </div>
