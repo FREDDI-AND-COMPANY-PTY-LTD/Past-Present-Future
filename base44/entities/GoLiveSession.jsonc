@@ -12,6 +12,10 @@
       "default": "pending",
       "description": "Tracks the going-live review process. pending = task shown in admin task list; in_progress = admin is reviewing events via swipe; completed = going live done, invite workflow triggered"
     },
+    "branch_id": {
+      "type": "string",
+      "description": "Branch this session is scoped to. Null/absent = the global admin going-live review (all branches). When set, the session and its completion milestone belong to a single branch admin's line."
+    },
     "total_items": {
       "type": "number",
       "description": "Total items in the review session"

@@ -5,7 +5,7 @@ import { base44 } from '@/api/base44Client';
 import SwipeReviewForm from '@/components/SwipeReviewForm';
 import InviteFamilyDialog from '@/components/InviteFamilyDialog';
 
-export default function SwipeReviewModal({ onClose }) {
+export default function SwipeReviewModal({ onClose, branchId, descendantAncestorIds, scopeLabel }) {
   const [items, setItems] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [ancestors, setAncestors] = useState([]);
@@ -22,8 +22,10 @@ export default function SwipeReviewModal({ onClose }) {
     try {
       const user = await base44.auth.me();
       const allItems = await base44.entities.ContentItem.list('-created_date', 200);
+      const inScope = (i) => !branchId ? true
+        : (i.branch_id === branchId || (i.ancestor_ids || []).some(aid => (descendantAncestorIds || []).includes(aid)));
       const pending = (allItems || []).filter(i =>
-        !i.review_status || i.review_status === 'pending' || i.review_status === 'flagged'
+        (!i.review_status || i.review_status === 'pending' || i.review_status === 'flagged') && inScope(i)
       );
       setItems(pending);
 
@@ -31,7 +33,10 @@ export default function SwipeReviewModal({ onClose }) {
       setAncestors(ancList || []);
 
       const sessions = await base44.entities.GoLiveSession.list().catch(() => []);
-      const activeSession = (sessions || []).find(s => s.status !== 'completed');
+      const mySessions = branchId
+        ? (sessions || []).filter(s => s.branch_id === branchId)
+        : (sessions || []).filter(s => !s.branch_id);
+      const activeSession = mySessions.find(s => s.status !== 'completed');
       if (activeSession) {
         const updated = await base44.entities.GoLiveSession.update(activeSession.id, {
           status: 'in_progress',
@@ -40,7 +45,7 @@ export default function SwipeReviewModal({ onClose }) {
           started_by_name: user.full_name,
         });
         setSession(updated);
-      } else if (!sessions || sessions.length === 0) {
+      } else if (mySessions.length === 0) {
         const created = await base44.entities.GoLiveSession.create({
           status: 'in_progress',
           total_items: pending.length,
@@ -48,6 +53,7 @@ export default function SwipeReviewModal({ onClose }) {
           started_by_name: user.full_name,
           confirmed_count: 0,
           flagged_count: 0,
+          branch_id: branchId || null,
         });
         setSession(created);
       }
@@ -185,7 +191,7 @@ export default function SwipeReviewModal({ onClose }) {
       <div className="flex items-center justify-between px-4 py-3 border-b border-[rgba(201,145,58,0.15)]">
         <div className="flex items-center gap-2">
           <Rocket size={20} className="text-gold" />
-          <span className="font-display text-lg text-parchment">Going Live Review</span>
+          <span className="font-display text-lg text-parchment">Going Live Review{scopeLabel ? ` — ${scopeLabel}` : ''}</span>
         </div>
         <button onClick={onClose} className="text-parchment/50 hover:text-parchment p-2">
           <X size={20} />
