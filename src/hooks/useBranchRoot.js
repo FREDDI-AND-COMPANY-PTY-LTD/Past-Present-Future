@@ -16,6 +16,23 @@ function surnameOf(fullName) {
   return parts.length ? parts[parts.length - 1].toUpperCase() : '';
 }
 
+// Walk up the male bloodline (father_id links) from a starting ancestor to
+// the senior-most male ancestor — the true root of the line. Branches follow
+// the male line of descent, so a branch's root is its oldest male ancestor.
+function oldestMaleBloodlineRoot(startId, allAncestors) {
+  const byId = new Map((allAncestors || []).map(a => [a.id, a]));
+  let current = byId.get(startId);
+  if (!current) return startId;
+  const visited = new Set([startId]);
+  while (current.father_id && !visited.has(current.father_id)) {
+    const father = byId.get(current.father_id);
+    if (!father) break;
+    visited.add(father.id);
+    current = father;
+  }
+  return current.id;
+}
+
 /**
  * Resolves the active branch root ancestor and computes the set of
  * descendant ancestor IDs (blood descendants + partners married in).
@@ -51,6 +68,7 @@ export function useBranchRoot() {
 
       const userSurname = surnameOf(me?.full_name);
       let rootId = me?.id ? localStorage.getItem(storageKey(me.id)) : null;
+      const userPicked = !!rootId;
 
       // Fall back to the user's own admin branch whose root ancestor shares
       // their surname (e.g. Freddi → Freddi Bloodline).
@@ -72,6 +90,13 @@ export function useBranchRoot() {
           (b.name || '').toLowerCase().includes('original branch')
         );
         rootId = rootBranch?.ancestor_id;
+      }
+
+      // The root of a branch is its oldest ancestor in the male bloodline:
+      // walk up the father line from the resolved ancestor to the senior-most
+      // male. An explicit user selection (localStorage) is honoured as-is.
+      if (rootId && !userPicked) {
+        rootId = oldestMaleBloodlineRoot(rootId, allAncestors);
       }
 
       // Fall back to Alfredo Freddi by name
