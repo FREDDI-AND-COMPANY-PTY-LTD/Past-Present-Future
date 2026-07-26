@@ -16,6 +16,7 @@ export default function BulkUpload({ ancestors, preselectedAncestorId, user }) {
   const [linkTitle, setLinkTitle] = useState('');
   const [linkType, setLinkType] = useState('video');
   const fileInputRef = useRef(null);
+  const dragCounter = useRef(0);
 
   const matchAncestors = useCallback((analysis) => {
     const allText = [
@@ -193,6 +194,8 @@ export default function BulkUpload({ ancestors, preselectedAncestorId, user }) {
 
   const handleDrop = (e) => {
     e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current = 0;
     setDragging(false);
     processFiles(e.dataTransfer.files);
   };
@@ -358,11 +361,12 @@ export default function BulkUpload({ ancestors, preselectedAncestorId, user }) {
   return (
     <div className="space-y-4">
       <div
-        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-        onDragLeave={() => setDragging(false)}
+        onDragEnter={(e) => { e.preventDefault(); dragCounter.current += 1; setDragging(true); }}
+        onDragOver={(e) => { e.preventDefault(); }}
+        onDragLeave={() => { dragCounter.current -= 1; if (dragCounter.current <= 0) { dragCounter.current = 0; setDragging(false); } }}
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
-        className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${dragging ? 'border-[#C9913A] bg-[rgba(201,145,58,0.05)]' : 'border-[rgba(201,145,58,0.25)] hover:border-[#C9913A] hover:bg-[rgba(201,145,58,0.03)]'}`}
+        className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${dragging ? 'border-[#C9913A] bg-[rgba(201,145,58,0.08)] gold-glow' : 'border-[rgba(201,145,58,0.25)] hover:border-[#C9913A] hover:bg-[rgba(201,145,58,0.03)]'}`}
       >
         <Upload size={32} className="text-gold mx-auto mb-3" />
         <p className="text-parchment font-medium mb-1">Drag &amp; drop multiple files here</p>
