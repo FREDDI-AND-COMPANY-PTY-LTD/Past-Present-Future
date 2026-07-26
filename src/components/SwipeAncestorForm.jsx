@@ -47,16 +47,32 @@ export default function SwipeAncestorForm({ formData, setFormData, ancestors }) 
 
       <div className="grid grid-cols-2 gap-3">
         <div>
+          <label className="text-xs text-parchment/50 mb-1 block">Sex</label>
+          <select value={formData.sex || ''} onChange={e => setField('sex', e.target.value)} className={inputClass}>
+            <option value="">Unknown</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+          </select>
+        </div>
+        <div>
           <label className="text-xs text-parchment/50 mb-1 block">Nationality</label>
           <input value={formData.nationality || ''} onChange={e => setField('nationality', e.target.value)} className={inputClass} placeholder="Italian" />
         </div>
+      </div>
+
+      {formData.sex === 'female' && (
         <div>
-          <label className="text-xs text-parchment/50 mb-1 block">Status</label>
-          <select value={formData.living === false ? 'false' : 'true'} onChange={e => setField('living', e.target.value === 'true')} className={inputClass}>
-            <option value="true">Living</option>
-            <option value="false">Deceased</option>
-          </select>
+          <label className="text-xs text-parchment/50 mb-1 block">Maiden Name (birth surname)</label>
+          <input value={formData.maiden_name || ''} onChange={e => setField('maiden_name', e.target.value)} className={inputClass} placeholder="e.g. Freddi — links to her birth branch" />
         </div>
+      )}
+
+      <div>
+        <label className="text-xs text-parchment/50 mb-1 block">Status</label>
+        <select value={formData.living === false ? 'false' : 'true'} onChange={e => setField('living', e.target.value === 'true')} className={inputClass}>
+          <option value="true">Living</option>
+          <option value="false">Deceased</option>
+        </select>
       </div>
 
       <div>

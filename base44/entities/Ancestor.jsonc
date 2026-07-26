@@ -6,6 +6,18 @@
       "type": "string",
       "description": "Full name of the ancestor"
     },
+    "sex": {
+      "type": "string",
+      "enum": [
+        "male",
+        "female"
+      ],
+      "description": "Biological sex of the ancestor. The branch/bloodline follows the male line of descent (the surname carried by sons); a female ancestor belongs to her husband's branch by marriage, but her maiden_name links back to her birth (father's) branch."
+    },
+    "maiden_name": {
+      "type": "string",
+      "description": "Birth surname for female ancestors \u2014 the surname of her father, identifying the branch she was born into. Used to link a married-in ancestor back to her own family's branch in the archive."
+    },
     "branch_id": {
       "type": "string",
       "description": "The branch this ancestor belongs to. Set when an ancestor is created via branch nomination or assigned to a branch. Used with the branch-admin model so each line's records are owned and governed by that branch's admin."

@@ -21,6 +21,8 @@ export default function AncestorEditDialog({ open, ancestor, onClose, onSaved })
       era: ancestor.era || '',
       biography: ancestor.biography || '',
       living: ancestor.living !== false,
+      sex: ancestor.sex || '',
+      maiden_name: ancestor.maiden_name || '',
     });
     setError('');
   }, [open, ancestor]);
@@ -45,6 +47,8 @@ export default function AncestorEditDialog({ open, ancestor, onClose, onSaved })
         era: form.era || null,
         biography: form.biography || null,
         living: form.living,
+        sex: form.sex || null,
+        maiden_name: (form.sex === 'female' && form.maiden_name?.trim()) ? form.maiden_name.trim() : null,
       });
       if (onSaved) onSaved(updated);
       onClose();
@@ -102,16 +106,41 @@ export default function AncestorEditDialog({ open, ancestor, onClose, onSaved })
 
           <div className="grid grid-cols-2 gap-3">
             <div>
+              <label className="text-xs text-parchment/50 mb-1 block">Sex</label>
+              <div className="flex gap-2">
+                {['male', 'female'].map(s => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setField('sex', s)}
+                    className={`flex-1 px-3 py-2 rounded-lg text-sm border transition-all ${(form.sex || '') === s ? 'border-[#C9913A] bg-[rgba(201,145,58,0.1)] text-gold' : 'border-[rgba(201,145,58,0.15)] text-parchment/50 hover:border-[rgba(201,145,58,0.3)]'}`}
+                  >
+                    {s === 'male' ? 'Male' : 'Female'}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
               <label className="text-xs text-parchment/50 mb-1 block">Nationality</label>
               <input value={form.nationality} onChange={e => setField('nationality', e.target.value)}
                 className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]"
                 placeholder="e.g. Italian" />
             </div>
+          </div>
+
+          {form.sex === 'female' && (
             <div>
-              <label className="text-xs text-parchment/50 mb-1 block">Bloodline</label>
-              <input value={form.bloodline} onChange={e => setField('bloodline', e.target.value)}
-                className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]" />
+              <label className="text-xs text-parchment/50 mb-1 block">Maiden Name <span className="text-parchment/30">(birth surname — links to her birth branch)</span></label>
+              <input value={form.maiden_name} onChange={e => setField('maiden_name', e.target.value)}
+                className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]"
+                placeholder="e.g. Freddi" />
             </div>
+          )}
+
+          <div>
+            <label className="text-xs text-parchment/50 mb-1 block">Bloodline</label>
+            <input value={form.bloodline} onChange={e => setField('bloodline', e.target.value)}
+              className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]" />
           </div>
 
           <div>

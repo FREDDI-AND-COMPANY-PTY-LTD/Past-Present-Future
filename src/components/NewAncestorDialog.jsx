@@ -6,7 +6,7 @@ import LocationAutocompleteInput from '@/components/LocationAutocompleteInput';
 import LocationPicker from '@/components/LocationPicker';
 
 export default function NewAncestorDialog({ open, onClose, onCreated, user }) {
-  const [form, setForm] = useState({ full_name: '', birth_date: '', birth_place: '', living: true });
+  const [form, setForm] = useState({ full_name: '', sex: 'male', maiden_name: '', birth_date: '', birth_place: '', living: true });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [locationPickerOpen, setLocationPickerOpen] = useState(false);
@@ -24,6 +24,8 @@ export default function NewAncestorDialog({ open, onClose, onCreated, user }) {
       const currentUser = user || await base44.auth.me().catch(() => null);
       const created = await base44.entities.Ancestor.create({
         full_name: form.full_name.trim(),
+        sex: form.sex || null,
+        maiden_name: (form.sex === 'female' && form.maiden_name?.trim()) ? form.maiden_name.trim() : null,
         birth_date: form.birth_date || null,
         birth_place: form.birth_place || null,
         living: form.living,
@@ -32,7 +34,7 @@ export default function NewAncestorDialog({ open, onClose, onCreated, user }) {
         created_by_name: currentUser?.full_name || currentUser?.email || null,
       });
       onCreated(created);
-      setForm({ full_name: '', birth_date: '', birth_place: '', living: true });
+      setForm({ full_name: '', sex: 'male', maiden_name: '', birth_date: '', birth_place: '', living: true });
       onClose();
     } catch (e) {
       setError(e.message || 'Failed to create ancestor');
@@ -65,6 +67,33 @@ export default function NewAncestorDialog({ open, onClose, onCreated, user }) {
                 autoFocus
               />
             </div>
+            <div>
+              <label className="text-xs text-parchment/50 mb-1 block">Sex</label>
+              <div className="flex gap-2">
+                {['male', 'female'].map(s => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setForm(f => ({ ...f, sex: s }))}
+                    className={`flex-1 px-3 py-2 rounded-lg text-sm border transition-all ${(form.sex || 'male') === s ? 'border-[#C9913A] bg-[rgba(201,145,58,0.1)] text-gold' : 'border-[rgba(201,145,58,0.15)] text-parchment/50 hover:border-[rgba(201,145,58,0.3)]'}`}
+                  >
+                    {s === 'male' ? 'Male' : 'Female'}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[11px] text-parchment/40 mt-1">The bloodline follows the male line (surname). Female ancestors link back to their birth branch via maiden name.</p>
+            </div>
+            {form.sex === 'female' && (
+              <div>
+                <label className="text-xs text-parchment/50 mb-1 block">Maiden Name <span className="text-parchment/30">(birth surname)</span></label>
+                <input
+                  value={form.maiden_name}
+                  onChange={e => setForm(f => ({ ...f, maiden_name: e.target.value }))}
+                  className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]"
+                  placeholder="e.g. Freddi (links to her birth branch)"
+                />
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs text-parchment/50 mb-1 block">Birth Date</label>

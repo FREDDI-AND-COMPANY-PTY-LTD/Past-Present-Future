@@ -106,6 +106,7 @@ export default function BranchNominationStep({ user, myAncestorId, invite, onCom
       } else if (mother.mode === 'new' && mother.full_name?.trim()) {
         const m = await base44.entities.Ancestor.create({
           full_name: mother.full_name.trim(),
+          sex: 'female',
           birth_place: mother.birth_place || null,
           living: false,
           review_status: 'staged',
@@ -122,6 +123,7 @@ export default function BranchNominationStep({ user, myAncestorId, invite, onCom
       } else if (father.mode === 'new' && father.full_name?.trim()) {
         const f = await base44.entities.Ancestor.create({
           full_name: father.full_name.trim(),
+          sex: 'male',
           birth_place: father.birth_place || null,
           living: false,
           review_status: 'staged',

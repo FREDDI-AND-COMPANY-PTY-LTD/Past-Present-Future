@@ -9,6 +9,7 @@ import SourcedField from '@/components/SourcedField';
 import AncestorEditDialog from '@/components/AncestorEditDialog';
 import RaiseDisputeDialog from '@/components/RaiseDisputeDialog';
 import { formatAncestorName } from '@/lib/ancestorName';
+import BirthBranchLink from '@/components/BirthBranchLink';
 
 export default function AncestorProfile() {
   const { id } = useParams();
@@ -116,7 +117,20 @@ export default function AncestorProfile() {
                 <SourcedField entityType="Ancestor" entityId={id} fieldName="birth_place" label="Place of Birth" value={ancestor.birth_place} icon={MapPin} />
                 <SourcedField entityType="Ancestor" entityId={id} fieldName="nationality" label="Nationality" value={ancestor.nationality} icon={Globe} />
                 <SourcedField entityType="Ancestor" entityId={id} fieldName="bloodline" label="Bloodline" value={ancestor.bloodline} icon={Heart} />
+                {ancestor.sex && (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-[rgba(201,145,58,0.08)] text-amber-light/80 border border-[rgba(201,145,58,0.15)]">
+                    {ancestor.sex === 'male' ? 'Male' : 'Female'}
+                  </span>
+                )}
+                {ancestor.sex === 'female' && ancestor.maiden_name && (
+                  <SourcedField entityType="Ancestor" entityId={id} fieldName="maiden_name" label="Maiden Name" value={ancestor.maiden_name} />
+                )}
               </div>
+              {ancestor.sex === 'female' && ancestor.maiden_name && (
+                <div className="mt-3">
+                  <BirthBranchLink maidenName={ancestor.maiden_name} currentBranchId={ancestor.branch_id} />
+                </div>
+              )}
               {ancestor.biography && (
                 <div className="mt-4">
                   <SourcedField entityType="Ancestor" entityId={id} fieldName="biography" label="Biography" value={ancestor.biography} />
