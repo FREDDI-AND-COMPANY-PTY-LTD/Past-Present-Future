@@ -65,6 +65,29 @@ const INITIAL_FORM = {
 // the event it documents — these get the "The Document" form section.
 const DOCUMENT_TYPES = ['certificate', 'press_clipping', 'passport', 'identity_document', 'correspondence', 'memorial'];
 
+// Fields that can accumulate across pages (e.g. witnesses named on the back).
+const ACCUMULATIVE_FIELDS = ['witnesses', 'mother_name', 'father_name', 'spouse_name'];
+
+// Merge back-page analysis into the front-page extracted fields. Empty fields
+// are filled; accumulative fields are concatenated; otherwise the front-page
+// (authoritative) value is kept.
+const mergeExtractedFields = (existing, incoming) => {
+  if (!incoming) return existing;
+  const merged = { ...(existing || {}) };
+  for (const [k, v] of Object.entries(incoming)) {
+    if (!v) continue;
+    const cur = merged[k];
+    if (!cur) {
+      merged[k] = v;
+    } else if (typeof cur === 'string' && typeof v === 'string' && cur.trim().toLowerCase() !== v.trim().toLowerCase()) {
+      if (ACCUMULATIVE_FIELDS.includes(k) && !cur.toLowerCase().includes(v.toLowerCase())) {
+        merged[k] = `${cur}; ${v}`;
+      }
+    }
+  }
+  return merged;
+};
+
 export default function UploadEvent() {
   const [step, setStep] = useState(STEPS.CAPTURE);
   const [file, setFile] = useState(null);
@@ -97,9 +120,9 @@ export default function UploadEvent() {
   const [refreshing, setRefreshing] = useState(false);
   const [additionalPagesOpen, setAdditionalPagesOpen] = useState(false);
   const [buildingMultipage, setBuildingMultipage] = useState(false);
+  const [addPagesPrompt, setAddPagesPrompt] = useState(false);
 
-  const [bulkMode, setBulkMode] = useState(false);
-  const [bulkSubMode, setBulkSubMode] = useState('batch');
+  const [captureMode, setCaptureMode] = useState('single'); // 'single' | 'multipage' | 'batch'
   const [activeTags, setActiveTags] = useState([]);
   const [tagInput, setTagInput] = useState('');
   const [newAncestorOpen, setNewAncestorOpen] = useState(false);
@@ -382,6 +405,7 @@ Return JSON with this structure:
     }
 
     setStep(STEPS.FORM);
+    setAddPagesPrompt(!!selectedFile?.type?.startsWith('image/') && DOCUMENT_TYPES.includes(result.type));
 
     if (exactMatches.length === 0 && nearMatches.length > 0) {
       setMatchDialog({ mode: 'confirm', matches: nearMatches });
@@ -409,9 +433,11 @@ Return JSON with this structure:
   };
 
   // Combine the front page with additional pages (back of a certificate, extra
-  // booklet pages) into a single multi-page PDF, then swap the stored file to
-  // that PDF. The AI analysis already run on the front page is retained.
-  const handleAdditionalPagesComplete = async (pdfFile) => {
+  // booklet pages, or pages appended to an existing PDF) into a single
+  // multi-page PDF, then swap the stored file to that PDF. The back/added pages
+  // are re-analysed so witness names, stamps and reverse-side data are extracted
+  // and merged into the front-page analysis.
+  const handleAdditionalPagesComplete = async (pdfFile, additionalPageFiles = []) => {
     setBuildingMultipage(true);
     try {
       const uploadRes = await base44.integrations.Core.UploadFile({ file: pdfFile });
@@ -425,6 +451,31 @@ Return JSON with this structure:
         .catch(() => null)
         .finally(() => setGeneratingThumb(false));
       setAdditionalPagesOpen(false);
+
+      if (additionalPageFiles.length > 0) {
+        try {
+          const uploadedUrls = await Promise.all(
+            additionalPageFiles.map(f => base44.integrations.Core.UploadFile({ file: f }).then(r => r.file_url))
+          );
+          const back = await base44.integrations.Core.InvokeLLM({
+            prompt: `These are additional pages (backs, continuation, or booklet pages) of a family history document whose front page has already been analysed. Extract ONLY data visible on THESE pages that would not already be captured from the front — e.g. witness signatures, official stamps, reverse-side notes, continuation text, additional named people or places. Return extracted_fields containing only newly-found values (leave a field empty if it would already be known from the front page), and any additional readable text in "transcription".`,
+            file_urls: uploadedUrls,
+            response_json_schema: {
+              type: 'object',
+              properties: {
+                extracted_fields: { type: 'object' },
+                transcription: { type: 'string' },
+              },
+            },
+          });
+          if (back.extracted_fields) {
+            setExtractedData(prev => mergeExtractedFields(prev, back.extracted_fields));
+          }
+          if (back.transcription && back.transcription.trim()) {
+            setTranscribedText(prev => (prev ? `${prev}\n\n--- Additional page ---\n${back.transcription.trim()}` : back.transcription.trim()));
+          }
+        } catch (e) {}
+      }
     } catch (e) {}
     setBuildingMultipage(false);
   };
@@ -529,6 +580,8 @@ Return JSON with this structure:
     thumbnailPromiseRef.current = null;
     setAdditionalPagesOpen(false);
     setBuildingMultipage(false);
+    setCaptureMode('single');
+    setAddPagesPrompt(false);
     setFormData(INITIAL_FORM);
   };
 
@@ -777,37 +830,6 @@ Return JSON with this structure:
             </div>
 
             <div className="border-t border-[rgba(201,145,58,0.1)] pt-6">
-              <div className="flex justify-center gap-2 mb-6">
-                <button onClick={() => setBulkMode(false)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${!bulkMode ? 'bg-[rgba(201,145,58,0.12)] text-gold border border-[rgba(201,145,58,0.3)]' : 'text-parchment/50 border border-transparent'}`}>
-                  Single Upload
-                </button>
-                <button onClick={() => setBulkMode(true)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${bulkMode ? 'bg-[rgba(201,145,58,0.12)] text-gold border border-[rgba(201,145,58,0.3)]' : 'text-parchment/50 border border-transparent'}`}>
-                  Other Uploads
-                </button>
-              </div>
-
-              {bulkMode ? (
-                <div>
-                  <div className="flex justify-center gap-2 mb-6">
-                    <button onClick={() => setBulkSubMode('batch')}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${bulkSubMode === 'batch' ? 'bg-[rgba(201,145,58,0.12)] text-gold border border-[rgba(201,145,58,0.3)]' : 'text-parchment/50 border border-transparent'}`}>
-                      Batch Separate Items
-                    </button>
-                    <button onClick={() => setBulkSubMode('multipage')}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${bulkSubMode === 'multipage' ? 'bg-[rgba(201,145,58,0.12)] text-gold border border-[rgba(201,145,58,0.3)]' : 'text-parchment/50 border border-transparent'}`}>
-                      Multi-Page Document (Camera)
-                    </button>
-                  </div>
-                  {bulkSubMode === 'batch' ? (
-                    <BulkUpload ancestors={ancestors} preselectedAncestorId={selectedAncestorId} user={user} />
-                  ) : (
-                    <MultiPageCameraCapture onComplete={handleFile} />
-                  )}
-                </div>
-              ) : (
-                <>
               <p className="text-parchment/60 text-sm mb-6 text-center">Upload a file from your device, or use your camera to photograph a document.</p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <button
@@ -838,8 +860,34 @@ Return JSON with this structure:
               <input ref={fileInputRef} type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,image/*" className="hidden" onChange={e => handleFile(e.target.files?.[0])} />
               <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={e => handleFile(e.target.files?.[0])} />
               <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={e => handleFile(e.target.files?.[0])} />
-                </>
-              )}
+
+              <div className="mt-6 pt-6 border-t border-[rgba(201,145,58,0.1)]">
+                <p className="text-xs text-parchment/40 text-center mb-3">Need to upload more than one item?</p>
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  <button
+                    onClick={() => setCaptureMode(captureMode === 'multipage' ? 'single' : 'multipage')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium border transition-all ${captureMode === 'multipage' ? 'bg-[rgba(201,145,58,0.12)] text-gold border-[rgba(201,145,58,0.3)]' : 'text-amber-light/70 border-[rgba(201,145,58,0.2)] hover:border-[rgba(201,145,58,0.4)]'}`}
+                  >
+                    {captureMode === 'multipage' ? 'Hide multi-page capture' : 'Capture a multi-page booklet (camera)'}
+                  </button>
+                  <button
+                    onClick={() => setCaptureMode(captureMode === 'batch' ? 'single' : 'batch')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium border transition-all ${captureMode === 'batch' ? 'bg-[rgba(201,145,58,0.12)] text-gold border-[rgba(201,145,58,0.3)]' : 'text-amber-light/70 border-[rgba(201,145,58,0.2)] hover:border-[rgba(201,145,58,0.4)]'}`}
+                  >
+                    {captureMode === 'batch' ? 'Hide batch upload' : 'Batch upload separate items'}
+                  </button>
+                </div>
+                {captureMode === 'multipage' && (
+                  <div className="mt-5">
+                    <MultiPageCameraCapture onComplete={handleFile} />
+                  </div>
+                )}
+                {captureMode === 'batch' && (
+                  <div className="mt-5">
+                    <BulkUpload ancestors={ancestors} preselectedAncestorId={selectedAncestorId} user={user} />
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="mt-6 pt-6 border-t border-[rgba(201,145,58,0.1)]">
@@ -976,13 +1024,36 @@ Return JSON with this structure:
               </div>
             )}
 
-            {/* Upload Additional Pages — combine the front page with more pages into one multi-page PDF */}
-            {file?.type?.startsWith('image/') && !additionalPagesOpen && (
+            {/* Upload Additional Pages — prompt right after analysis for document types */}
+            {addPagesPrompt && !additionalPagesOpen && (
+              <div className="aged-card rounded-xl p-4 flex items-center gap-3 border-[rgba(201,145,58,0.4)] gold-glow">
+                <FileText size={20} className="text-gold flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm text-parchment font-medium">Add the back of this document or more pages?</p>
+                  <p className="text-xs text-parchment/40">Combine the back of a certificate, extra booklet pages, or continuation pages into one multi-page PDF for this event.</p>
+                </div>
+                <div className="flex gap-2 flex-shrink-0">
+                  <button
+                    onClick={() => { setAdditionalPagesOpen(true); setAddPagesPrompt(false); }}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-gradient-to-r from-[#C9913A] to-[#E8C97A] text-charcoal text-sm font-semibold hover:opacity-90 transition-opacity whitespace-nowrap"
+                  >
+                    <Plus size={14} /> Add Pages
+                  </button>
+                  <button
+                    onClick={() => setAddPagesPrompt(false)}
+                    className="px-3 py-2 rounded-lg border border-[rgba(245,236,215,0.15)] text-parchment/60 text-sm font-medium hover:bg-[rgba(245,236,215,0.05)] transition-colors whitespace-nowrap"
+                  >
+                    Skip
+                  </button>
+                </div>
+              </div>
+            )}
+            {!addPagesPrompt && !additionalPagesOpen && (file?.type?.startsWith('image/') || file?.type === 'application/pdf') && (
               <div className="aged-card rounded-xl p-4 flex items-center gap-3">
                 <FileText size={20} className="text-gold flex-shrink-0" />
                 <div className="flex-1">
                   <p className="text-sm text-parchment font-medium">Add more pages to this event</p>
-                  <p className="text-xs text-parchment/40">Back of a certificate, extra booklet pages — combined into one multi-page PDF.</p>
+                  <p className="text-xs text-parchment/40">{file?.type === 'application/pdf' ? 'Append more pages to this PDF — combined into one multi-page PDF.' : 'Back of a certificate, extra booklet pages — combined into one multi-page PDF.'}</p>
                 </div>
                 <button
                   onClick={() => setAdditionalPagesOpen(true)}
@@ -992,9 +1063,10 @@ Return JSON with this structure:
                 </button>
               </div>
             )}
-            {additionalPagesOpen && file?.type?.startsWith('image/') && (
+            {additionalPagesOpen && (file?.type?.startsWith('image/') || file?.type === 'application/pdf') && (
               <AdditionalPagesUploader
-                primaryImageFile={file}
+                primaryImageFile={file?.type?.startsWith('image/') ? file : null}
+                primaryPdfUrl={file?.type === 'application/pdf' ? fileUrl : null}
                 onComplete={handleAdditionalPagesComplete}
                 onCancel={() => setAdditionalPagesOpen(false)}
               />

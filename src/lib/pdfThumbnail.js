@@ -57,6 +57,36 @@ export async function generatePdfThumbnail(pdfUrl, { maxWidth = 800 } = {}) {
   return blob;
 }
 
+/**
+ * Render EVERY page of a PDF to JPEG blobs (used to merge an existing PDF
+ * with newly-added pages into one combined multi-page PDF).
+ * @param {string} pdfUrl  URL of the PDF file.
+ * @param {object} opts
+ * @param {number} opts.maxWidth  Target pixel width per page (default 1400).
+ * @returns {Promise<Blob[]>}  One JPEG blob per page, in order.
+ */
+export async function renderAllPdfPages(pdfUrl, { maxWidth = 1400 } = {}) {
+  const pdfjsLib = await loadPdfJs();
+  const loadingTask = pdfjsLib.getDocument(pdfUrl);
+  const pdf = await loadingTask.promise;
+  const blobs = [];
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const base = page.getViewport({ scale: 1 });
+    const scale = Math.min(2.5, Math.max(1, maxWidth / base.width));
+    const viewport = page.getViewport({ scale });
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(viewport.width);
+    canvas.height = Math.round(viewport.height);
+    const ctx = canvas.getContext('2d');
+    await page.render({ canvasContext: ctx, viewport }).promise;
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.85));
+    if (blob) blobs.push(blob);
+  }
+  try { await pdf.destroy(); } catch (_) {}
+  return blobs;
+}
+
 /** Quick check for whether a URL points to a directly-renderable image file. */
 export function isImageUrl(url) {
   if (!url) return false;

@@ -1,29 +1,58 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Camera, Upload, X, Loader2, Check, ChevronLeft, ChevronRight, FileText } from 'lucide-react';
 import { buildMultiPagePdf } from '@/lib/multipagePdf';
+import { renderAllPdfPages } from '@/lib/pdfThumbnail';
 
 /**
  * Lets a user append extra pages to an already-uploaded event image (the back
- * of a certificate, extra booklet pages, etc.) and combine the whole set —
- * front page first — into a single multi-page PDF for the one event.
+ * of a certificate, extra booklet pages) OR to an already-uploaded PDF, then
+ * combine the whole set into a single multi-page PDF for the one event.
  *
- * The primary page is passed as the original File so we render it from a local
- * object URL (no CORS canvas taint); added pages are captured via camera or
- * picked from the device. On "Combine", the PDF is handed to onComplete.
+ * Pass EITHER primaryImageFile (an image File) or primaryPdfUrl (a remote PDF
+ * URL). The front page(s) are rendered from local object URLs so the canvas
+ * never taints; for a PDF primary, every existing page is rendered to an image
+ * first. On "Combine", the PDF plus the list of added page Files is handed to
+ * onComplete so the parent can re-analyse the back pages.
  */
-export default function AdditionalPagesUploader({ primaryImageFile, onComplete, onCancel }) {
+export default function AdditionalPagesUploader({ primaryImageFile, primaryPdfUrl, onComplete, onCancel }) {
   const [pages, setPages] = useState([]);
   const [building, setBuilding] = useState(false);
   const [error, setError] = useState('');
+  const [primaryPageUrls, setPrimaryPageUrls] = useState([]);
+  const [renderingPdf, setRenderingPdf] = useState(!!primaryPdfUrl);
   const cameraRef = useRef(null);
   const fileRef = useRef(null);
 
-  // Use a local object URL for the front page so the canvas never taints.
+  const isPdfPrimary = !!primaryPdfUrl;
+
   const primaryObjectUrl = useMemo(
     () => (primaryImageFile ? URL.createObjectURL(primaryImageFile) : ''),
     [primaryImageFile]
   );
   useEffect(() => () => { if (primaryObjectUrl) URL.revokeObjectURL(primaryObjectUrl); }, [primaryObjectUrl]);
+
+  // Render the existing PDF's pages to images so they can be merged with new pages.
+  useEffect(() => {
+    if (!isPdfPrimary) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const blobs = await renderAllPdfPages(primaryPdfUrl, { maxWidth: 1400 });
+        const urls = blobs.map((b) => URL.createObjectURL(b));
+        if (!cancelled) { setPrimaryPageUrls(urls); setRenderingPdf(false); }
+      } catch (e) {
+        if (!cancelled) { setError('Could not read the existing PDF pages.'); setRenderingPdf(false); }
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPdfPrimary, primaryPdfUrl]);
+
+  // Revoke rendered PDF page object URLs on unmount.
+  useEffect(() => () => { primaryPageUrls.forEach((u) => URL.revokeObjectURL(u)); }, [primaryPageUrls]);
+
+  const primarySources = isPdfPrimary ? primaryPageUrls : (primaryObjectUrl ? [primaryObjectUrl] : []);
+  const primaryReady = isPdfPrimary ? primaryPageUrls.length > 0 : !!primaryObjectUrl;
 
   const addPage = (e) => {
     const f = e.target.files?.[0];
@@ -52,14 +81,17 @@ export default function AdditionalPagesUploader({ primaryImageFile, onComplete, 
     setBuilding(true);
     setError('');
     try {
-      const pdfFile = await buildMultiPagePdf([primaryObjectUrl, ...pages], 'event-document');
+      const sources = [...primarySources, ...pages];
+      const pdfFile = await buildMultiPagePdf(sources, 'event-document');
       pages.forEach((p) => URL.revokeObjectURL(p.url));
-      onComplete(pdfFile, pages.length + 1);
+      onComplete(pdfFile, pages.map((p) => p.file));
     } catch (e) {
       setError('Could not build the PDF. Please try again.');
       setBuilding(false);
     }
   };
+
+  const totalPages = primarySources.length + pages.length;
 
   return (
     <div className="aged-card rounded-xl p-5">
@@ -68,14 +100,29 @@ export default function AdditionalPagesUploader({ primaryImageFile, onComplete, 
         <h3 className="font-display text-lg text-parchment">Upload Additional Pages</h3>
       </div>
       <p className="text-xs text-parchment/50 mb-4 leading-relaxed">
-        Add the back of a certificate, extra pages of a booklet, or any pages that belong to this same event. All pages — including the one you've already uploaded — combine into a single multi-page PDF.
+        {isPdfPrimary
+          ? 'Add more pages to this PDF — the existing pages and any you add combine into one multi-page PDF.'
+          : "Add the back of a certificate, extra pages of a booklet, or any pages that belong to this same event. All pages — including the one you've already uploaded — combine into a single multi-page PDF."}
       </p>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
         <div className="aged-card rounded-xl p-2 relative">
-          <span className="absolute top-2 left-2 z-10 px-2 py-0.5 rounded-full bg-[#C9913A] text-xs text-charcoal font-semibold">Page 1 · Front</span>
-          {primaryObjectUrl && (
-            <img src={primaryObjectUrl} alt="front page" className="w-full h-40 object-contain rounded-lg sepia-tint" />
+          {isPdfPrimary ? (
+            <>
+              <span className="absolute top-2 left-2 z-10 px-2 py-0.5 rounded-full bg-[#C9913A] text-xs text-charcoal font-semibold">Existing PDF</span>
+              {renderingPdf ? (
+                <div className="w-full h-40 flex items-center justify-center">
+                  <Loader2 size={20} className="text-gold animate-spin" />
+                </div>
+              ) : (
+                primaryPageUrls[0] && <img src={primaryPageUrls[0]} alt="existing pdf first page" className="w-full h-40 object-contain rounded-lg sepia-tint" />
+              )}
+            </>
+          ) : (
+            <>
+              <span className="absolute top-2 left-2 z-10 px-2 py-0.5 rounded-full bg-[#C9913A] text-xs text-charcoal font-semibold">Page 1 · Front</span>
+              {primaryObjectUrl && <img src={primaryObjectUrl} alt="front page" className="w-full h-40 object-contain rounded-lg sepia-tint" />}
+            </>
           )}
         </div>
         {pages.map((p, idx) => (
@@ -119,7 +166,7 @@ export default function AdditionalPagesUploader({ primaryImageFile, onComplete, 
         <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={addPage} />
       </div>
 
-      {pages.length > 0 && (
+      {pages.length > 0 && primaryReady && (
         <button
           onClick={combine}
           disabled={building}
@@ -128,7 +175,7 @@ export default function AdditionalPagesUploader({ primaryImageFile, onComplete, 
           {building ? (
             <><Loader2 size={18} className="animate-spin" /> Building PDF...</>
           ) : (
-            <><Check size={18} /> Combine into Multi-Page PDF ({pages.length + 1} pages)</>
+            <><Check size={18} /> Combine into Multi-Page PDF ({totalPages} pages)</>
           )}
         </button>
       )}
