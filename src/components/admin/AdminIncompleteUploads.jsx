@@ -68,7 +68,7 @@ export default function AdminIncompleteUploads({ items, onResolved }) {
 
             {isExpanded && (
               <div className="border-t border-[rgba(201,145,58,0.12)] p-5">
-                <AdminEventEditor item={item} onApproved={(id) => { setLocalItems(prev => prev.filter(i => i.id !== id)); setExpandedId(null); onResolved?.(id); }} />
+                <AdminEventEditor item={item} onApproved={(id) => { setLocalItems(prev => prev.filter(i => i.id !== id)); setExpandedId(null); onResolved?.(id); }} onDeleted={(id) => { setLocalItems(prev => prev.filter(i => i.id !== id)); setExpandedId(null); onResolved?.(id); }} />
               </div>
             )}
           </div>
