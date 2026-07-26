@@ -9,6 +9,7 @@ import { analyzeCrop } from '@/lib/cropAnalysis';
 export default function BulkUpload({ ancestors, preselectedAncestorId, user }) {
   const [items, setItems] = useState([]);
   const [dragging, setDragging] = useState(false);
+  const dragCounter = useRef(0);
   const [savingAll, setSavingAll] = useState(false);
   const [ancestorsList, setAncestorsList] = useState(ancestors);
   const [showLinkForm, setShowLinkForm] = useState(false);
@@ -193,8 +194,32 @@ export default function BulkUpload({ ancestors, preselectedAncestorId, user }) {
 
   const handleDrop = (e) => {
     e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current = 0;
     setDragging(false);
     processFiles(e.dataTransfer.files);
+  };
+
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current += 1;
+    setDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current -= 1;
+    if (dragCounter.current <= 0) {
+      dragCounter.current = 0;
+      setDragging(false);
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
   };
 
   const handleFileSelect = (e) => {
@@ -358,15 +383,18 @@ export default function BulkUpload({ ancestors, preselectedAncestorId, user }) {
   return (
     <div className="space-y-4">
       <div
-        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-        onDragLeave={() => setDragging(false)}
+        onDragEnter={handleDragEnter}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
-        className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${dragging ? 'border-[#C9913A] bg-[rgba(201,145,58,0.05)]' : 'border-[rgba(201,145,58,0.25)] hover:border-[#C9913A] hover:bg-[rgba(201,145,58,0.03)]'}`}
+        className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${dragging ? 'border-[#C9913A] bg-[rgba(201,145,58,0.08)] scale-[1.01]' : 'border-[rgba(201,145,58,0.25)] hover:border-[#C9913A] hover:bg-[rgba(201,145,58,0.03)]'}`}
       >
-        <Upload size={32} className="text-gold mx-auto mb-3" />
-        <p className="text-parchment font-medium mb-1">Drag &amp; drop multiple files here</p>
-        <p className="text-xs text-parchment/40">or click to browse — photos, audio, video</p>
+        <div className="pointer-events-none">
+          <Upload size={32} className="text-gold mx-auto mb-3" />
+          <p className="text-parchment font-medium mb-1">Drag &amp; drop multiple files here</p>
+          <p className="text-xs text-parchment/40">or click to browse — photos, audio, video</p>
+        </div>
         <input ref={fileInputRef} type="file" accept="image/*,audio/*,video/*" multiple className="hidden" onChange={handleFileSelect} />
       </div>
 
