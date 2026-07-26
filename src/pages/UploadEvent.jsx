@@ -18,6 +18,7 @@ import LocationAutocompleteInput from '@/components/LocationAutocompleteInput';
 import DateSelectInput from '@/components/DateSelectInput';
 import { analyzeCrop } from '@/lib/cropAnalysis';
 import { generatePdfThumbnail } from '@/lib/pdfThumbnail';
+import { geocodeAddress } from '@/lib/geocode';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAccessRights } from '@/hooks/useAccessRights';
 
@@ -253,13 +254,14 @@ Return JSON with this structure:
   "extracted_fields": {
     "full_name": "", "date_of_birth": "", "place_of_birth": "", "date_of_death": "", "place_of_death": "",
     "mother_name": "", "father_name": "", "spouse_name": "", "witnesses": "", "issuing_authority": "",
-    "date_of_event": "", "place_of_event": "", "nationality": "", "religion": "", "occupation": "",
+    "date_of_event": "", "date_of_award": "", "place_of_event": "", "nationality": "", "religion": "", "occupation": "",
     "document_number": "", "registration_number": "", "ship_name": "", "port_of_departure": "", "port_of_arrival": "",
     "military_unit": "", "rank": "", "service_number": "", "residence_address": "",
     "passport_number": "", "date_of_issue": "", "date_of_expiry": "", "issuing_country": "",
     "place_of_issue": "", "surname": "", "given_names": "", "national_id_number": "",
     "sex": "", "height": "", "profession": "", "distinguishing_marks": "", "photograph_present": ""
   },
+  "event_date": "The single best date for the EVENT depicted in this image/document — the date a photo was taken, the date a birth/marriage/death was registered, the date a degree or qualification was AWARDED, the date of arrival/naturalization, the date a letter was written, etc. Use ISO format YYYY-MM-DD when determinable; otherwise a human-readable date (e.g. '14 March 1923', 'circa 1950'). This is the date the EVENT happened — NOT the date the document was printed or issued, unless they are the same. Empty string if no date can be determined.",
   "event_location": "The geographic location WHERE THE EVENT DEPICTED in this image/document took place — NOT the location of the person viewing or uploading it. For a photo, this is where the photo was taken. For a certificate, this is where the birth/marriage/death was registered. For a letter, this is where it was written or sent from. For a passport, this is where it was issued. Be as specific as possible (city, state, country). Empty string if no location can be determined from the image.",
   "visual_elements": {
     "objects": ["list of ALL visible objects — e.g. 'fountain', 'church spire', 'vintage car', 'furniture'"],
@@ -284,6 +286,7 @@ Return JSON with this structure:
           categorization_notes: { type: 'string' },
           transcription: { type: 'string' },
           extracted_fields: { type: 'object' },
+          event_date: { type: 'string' },
           visual_elements: { type: 'object' },
           suggested_title: { type: 'string' },
           suggested_description: { type: 'string' },
@@ -365,7 +368,12 @@ Return JSON with this structure:
       || result.visual_elements?.locations_visible?.[0]
       || '';
 
-    const eventDate = result.extracted_fields?.date_of_event || result.extracted_fields?.date_of_birth || '';
+    const eventDate = result.event_date
+      || result.extracted_fields?.date_of_award
+      || result.extracted_fields?.date_of_event
+      || result.extracted_fields?.date_of_birth
+      || result.extracted_fields?.date_of_death
+      || '';
     const eventDescription = result.suggested_description || '';
 
     // ── STABLE missing-field tracking ──
@@ -383,8 +391,13 @@ Return JSON with this structure:
     // For press clippings: the masthead publication date / newspaper city
     //   (often not in extracted_fields, so fall back to event_location only if
     //   it's clearly a publication city \u2014 otherwise leave blank for the user).
-    const publicationDate = result.extracted_fields?.date_of_issue || '';
-    const publicationLocation = result.extracted_fields?.place_of_issue || '';
+    let publicationDate = result.extracted_fields?.date_of_issue || '';
+    let publicationLocation = result.extracted_fields?.place_of_issue || '';
+    // If the issue date/place is the same as the event date/place, it's not a
+    // separate publication detail (e.g. a degree certificate's award date IS the
+    // event) — don't duplicate it into the publication fields.
+    if (publicationDate && eventDate && publicationDate === eventDate) publicationDate = '';
+    if (publicationLocation && eventLocation && publicationLocation === eventLocation) publicationLocation = '';
 
     setFormData(f => ({
       ...f,
@@ -396,6 +409,17 @@ Return JSON with this structure:
       publication_location_name: publicationLocation,
       ancestor_ids: autoTaggedIds,
     }));
+
+    // Auto-geocode the AI's event location into latitude/longitude so the map pin
+    // is placed without the user opening the map picker. Falls back silently if
+    // the geocoder is unavailable — the manual picker still works.
+    if (eventLocation) {
+      geocodeAddress(eventLocation).then(geo => {
+        if (geo) {
+          setFormData(f => ({ ...f, latitude: String(geo.lat), longitude: String(geo.lng) }));
+        }
+      }).catch(() => {});
+    }
 
     if (matchedAncestorId && (
       (result.type === 'certificate' && (result.document_subtype === 'birth_certificate' || result.document_subtype === 'marriage_certificate')) ||

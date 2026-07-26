@@ -49,13 +49,14 @@ Return JSON with this structure:
   "extracted_fields": {
     "full_name": "", "date_of_birth": "", "place_of_birth": "", "date_of_death": "", "place_of_death": "",
     "mother_name": "", "father_name": "", "spouse_name": "", "witnesses": "", "issuing_authority": "",
-    "date_of_event": "", "place_of_event": "", "nationality": "", "religion": "", "occupation": "",
+    "date_of_event": "", "date_of_award": "", "place_of_event": "", "nationality": "", "religion": "", "occupation": "",
     "document_number": "", "registration_number": "", "ship_name": "", "port_of_departure": "", "port_of_arrival": "",
     "military_unit": "", "rank": "", "service_number": "", "residence_address": "",
     "passport_number": "", "date_of_issue": "", "date_of_expiry": "", "issuing_country": "",
     "place_of_issue": "", "surname": "", "given_names": "", "national_id_number": "",
     "sex": "", "height": "", "profession": "", "distinguishing_marks": "", "photograph_present": ""
   },
+  "event_date": "The single best date for the EVENT depicted — the date a photo was taken, the date a birth/marriage/death was registered, the date a degree or qualification was AWARDED, the date of arrival/naturalization, etc. ISO YYYY-MM-DD when determinable, otherwise human-readable. This is the date the EVENT happened, NOT the date the document was printed/issued unless they are the same. Empty string if no date can be determined.",
   "event_location": "The geographic location WHERE THE EVENT DEPICTED in this image/document took place — NOT the location of the person viewing or uploading it. For a photo, this is where the photo was taken. For a certificate, this is where the birth/marriage/death was registered. Be as specific as possible (city, state, country). Empty string if no location can be determined.",
   "visual_elements": {
     "objects": ["list of ALL visible objects"],
@@ -85,6 +86,7 @@ export async function analyzeImage(fileUrl) {
         categorization_notes: { type: 'string' },
         transcription: { type: 'string' },
         extracted_fields: { type: 'object' },
+        event_date: { type: 'string' },
         event_location: { type: 'string' },
         visual_elements: { type: 'object' },
         suggested_title: { type: 'string' },
