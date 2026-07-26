@@ -28,7 +28,7 @@ export default function AdminUploads({ refreshKey }) {
     setLoading(true);
     try {
       const data = await base44.entities.ContentItem.list('-created_date', 50);
-      setItems(data || []);
+      setItems((data || []).filter(i => !i.review_status || i.review_status === 'pending' || i.review_status === 'flagged'));
     } catch (e) {}
     setLoading(false);
   };
@@ -40,7 +40,7 @@ export default function AdminUploads({ refreshKey }) {
     const originalItem = items.find(i => i.id === id);
     try {
       await base44.entities.ContentItem.update(id, { review_status: 'reviewed' });
-      setItems(prev => prev.map(i => i.id === id ? { ...i, review_status: 'reviewed' } : i));
+      setItems(prev => prev.filter(i => i.id !== id));
       if (originalItem) {
         setUndoToasts(prev => [...prev, {
           id: `mark-${id}-${Date.now()}`,
