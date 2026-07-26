@@ -9,6 +9,12 @@ const AUTO_APPLICABLE = (p) =>
   !!p.target_id &&
   p.proposal_type === 'field_change';
 
+const RELATIONSHIP_APPLICABLE = (p) =>
+  p.target_type === 'ancestor' &&
+  !!p.target_id &&
+  p.proposal_type === 'relationship' &&
+  !!(p.proposed_changes && (p.proposed_changes.new_mother || p.proposed_changes.new_father || p.proposed_changes.new_partner));
+
 const STATUS_STYLES = {
   pending: 'bg-[rgba(201,145,58,0.08)] text-amber-light border-[rgba(201,145,58,0.2)]',
   approved: 'bg-green-900/20 text-green-400 border-green-800/30',
@@ -32,6 +38,7 @@ export default function ProposalDetail() {
 
   const isAdmin = user?.role === 'admin';
   const auto = proposal && AUTO_APPLICABLE(proposal);
+  const relationship = proposal && RELATIONSHIP_APPLICABLE(proposal);
 
   const act = async (status, apply = false) => {
     setProcessing(true);
@@ -41,6 +48,8 @@ export default function ProposalDetail() {
       if (apply && auto) {
         const entity = proposal.target_type === 'ancestor' ? base44.entities.Ancestor : base44.entities.ContentItem;
         await entity.update(proposal.target_id, proposal.proposed_changes || {});
+      } else if (apply && relationship) {
+        await base44.functions.invoke('applyRelationshipProposal', { proposal_id: id, review_note: reviewNote || '' });
       }
       await base44.entities.Proposal.update(id, { status, review_note: reviewNote || '', ...meta });
       setProposal((prev) => ({ ...prev, status, review_note: reviewNote }));
@@ -109,7 +118,7 @@ export default function ProposalDetail() {
                   placeholder="Admin note (optional)..."
                 />
                 <div className="flex flex-wrap gap-2">
-                  {auto ? (
+                  {auto || relationship ? (
                     <button onClick={() => act('applied', true)} disabled={processing} className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-green-900/20 text-green-400 text-sm border border-green-800/30 hover:bg-green-900/30 transition-colors disabled:opacity-50">
                       {processing ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />} Approve & Apply
                     </button>

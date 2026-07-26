@@ -302,7 +302,12 @@ export default function UploadAssistant({ rootAncestor }) {
             proposed_by_name: me?.full_name || me?.email || 'Family Member',
             action_path: p.action_path || '',
           });
-          if (created && created.id) proposalAction = { label: 'View proposal status', path: `/proposal/${created.id}` };
+          if (created && created.id) {
+            proposalAction = [{ label: 'View proposal status', path: `/proposal/${created.id}` }];
+            if (p.target_type === 'ancestor') {
+              proposalAction.push({ label: 'View on Family Tree', path: '/family-tree' });
+            }
+          }
         } catch (e) {}
       }
 
@@ -311,7 +316,7 @@ export default function UploadAssistant({ rootAncestor }) {
       setMessages(prev => [...prev, {
         role: 'assistant',
         content: replyText,
-        actions: proposalAction ? [...baseActions, proposalAction] : baseActions,
+        actions: proposalAction ? [...baseActions, ...proposalAction] : baseActions,
       }]);
       // In voice-conversation mode, read the reply aloud automatically.
       if (voiceMode && speechSupported) speakText(replyText, assistantIdx);

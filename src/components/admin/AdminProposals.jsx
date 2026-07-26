@@ -11,6 +11,15 @@ const AUTO_APPLICABLE = (p) =>
   !!p.target_id &&
   p.proposal_type === 'field_change';
 
+// A relationship proposal (e.g. "add Lucia as Nonno's mother") is auto-applicable
+// via the applyRelationshipProposal backend function, which creates the new
+// ancestor and links them onto the target — no manual data entry.
+const RELATIONSHIP_APPLICABLE = (p) =>
+  p.target_type === 'ancestor' &&
+  !!p.target_id &&
+  p.proposal_type === 'relationship' &&
+  !!(p.proposed_changes && (p.proposed_changes.new_mother || p.proposed_changes.new_father || p.proposed_changes.new_partner));
+
 export default function AdminProposals({ refreshKey }) {
   const [proposals, setProposals] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -39,8 +48,12 @@ export default function AdminProposals({ refreshKey }) {
     setProcessing((prev) => ({ ...prev, [p.id]: 'applying' }));
     try {
       const meta = await adminMeta();
-      const entity = p.target_type === 'ancestor' ? base44.entities.Ancestor : base44.entities.ContentItem;
-      await entity.update(p.target_id, p.proposed_changes || {});
+      if (RELATIONSHIP_APPLICABLE(p)) {
+        await base44.functions.invoke('applyRelationshipProposal', { proposal_id: p.id, review_note: reviewNote[p.id] || '' });
+      } else {
+        const entity = p.target_type === 'ancestor' ? base44.entities.Ancestor : base44.entities.ContentItem;
+        await entity.update(p.target_id, p.proposed_changes || {});
+      }
       await base44.entities.Proposal.update(p.id, {
         status: 'applied',
         review_note: reviewNote[p.id] || 'Approved and auto-applied by admin',
@@ -106,6 +119,7 @@ export default function AdminProposals({ refreshKey }) {
       {proposals.map((p) => {
         const isExpanded = expandedId === p.id;
         const auto = AUTO_APPLICABLE(p);
+        const relationship = RELATIONSHIP_APPLICABLE(p);
         return (
           <div key={p.id} className="aged-card rounded-xl p-5">
             <div className="flex items-start justify-between gap-4 mb-3">
@@ -158,7 +172,7 @@ export default function AdminProposals({ refreshKey }) {
             />
 
             <div className="flex flex-wrap gap-2">
-              {auto ? (
+              {auto || relationship ? (
                 <button onClick={() => handleApply(p)} disabled={processing[p.id]} className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-green-900/20 text-green-400 text-xs border border-green-800/30 hover:bg-green-900/30 transition-colors disabled:opacity-50">
                   {processing[p.id] === 'applying' ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />} Approve & Apply
                 </button>
