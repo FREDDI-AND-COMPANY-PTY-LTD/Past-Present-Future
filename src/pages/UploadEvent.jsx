@@ -124,6 +124,9 @@ export default function UploadEvent() {
   const [addPagesPrompt, setAddPagesPrompt] = useState(false);
 
   const [captureMode, setCaptureMode] = useState('single'); // 'single' | 'multipage' | 'batch'
+  const [batchInitialFiles, setBatchInitialFiles] = useState(null);
+  const [mainDragging, setMainDragging] = useState(false);
+  const mainDragCounter = useRef(0);
   const [activeTags, setActiveTags] = useState([]);
   const [tagInput, setTagInput] = useState('');
   const [newAncestorOpen, setNewAncestorOpen] = useState(false);
@@ -504,6 +507,24 @@ Return JSON with this structure:
     setBuildingMultipage(false);
   };
 
+  // Drop onto the main upload card: a single file goes through the standard
+  // single-upload analysis flow; multiple files auto-open batch mode and are
+  // handed to the BulkUpload component to process.
+  const handleMainDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    mainDragCounter.current = 0;
+    setMainDragging(false);
+    const files = Array.from(e.dataTransfer.files || []);
+    if (files.length === 0) return;
+    if (files.length === 1) {
+      handleFile(files[0]);
+    } else {
+      setBatchInitialFiles(files);
+      setCaptureMode('batch');
+    }
+  };
+
   const handleFile = async (selectedFile) => {
     if (!selectedFile) return;
     setFile(selectedFile);
@@ -804,7 +825,13 @@ Return JSON with this structure:
         <p className="text-parchment/50 text-sm mb-8">Share a piece of family history — the system will analyse it and help you tag it.</p>
 
         {step === STEPS.CAPTURE && (
-          <div className="aged-card rounded-2xl p-8">
+          <div
+            className={`aged-card rounded-2xl p-8 transition-all ${mainDragging ? 'border-[#C9913A] gold-glow bg-[rgba(201,145,58,0.04)]' : ''}`}
+            onDragEnter={(e) => { e.preventDefault(); mainDragCounter.current += 1; setMainDragging(true); }}
+            onDragOver={(e) => { e.preventDefault(); }}
+            onDragLeave={() => { mainDragCounter.current -= 1; if (mainDragCounter.current <= 0) { mainDragCounter.current = 0; setMainDragging(false); } }}
+            onDrop={handleMainDrop}
+          >
             {/* Ancestor pre-selection */}
             <div className="mb-6">
               <label className="text-sm text-parchment/60 mb-2 flex items-center gap-1.5">
@@ -908,7 +935,7 @@ Return JSON with this structure:
                 )}
                 {captureMode === 'batch' && (
                   <div className="mt-5">
-                    <BulkUpload ancestors={ancestors} preselectedAncestorId={selectedAncestorId} user={user} />
+                    <BulkUpload ancestors={ancestors} preselectedAncestorId={selectedAncestorId} user={user} initialFiles={batchInitialFiles} />
                   </div>
                 )}
               </div>

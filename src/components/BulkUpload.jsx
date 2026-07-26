@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Upload, Loader2, Save, Check, AlertCircle, Link2, Video, Music } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { analyzeImage } from '@/lib/imageAnalysis';
@@ -6,7 +6,7 @@ import { analyzeAudioVideo } from '@/lib/avAnalysis';
 import BulkUploadItem from '@/components/BulkUploadItem';
 import { analyzeCrop } from '@/lib/cropAnalysis';
 
-export default function BulkUpload({ ancestors, preselectedAncestorId, user }) {
+export default function BulkUpload({ ancestors, preselectedAncestorId, user, initialFiles }) {
   const [items, setItems] = useState([]);
   const [dragging, setDragging] = useState(false);
   const [savingAll, setSavingAll] = useState(false);
@@ -17,6 +17,15 @@ export default function BulkUpload({ ancestors, preselectedAncestorId, user }) {
   const [linkType, setLinkType] = useState('video');
   const fileInputRef = useRef(null);
   const dragCounter = useRef(0);
+
+  // When files are dropped onto the main upload card (multi-file), they are
+  // handed in here and processed immediately on mount.
+  useEffect(() => {
+    if (initialFiles && initialFiles.length > 0) {
+      processFiles(initialFiles);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const matchAncestors = useCallback((analysis) => {
     const allText = [
