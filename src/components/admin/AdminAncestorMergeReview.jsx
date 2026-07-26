@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Users, Loader2, GitMerge, X, Check, AlertTriangle, ExternalLink, ArrowRight, ShieldCheck } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Users, Loader2, GitMerge, X, Check, AlertTriangle, ExternalLink, ArrowRight, ShieldCheck, Flag } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-AU') : '');
@@ -43,6 +43,38 @@ export default function AdminAncestorMergeReview() {
   const [resolved, setResolved] = useState(new Set());
   const [pairs, setPairs] = useState([]);
   const [scanned, setScanned] = useState(null);
+  const [flagPairs, setFlagPairs] = useState([]);
+  const [ancestorsById, setAncestorsById] = useState({});
+  const [flagBusy, setFlagBusy] = useState(null);
+  const [flagResolved, setFlagResolved] = useState(new Set());
+
+  useEffect(() => {
+    base44.entities.ConflictFlag.filter({ flag_type: 'duplicate_ancestor', status: 'open' })
+      .then(setFlagPairs).catch(() => {});
+    base44.entities.Ancestor.list().then(list => {
+      const map = {}; (list || []).forEach(a => { map[a.id] = a; });
+      setAncestorsById(map);
+    }).catch(() => {});
+  }, []);
+
+  const handleFlagMerge = async (flagId, keepId, removeId) => {
+    setFlagBusy(flagId);
+    try {
+      await base44.functions.invoke('mergeAncestorProfiles', { keep_ancestor_id: keepId, remove_ancestor_id: removeId });
+      await base44.entities.ConflictFlag.update(flagId, { status: 'resolved', resolution_note: 'Profiles merged.' }).catch(() => {});
+      setFlagResolved(prev => new Set([...prev, flagId]));
+    } catch (e) {}
+    setFlagBusy(null);
+  };
+
+  const handleFlagDismiss = async (flagId) => {
+    setFlagBusy(flagId);
+    try {
+      await base44.entities.ConflictFlag.update(flagId, { status: 'dismissed', resolution_note: 'Not the same person.' }).catch(() => {});
+      setFlagResolved(prev => new Set([...prev, flagId]));
+    } catch (e) {}
+    setFlagBusy(null);
+  };
 
   const handleScan = async () => {
     setScanning(true);
@@ -96,6 +128,54 @@ export default function AdminAncestorMergeReview() {
         <p className="text-xs text-parchment/40 px-1">
           Scanned {scanned} profile{scanned !== 1 ? 's' : ''} · {pairs.length} pair{pairs.length !== 1 ? 's' : ''} flagged for review.
         </p>
+      )}
+
+      {/* Family-reported duplicates — submitted via the "Flag as Duplicate" button on a profile */}
+      {flagPairs.filter(f => !flagResolved.has(f.id)).length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 px-1">
+            <Flag size={14} className="text-amber-light" />
+            <span className="text-xs text-amber-light/70 uppercase tracking-wider">Requested by family</span>
+          </div>
+          {flagPairs.filter(f => !flagResolved.has(f.id)).map(flag => {
+            const a = ancestorsById[flag.ancestor_id];
+            const b = ancestorsById[flag.duplicate_of_ancestor_id];
+            if (!a || !b) return null;
+            const aIsEarlier = new Date(a.created_date) <= new Date(b.created_date);
+            const earlier = aIsEarlier ? a : b;
+            const later = aIsEarlier ? b : a;
+            return (
+              <div key={flag.id} className="aged-card rounded-xl p-5 border-[rgba(201,145,58,0.25)]">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle size={18} className="text-amber-light" />
+                    <span className="text-sm text-parchment font-medium">Family-reported duplicate</span>
+                    <span className="text-xs text-parchment/40">by {flag.raised_by_name || 'a family member'}</span>
+                  </div>
+                </div>
+                <p className="text-xs text-parchment/50 mb-3 italic">{flag.dispute_description}</p>
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <ProfileCard ancestor={earlier} badge="Earliest Saved" badgeClass="bg-green-900/20 text-green-400 border border-green-800/30" />
+                  <ProfileCard ancestor={later} badge="Later Saved" badgeClass="bg-[rgba(245,236,215,0.05)] text-parchment/40 border border-[rgba(245,236,215,0.1)]" />
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button onClick={() => handleFlagMerge(flag.id, earlier.id, later.id)} disabled={flagBusy === flag.id}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gradient-to-r from-[#C9913A] to-[#E8C97A] text-charcoal text-sm font-semibold disabled:opacity-50 hover:opacity-90 transition-opacity">
+                    {flagBusy === flag.id ? <Loader2 size={14} className="animate-spin" /> : <ShieldCheck size={14} />} Approve & Merge
+                  </button>
+                  <button onClick={() => handleFlagMerge(flag.id, later.id, earlier.id)} disabled={flagBusy === flag.id}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[rgba(201,145,58,0.2)] text-amber-light text-sm hover:bg-[rgba(201,145,58,0.08)] transition-colors disabled:opacity-50">
+                    {flagBusy === flag.id ? <Loader2 size={14} className="animate-spin" /> : <GitMerge size={14} />} Keep Later Instead
+                  </button>
+                  <button onClick={() => handleFlagDismiss(flag.id)} disabled={flagBusy === flag.id}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-parchment/50 border border-[rgba(245,236,215,0.1)] hover:bg-[rgba(245,236,215,0.05)] transition-colors disabled:opacity-50">
+                    <X size={14} /> Not the Same Person
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
 
       {/* Results */}

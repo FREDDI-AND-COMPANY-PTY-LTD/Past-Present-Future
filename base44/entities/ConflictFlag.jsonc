@@ -8,7 +8,7 @@
     },
     "ancestor_id": {
       "type": "string",
-      "description": "ID of the ancestor profile being disputed, if applicable"
+      "description": "ID of the ancestor profile being disputed, if applicable. For a duplicate_ancestor flag, this is the profile the family member believes is a duplicate."
     },
     "field_name": {
       "type": "string",
@@ -19,10 +19,11 @@
       "enum": [
         "dispute",
         "duplicate_upload",
-        "contested"
+        "contested",
+        "duplicate_ancestor"
       ],
       "default": "dispute",
-      "description": "Type of conflict flag \u2014 'dispute' for data disagreements, 'duplicate_upload' for potential duplicate content, 'contested' for fields where the correct value is uncertain after merge resolution"
+      "description": "Type of conflict flag \u2014 'dispute' for data disagreements, 'duplicate_upload' for potential duplicate content, 'contested' for fields where the correct value is uncertain after merge resolution, 'duplicate_ancestor' for a family-reported duplicate ancestor profile requesting consolidation"
     },
     "duplicate_of_content_item_id": {
       "type": "string",
@@ -31,6 +32,14 @@
     "duplicate_of_content_item_title": {
       "type": "string",
       "description": "Title of the existing content item that this upload may duplicate"
+    },
+    "duplicate_of_ancestor_id": {
+      "type": "string",
+      "description": "When flag_type is 'duplicate_ancestor' \u2014 ID of the other ancestor profile this one is believed to duplicate"
+    },
+    "duplicate_of_ancestor_name": {
+      "type": "string",
+      "description": "Name of the other ancestor profile this one is believed to duplicate (denormalised at flag time)"
     },
     "duplicate_confidence": {
       "type": "number",

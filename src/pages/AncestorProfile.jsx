@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { MapPin, Calendar, Globe, Heart, FileText, Award, Flag, ChevronLeft, BookUser, Pencil } from 'lucide-react';
+import { MapPin, Calendar, Globe, Heart, FileText, Award, Flag, GitMerge, ChevronLeft, BookUser, Pencil } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import AncestorAvatar from '@/components/AncestorAvatar';
@@ -8,6 +8,7 @@ import ContentCard from '@/components/ContentCard';
 import SourcedField from '@/components/SourcedField';
 import AncestorEditDialog from '@/components/AncestorEditDialog';
 import RaiseDisputeDialog from '@/components/RaiseDisputeDialog';
+import FlagDuplicateAncestorDialog from '@/components/FlagDuplicateAncestorDialog';
 import { formatAncestorName } from '@/lib/ancestorName';
 import BirthBranchLink from '@/components/BirthBranchLink';
 
@@ -20,6 +21,7 @@ export default function AncestorProfile() {
   const [allAncestors, setAllAncestors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showDispute, setShowDispute] = useState(false);
+  const [showDuplicate, setShowDuplicate] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [editOpen, setEditOpen] = useState(false);
 
@@ -216,13 +218,30 @@ export default function AncestorProfile() {
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-display text-2xl text-parchment">Gallery</h2>
-            <button
-              onClick={() => setShowDispute(true)}
-              className="flex items-center gap-1.5 text-sm text-amber-light/70 hover:text-amber-light transition-colors"
-            >
-              <Flag size={14} /> Raise a Dispute
-            </button>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setShowDuplicate(true)}
+                className="flex items-center gap-1.5 text-sm text-amber-light/70 hover:text-amber-light transition-colors"
+              >
+                <GitMerge size={14} /> Flag as Duplicate
+              </button>
+              <button
+                onClick={() => setShowDispute(true)}
+                className="flex items-center gap-1.5 text-sm text-amber-light/70 hover:text-amber-light transition-colors"
+              >
+                <Flag size={14} /> Raise a Dispute
+              </button>
+            </div>
           </div>
+
+          {showDuplicate && (
+            <FlagDuplicateAncestorDialog
+              ancestor={ancestor}
+              allAncestors={allAncestors}
+              onClose={() => setShowDuplicate(false)}
+              onSubmitted={() => setShowDuplicate(false)}
+            />
+          )}
 
           {showDispute && (
             <RaiseDisputeDialog
