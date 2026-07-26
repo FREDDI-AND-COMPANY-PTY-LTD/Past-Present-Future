@@ -30,6 +30,15 @@
     "description": {
       "type": "string",
       "description": "Description of the branch"
+    },
+    "newsletter_frequency": {
+      "type": "string",
+      "enum": [
+        "weekly",
+        "monthly"
+      ],
+      "default": "monthly",
+      "description": "How often this branch's family newsletter is generated. Set by the branch admin; defaults to monthly."
     }
   },
   "required": [

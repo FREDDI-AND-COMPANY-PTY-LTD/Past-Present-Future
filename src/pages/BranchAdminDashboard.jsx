@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Shield, UserPlus, Loader2, Check, X, GitBranch, Mail, Clock, AlertCircle, Upload, Users, Flag } from 'lucide-react';
+import { Shield, UserPlus, Loader2, Check, X, GitBranch, Mail, Clock, AlertCircle, Upload, Users, Flag, Newspaper } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import BranchAdminInviteDialog from '@/components/BranchAdminInviteDialog';
 import GoLiveTaskCard from '@/components/GoLiveTaskCard';
+import BranchNewsletterFrequency from '@/components/BranchNewsletterFrequency';
 
 function computeDescendants(rootId, allAncestors) {
   const ids = new Set(rootId ? [rootId] : []);
@@ -247,6 +248,19 @@ export default function BranchAdminDashboard() {
             </div>
           </div>
           <p className="text-xs text-parchment/30 mt-2">Queues are scoped to the branch(es) you administer. Full review tools are in the global Admin Dashboard.</p>
+        </div>
+
+        {/* Newsletter frequency — per branch */}
+        <div className="mt-8">
+          <h2 className="font-display text-xl text-parchment mb-4 flex items-center gap-2">
+            <Newspaper size={18} className="text-gold" /> Newsletter Frequency
+          </h2>
+          <div className="space-y-3 max-w-xl">
+            {myBranches.map(b => (
+              <BranchNewsletterFrequency key={b.id} branch={b} onUpdate={load} />
+            ))}
+          </div>
+          <p className="text-xs text-parchment/30 mt-2">Tick a branch to issue its newsletter weekly; untick for monthly (the default).</p>
         </div>
 
         {/* Nominations awaiting review */}
