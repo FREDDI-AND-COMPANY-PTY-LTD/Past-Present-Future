@@ -7,6 +7,7 @@ import BranchAdminInviteDialog from '@/components/BranchAdminInviteDialog';
 import GoLiveTaskCard from '@/components/GoLiveTaskCard';
 import BranchNewsletterFrequency from '@/components/BranchNewsletterFrequency';
 import BranchAdminEscalationDialog from '@/components/BranchAdminEscalationDialog';
+import BranchAdminSuccession from '@/components/BranchAdminSuccession';
 
 function computeDescendants(rootId, allAncestors) {
   const ids = new Set(rootId ? [rootId] : []);
@@ -202,6 +203,9 @@ export default function BranchAdminDashboard() {
             </button>
           </div>
         </div>
+
+        {/* Succession — transfer branch admin to an elder living male ancestor */}
+        <BranchAdminSuccession branches={myBranches} allAncestors={allAncestors} user={user} onChanged={load} />
 
         {/* Branch-scoped admin queues */}
         <div className="mt-8">

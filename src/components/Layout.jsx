@@ -7,6 +7,7 @@ import InviteUserDialog from '@/components/InviteUserDialog';
 import NewsletterOptIn from '@/components/NewsletterOptIn';
 import NotificationPopup from '@/components/NotificationPopup';
 import BranchUpgradeForm from '@/components/BranchUpgradeForm';
+import BranchTransferInvitation from '@/components/BranchTransferInvitation';
 import LogoutButton from '@/components/LogoutButton';
 import UploadAssistant from '@/components/UploadAssistant';
 import PageHero from '@/components/PageHero';
@@ -177,6 +178,7 @@ export default function Layout({ children }) {
       {/* Main content */}
       <div className="flex-1 pt-16 lg:pt-0">
         {user && <NotificationPopup />}
+        {user && <BranchTransferInvitation branches={adminBranches} user={user} onResponded={() => base44.entities.Branch.list().then(setAdminBranches).catch(() => {})} />}
         <main className="min-h-screen">
           {location.pathname !== '/' && <PageHero />}
           {children}

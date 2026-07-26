@@ -39,6 +39,59 @@
       ],
       "default": "monthly",
       "description": "How often this branch's family newsletter is generated. Set by the branch admin; defaults to monthly."
+    },
+    "transfer_request": {
+      "type": "object",
+      "description": "A pending invitation to transfer branch admin to an elder (senior living male) ancestor in the bloodline. The first member to register is a placeholder admin; authority naturally devolves upon the eldest living male in the line. The current admin may propose a transfer, which emails the elder an invitation they must accept.",
+      "properties": {
+        "to_user_id": {
+          "type": "string",
+          "description": "User ID of the invited successor"
+        },
+        "to_user_name": {
+          "type": "string",
+          "description": "Display name of the invited successor"
+        },
+        "to_ancestor_id": {
+          "type": "string",
+          "description": "Ancestor profile ID of the invited successor"
+        },
+        "to_ancestor_name": {
+          "type": "string",
+          "description": "Full name of the invited successor ancestor"
+        },
+        "from_user_id": {
+          "type": "string",
+          "description": "User ID of the admin proposing the transfer"
+        },
+        "from_user_name": {
+          "type": "string",
+          "description": "Display name of the admin proposing the transfer"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "accepted",
+            "declined"
+          ],
+          "description": "pending = invitation sent, awaiting the elder's response; accepted = admin transferred; declined = elder declined"
+        },
+        "invited_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the transfer invitation was sent"
+        },
+        "responded_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the elder accepted or declined"
+        },
+        "message": {
+          "type": "string",
+          "description": "Optional note from the current admin to the successor"
+        }
+      }
     }
   },
   "required": [
