@@ -42,9 +42,15 @@ export default function Newsletters() {
                 to={`/newsletter/${nl.id}`}
                 className="block aged-card rounded-xl p-6 hover:border-[rgba(201,145,58,0.4)] transition-all duration-300 group"
               >
-                <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
                   <Calendar size={14} className="text-gold/60" />
                   <span className="text-xs text-parchment/50">{nl.month_label}</span>
+                  {nl.branch_name && (
+                    <span className="px-2 py-0.5 rounded-full bg-[rgba(201,145,58,0.12)] text-gold text-xs border border-[rgba(201,145,58,0.25)] flex items-center gap-1">
+                      {nl.branch_name}
+                      {nl.frequency === 'weekly' && <span className="text-amber-light/60">· weekly</span>}
+                    </span>
+                  )}
                   {nl.item_count > 0 && (
                     <span className="px-2 py-0.5 rounded-full bg-[rgba(201,145,58,0.08)] text-amber-light/70 text-xs">
                       {nl.item_count} {nl.item_count === 1 ? 'discovery' : 'discoveries'}

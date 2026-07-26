@@ -4,7 +4,7 @@
   "properties": {
     "headline": {
       "type": "string",
-      "description": "AI-generated headline for the monthly newsletter"
+      "description": "AI-generated headline for the chronicle"
     },
     "intro": {
       "type": "string",
@@ -31,7 +31,7 @@
     },
     "month_label": {
       "type": "string",
-      "description": "Human-readable month and year (e.g. 'July 2026')"
+      "description": "Human-readable period label \u2014 month for monthly chronicles (e.g. 'July 2026'), 'Week of \u2026' for weekly"
     },
     "item_count": {
       "type": "number",
@@ -50,6 +50,22 @@
         "type": "string"
       },
       "description": "URLs of photos included in the newsletter gallery"
+    },
+    "branch_id": {
+      "type": "string",
+      "description": "Branch this chronicle is scoped to. Chronicles are distinct per branch \u2014 each draws only from its own line's discoveries."
+    },
+    "branch_name": {
+      "type": "string",
+      "description": "Denormalised branch name at generation time"
+    },
+    "frequency": {
+      "type": "string",
+      "enum": [
+        "weekly",
+        "monthly"
+      ],
+      "description": "Cadence this chronicle was generated at \u2014 mirrors the branch's newsletter_frequency"
     }
   },
   "required": [
