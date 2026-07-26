@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, Upload, FileText, Image as ImageIcon, Award, Loader2, Check, Sparkles, Newspaper, Tag, Link2, Search, UserPlus, BookUser, IdCard, Mail, Heart, HelpCircle, Eye, MessageSquare, AlertCircle, MapPin, Calendar, RefreshCw, X, Video, Music, Lock } from 'lucide-react';
+import { Camera, Upload, FileText, Image as ImageIcon, Award, Loader2, Check, Sparkles, Newspaper, Tag, Link2, Search, UserPlus, BookUser, IdCard, Mail, Heart, HelpCircle, Eye, MessageSquare, AlertCircle, MapPin, Calendar, RefreshCw, X, Video, Music, Lock, Plus } from 'lucide-react';
 import PublicationFields from '@/components/PublicationFields';
 import MissingFieldPrompts from '@/components/MissingFieldPrompts';
 import { base44 } from '@/api/base44Client';
@@ -9,6 +9,7 @@ import AncestorMatchDialog from '@/components/AncestorMatchDialog';
 import LocationPicker from '@/components/LocationPicker';
 import BulkUpload from '@/components/BulkUpload';
 import MultiPageCameraCapture from '@/components/MultiPageCameraCapture';
+import AdditionalPagesUploader from '@/components/AdditionalPagesUploader';
 import MentionTextarea from '@/components/MentionTextarea';
 import NewAncestorDialog from '@/components/NewAncestorDialog';
 import DuplicateResolutionDialog from '@/components/DuplicateResolutionDialog';
@@ -94,6 +95,8 @@ export default function UploadEvent() {
   const [locationPickerOpen, setLocationPickerOpen] = useState(false);
   const [assistantMessages, setAssistantMessages] = useState(getMessages());
   const [refreshing, setRefreshing] = useState(false);
+  const [additionalPagesOpen, setAdditionalPagesOpen] = useState(false);
+  const [buildingMultipage, setBuildingMultipage] = useState(false);
 
   const [bulkMode, setBulkMode] = useState(false);
   const [bulkSubMode, setBulkSubMode] = useState('batch');
@@ -404,6 +407,27 @@ Return JSON with this structure:
     setRefreshing(false);
   };
 
+  // Combine the front page with additional pages (back of a certificate, extra
+  // booklet pages) into a single multi-page PDF, then swap the stored file to
+  // that PDF. The AI analysis already run on the front page is retained.
+  const handleAdditionalPagesComplete = async (pdfFile) => {
+    setBuildingMultipage(true);
+    try {
+      const uploadRes = await base44.integrations.Core.UploadFile({ file: pdfFile });
+      const newUrl = uploadRes.file_url;
+      setFileUrl(newUrl);
+      setFile(pdfFile);
+      setGeneratingThumb(true);
+      thumbnailPromiseRef.current = generatePdfThumbnail(newUrl)
+        .then(blob => base44.integrations.Core.UploadFile({ file: new File([blob], 'thumbnail.jpg', { type: 'image/jpeg' }) }))
+        .then(r => { setThumbnailUrl(r.file_url); return r.file_url; })
+        .catch(() => null)
+        .finally(() => setGeneratingThumb(false));
+      setAdditionalPagesOpen(false);
+    } catch (e) {}
+    setBuildingMultipage(false);
+  };
+
   const handleFile = async (selectedFile) => {
     if (!selectedFile) return;
     setFile(selectedFile);
@@ -502,6 +526,8 @@ Return JSON with this structure:
     setThumbnailUrl(null);
     setGeneratingThumb(false);
     thumbnailPromiseRef.current = null;
+    setAdditionalPagesOpen(false);
+    setBuildingMultipage(false);
     setFormData(INITIAL_FORM);
   };
 
@@ -930,6 +956,30 @@ Return JSON with this structure:
                   </p>
                 )}
               </div>
+            )}
+
+            {/* Upload Additional Pages — combine the front page with more pages into one multi-page PDF */}
+            {file?.type?.startsWith('image/') && !additionalPagesOpen && (
+              <div className="aged-card rounded-xl p-4 flex items-center gap-3">
+                <FileText size={20} className="text-gold flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm text-parchment font-medium">Add more pages to this event</p>
+                  <p className="text-xs text-parchment/40">Back of a certificate, extra booklet pages — combined into one multi-page PDF.</p>
+                </div>
+                <button
+                  onClick={() => setAdditionalPagesOpen(true)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[rgba(201,145,58,0.1)] border border-[rgba(201,145,58,0.2)] text-amber-light text-sm font-medium hover:bg-[rgba(201,145,58,0.15)] transition-colors whitespace-nowrap"
+                >
+                  <Plus size={14} /> Add Pages
+                </button>
+              </div>
+            )}
+            {additionalPagesOpen && file?.type?.startsWith('image/') && (
+              <AdditionalPagesUploader
+                primaryImageFile={file}
+                onComplete={handleAdditionalPagesComplete}
+                onCancel={() => setAdditionalPagesOpen(false)}
+              />
             )}
 
             {/* Extracted document fields */}

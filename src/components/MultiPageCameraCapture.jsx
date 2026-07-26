@@ -1,26 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { jsPDF } from 'jspdf';
 import { Camera, X, Loader2, Check, ChevronLeft, ChevronRight } from 'lucide-react';
-
-const loadImage = (src) => new Promise((resolve, reject) => {
-  const img = new Image();
-  img.onload = () => resolve(img);
-  img.onerror = reject;
-  img.src = src;
-});
-
-// Flatten any transparency onto white (so camera PNGs/JPEGs archive cleanly)
-// and emit a consistent JPEG data URL for jsPDF.
-const toJpegDataUrl = (img) => {
-  const canvas = document.createElement('canvas');
-  canvas.width = img.naturalWidth;
-  canvas.height = img.naturalHeight;
-  const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.drawImage(img, 0, 0);
-  return canvas.toDataURL('image/jpeg', 0.85);
-};
+import { buildMultiPagePdf } from '@/lib/multipagePdf';
 
 /**
  * Camera-based multi-page document capture.
@@ -58,23 +38,8 @@ export default function MultiPageCameraCapture({ onComplete }) {
     setBuilding(true);
     setError('');
     try {
-      const imgs = await Promise.all(pages.map(p => loadImage(p.url)));
-      const dataUrls = imgs.map(toJpegDataUrl);
-      const first = imgs[0];
-      const doc = new jsPDF({
-        orientation: first.naturalWidth > first.naturalHeight ? 'landscape' : 'portrait',
-        unit: 'pt',
-        format: [first.naturalWidth, first.naturalHeight],
-      });
-      doc.addImage(dataUrls[0], 'JPEG', 0, 0, first.naturalWidth, first.naturalHeight);
-      for (let i = 1; i < imgs.length; i++) {
-        const im = imgs[i];
-        doc.addPage([im.naturalWidth, im.naturalHeight], im.naturalWidth > im.naturalHeight ? 'landscape' : 'portrait');
-        doc.addImage(dataUrls[i], 'JPEG', 0, 0, im.naturalWidth, im.naturalHeight);
-      }
-      const blob = doc.output('blob');
+      const pdfFile = await buildMultiPagePdf(pages);
       pages.forEach(p => URL.revokeObjectURL(p.url));
-      const pdfFile = new File([blob], `multi-page-document-${Date.now()}.pdf`, { type: 'application/pdf' });
       onComplete(pdfFile);
     } catch (e) {
       setError('Could not build the PDF. Please try again.');
