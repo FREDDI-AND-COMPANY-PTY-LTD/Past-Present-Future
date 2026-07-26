@@ -95,12 +95,18 @@ APP IMPROVEMENT DETECTION:
 
 PROPOSING CHANGES TO EXISTING RECORDS & RELATIONSHIPS:
 - When a family member asks you to change, add, or correct something on a record that ALREADY exists — e.g. "add Lucia as Nonno's mother", "his birth date should be 1923", "link these two as spouses", "fix the spelling of her name" — you cannot edit the archive directly. This is a proposed change that must go to Jason (the archive admin / Elder) for approval before anything changes.
-- In these cases, set the "admin_handoff" field (below) with:
+- In these cases, set the "proposal" field (below) with:
   - summary: a one-line description of the proposed change (e.g. "Add Lucia Rossi as mother of <ancestor name>").
-  - proposed_solution: the concrete change to apply — name the ancestor (use the real id from the ARCHIVE DATA snapshot if you can match it), the field, and the new value, phrased so the admin can action it directly. E.g. "On ancestor <id> (<name>), set mother_id to a new ancestor 'Lucia Rossi' (born Venice, Italy) — please create her profile and link it."
-  - action_path: the route the admin can open to apply it — "/ancestor/<id>" for an ancestor profile, "/admin" for the dashboard, or empty string if none applies.
+  - target_type: "ancestor" if the change is to an ancestor profile, "content_item" if to an uploaded event/photo/certificate, "other" otherwise.
+  - target_id: the real id of the targeted record from the ARCHIVE DATA snapshot, if you can match it; empty string if not known.
+  - target_label: the name or title of the targeted record.
+  - proposal_type: "field_change" when the change is concrete field:value edits the admin can apply directly (e.g. setting birth_date, correcting a spelling, linking mother_id/father_id/partner_id to an EXISTING ancestor id); "relationship" when it requires creating a NEW ancestor and linking them (e.g. "add Lucia as Nonno's mother" where Lucia has no profile yet); "other" for anything else.
+  - proposed_changes: an object of field:value pairs to apply (e.g. {"birth_date":"1923-05-14"} or {"mother_id":"<existing ancestor id>"}). For a "relationship" to a new ancestor, put the identifying details under a single key, e.g. {"new_mother": {"full_name":"Lucia Rossi","birth_place":"Venice, Italy"}}.
+  - reason: the user's explanation of why the change is needed.
+  - action_path: the route the admin can open to apply it — "/ancestor/<id>" for an ancestor profile, "/content/<id>" for an event, "/admin" for the dashboard, or empty string.
 - In your reply to the user, say warmly that you've sent their proposed change to Jason for approval and that nothing in the archive changes until he reviews it. Do NOT give them copy-paste text to apply themselves for these requests — the proposal goes to the admin, not back to the user.
 - This does NOT apply to NEW uploads (use the upload-form interpretation guidance for those) or to routine questions you can answer — only to requested changes to records that already exist.
+- "admin_handoff" is reserved for requests you genuinely cannot resolve AND are not record/relationship changes (e.g. a bug, a layout/banner edit, a capability the app doesn't expose). Do not set both "proposal" and "admin_handoff" for the same request.
 
 ADMIN HANDOFF (when you cannot resolve the user's request):
 - Some user requests are outside your power — e.g. editing the app's layout or banner images, re-cropping a photo across the archive, changing a record you can't edit directly, proposing a relationship/family-tree edit (see above), fixing a bug, or performing an action the interface doesn't expose to you.
@@ -246,6 +252,20 @@ export default function UploadAssistant({ rootAncestor }) {
               },
             },
             improvement_suggestion: { type: 'string' },
+            proposal: {
+              type: 'object',
+              properties: {
+                summary: { type: 'string' },
+                target_type: { type: 'string' },
+                target_id: { type: 'string' },
+                target_label: { type: 'string' },
+                proposal_type: { type: 'string' },
+                proposed_changes: { type: 'object' },
+                original_values: { type: 'object' },
+                reason: { type: 'string' },
+                action_path: { type: 'string' },
+              },
+            },
             admin_handoff: {
               type: 'object',
               properties: {
@@ -259,11 +279,39 @@ export default function UploadAssistant({ rootAncestor }) {
       });
 
       const replyText = result.reply || 'Sorry, I could not generate a response. Please try again.';
+
+      // If the AI proposed a change to an existing record/relationship, create a
+      // structured Proposal the admin can approve (with an automated approval link).
+      let proposalAction = null;
+      if (result.proposal && result.proposal.summary && result.proposal.summary.trim()) {
+        const p = result.proposal;
+        try {
+          const me = await base44.auth.me().catch(() => null);
+          const created = await base44.entities.Proposal.create({
+            summary: p.summary.trim(),
+            source: 'ai_assistant',
+            target_type: p.target_type || 'other',
+            target_id: p.target_id || '',
+            target_label: p.target_label || '',
+            proposal_type: p.proposal_type || 'field_change',
+            proposed_changes: p.proposed_changes || {},
+            original_values: p.original_values || {},
+            reason: p.reason || question,
+            status: 'pending',
+            proposed_by_id: me?.id || null,
+            proposed_by_name: me?.full_name || me?.email || 'Family Member',
+            action_path: p.action_path || '',
+          });
+          if (created && created.id) proposalAction = { label: 'View proposal status', path: `/proposal/${created.id}` };
+        } catch (e) {}
+      }
+
       const assistantIdx = newMessages.length;
+      const baseActions = Array.isArray(result.actions) ? result.actions.filter(a => a && a.label && a.path) : [];
       setMessages(prev => [...prev, {
         role: 'assistant',
         content: replyText,
-        actions: Array.isArray(result.actions) ? result.actions.filter(a => a && a.label && a.path) : [],
+        actions: proposalAction ? [...baseActions, proposalAction] : baseActions,
       }]);
       // In voice-conversation mode, read the reply aloud automatically.
       if (voiceMode && speechSupported) speakText(replyText, assistantIdx);

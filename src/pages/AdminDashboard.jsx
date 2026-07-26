@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Activity, Flag, Copy, Users, AlertCircle, Edit3, Upload, Network, Brain, Inbox, Settings, Crop, ArrowRight, Loader2 } from 'lucide-react';
+import { Activity, Flag, Copy, Users, AlertCircle, Edit3, Upload, Network, Brain, Inbox, Settings, Crop, ArrowRight, Loader2, Lightbulb } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import AdminEditRequests from '@/components/admin/AdminEditRequests';
@@ -10,6 +10,7 @@ import AdminUploads from '@/components/admin/AdminUploads';
 import AdminUncategorized from '@/components/admin/AdminUncategorized';
 import AdminFamilyLinks from '@/components/admin/AdminFamilyLinks';
 import AdminProblems from '@/components/admin/AdminProblems';
+import AdminProposals from '@/components/admin/AdminProposals';
 import AdminDisputesList from '@/components/admin/AdminDisputesList';
 import AdminActivityFeed from '@/components/admin/AdminActivityFeed';
 import AdminIncompleteUploads from '@/components/admin/AdminIncompleteUploads';
@@ -32,6 +33,7 @@ const REVIEW_FILTERS = [
   { key: 'familyLinks', label: 'Family Links', icon: Network },
   { key: 'ancestors', label: 'Ancestors', icon: Users },
   { key: 'problems', label: 'Problems', icon: Inbox },
+  { key: 'proposals', label: 'Proposals', icon: Lightbulb },
 ];
 
 const DUP_FILTERS = [
@@ -56,6 +58,7 @@ export default function AdminDashboard() {
   const [familyLinkCount, setFamilyLinkCount] = useState(0);
   const [uncategorizedCount, setUncategorizedCount] = useState(0);
   const [problemCount, setProblemCount] = useState(0);
+  const [proposalCount, setProposalCount] = useState(0);
 
   useEffect(() => {
     base44.auth.me().then(setUser).catch(() => {});
@@ -69,7 +72,8 @@ export default function AdminDashboard() {
       base44.entities.FamilyLink.filter({ status: 'pending' }),
       base44.entities.ContentItem.filter({ content_type: 'uncategorized' }),
       base44.entities.ProblemReport.filter({ status: 'open' }),
-    ]).then(([lg, fl, na, fi, er, items, flk, unc, probs]) => {
+      base44.entities.Proposal.filter({ status: 'pending' }),
+    ]).then(([lg, fl, na, fi, er, items, flk, unc, probs, props]) => {
       setLogs(lg || []);
       setFlags(fl || []);
       setNewAncestors(na || []);
@@ -79,6 +83,7 @@ export default function AdminDashboard() {
       setFamilyLinkCount((flk || []).length);
       setUncategorizedCount((unc || []).length);
       setProblemCount((probs || []).length);
+      setProposalCount((props || []).length);
     }).catch(() => {}).finally(() => setLoading(false));
   }, [refreshKey]);
 
@@ -91,6 +96,7 @@ export default function AdminDashboard() {
     familyLinks: familyLinkCount,
     ancestors: newAncestors.length,
     problems: problemCount,
+    proposals: proposalCount,
   };
 
   const topCounts = {
@@ -181,6 +187,7 @@ export default function AdminDashboard() {
                 {reviewFilter === 'familyLinks' && <AdminFamilyLinks refreshKey={refreshKey} />}
                 {reviewFilter === 'ancestors' && <AdminNewAncestors ancestors={newAncestors} onVerified={() => setRefreshKey(k => k + 1)} />}
                 {reviewFilter === 'problems' && <AdminProblems refreshKey={refreshKey} />}
+                {reviewFilter === 'proposals' && <AdminProposals refreshKey={refreshKey} />}
               </>
             )}
             {tab === 'disputes' && <AdminDisputesList flags={flags} onResolved={() => setRefreshKey(k => k + 1)} />}

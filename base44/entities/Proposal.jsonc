@@ -1,0 +1,124 @@
+{
+  "name": "Proposal",
+  "type": "object",
+  "properties": {
+    "summary": {
+      "type": "string",
+      "description": "One-line description of the proposed change"
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "ai_assistant",
+        "user"
+      ],
+      "default": "ai_assistant",
+      "description": "Where the proposal originated"
+    },
+    "target_type": {
+      "type": "string",
+      "enum": [
+        "ancestor",
+        "content_item",
+        "other"
+      ],
+      "default": "other",
+      "description": "Kind of record this proposal targets"
+    },
+    "target_id": {
+      "type": "string",
+      "description": "ID of the targeted record, if known"
+    },
+    "target_label": {
+      "type": "string",
+      "description": "Display name or title of the targeted record"
+    },
+    "proposal_type": {
+      "type": "string",
+      "enum": [
+        "field_change",
+        "relationship",
+        "other"
+      ],
+      "default": "field_change",
+      "description": "field_change = concrete field:value edits the admin can auto-apply; relationship = links that may require creating a new ancestor; other = manual"
+    },
+    "proposed_changes": {
+      "type": "object",
+      "description": "Field:value pairs to apply to the target record. For a relationship to a new ancestor, put identifying details under a single key e.g. { new_mother: { full_name, birth_place } }.",
+      "properties": {}
+    },
+    "original_values": {
+      "type": "object",
+      "description": "Snapshot of the original field values, if known",
+      "properties": {}
+    },
+    "reason": {
+      "type": "string",
+      "description": "Why the change is proposed (the user's explanation)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "rejected",
+        "applied"
+      ],
+      "default": "pending",
+      "description": "pending = awaiting admin review; approved = admin approved (manual application may be needed); applied = auto-applied to the record; rejected = declined"
+    },
+    "proposed_by_id": {
+      "type": "string",
+      "description": "User ID of the proposer"
+    },
+    "proposed_by_name": {
+      "type": "string",
+      "description": "Display name of the proposer"
+    },
+    "reviewed_by_id": {
+      "type": "string",
+      "description": "Admin user ID who reviewed the proposal"
+    },
+    "reviewed_by_name": {
+      "type": "string",
+      "description": "Display name of the reviewing admin"
+    },
+    "review_note": {
+      "type": "string",
+      "description": "Admin's note on the decision"
+    },
+    "action_path": {
+      "type": "string",
+      "description": "App route to open the target record (e.g. /ancestor/<id>, /content/<id>, /admin), used for the automated approval link"
+    }
+  },
+  "required": [
+    "summary",
+    "status"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
