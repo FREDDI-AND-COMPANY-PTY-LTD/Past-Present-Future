@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Shield, UserPlus, Loader2, Check, X, GitBranch, Mail, Clock, AlertCircle, Upload, Users, Flag, Newspaper } from 'lucide-react';
+import { Shield, UserPlus, Loader2, Check, X, GitBranch, Mail, Clock, AlertCircle, Upload, Users, Flag, Newspaper, LifeBuoy } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import BranchAdminInviteDialog from '@/components/BranchAdminInviteDialog';
 import GoLiveTaskCard from '@/components/GoLiveTaskCard';
 import BranchNewsletterFrequency from '@/components/BranchNewsletterFrequency';
+import BranchAdminEscalationDialog from '@/components/BranchAdminEscalationDialog';
 
 function computeDescendants(rootId, allAncestors) {
   const ids = new Set(rootId ? [rootId] : []);
@@ -46,6 +47,7 @@ export default function BranchAdminDashboard() {
   const [newAncestors, setNewAncestors] = useState([]);
   const [disputes, setDisputes] = useState([]);
   const [branchScopes, setBranchScopes] = useState([]);
+  const [escalateOpen, setEscalateOpen] = useState(false);
 
   const load = async () => {
     try {
@@ -189,10 +191,16 @@ export default function BranchAdminDashboard() {
               <p className="text-parchment/50 text-sm">You are the sole authority over: {myBranches.map(b => b.name).join(', ')}</p>
             </div>
           </div>
-          <button onClick={() => setInviteOpen(true)}
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-gradient-to-r from-[#C9913A] to-[#E8C97A] text-charcoal text-sm font-semibold hover:opacity-90 transition-opacity">
-            <UserPlus size={15} /> Invite to Branch
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setEscalateOpen(true)}
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg border border-[rgba(201,145,58,0.3)] text-amber-light text-sm font-medium hover:bg-[rgba(201,145,58,0.08)] transition-colors">
+              <LifeBuoy size={15} /> Escalate to Global Admin
+            </button>
+            <button onClick={() => setInviteOpen(true)}
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-gradient-to-r from-[#C9913A] to-[#E8C97A] text-charcoal text-sm font-semibold hover:opacity-90 transition-opacity">
+              <UserPlus size={15} /> Invite to Branch
+            </button>
+          </div>
         </div>
 
         {/* Branch-scoped admin queues */}
@@ -350,6 +358,7 @@ export default function BranchAdminDashboard() {
       </div>
 
       <BranchAdminInviteDialog open={inviteOpen} onClose={() => { setInviteOpen(false); load(); }} branches={myBranches} user={user} />
+      <BranchAdminEscalationDialog open={escalateOpen} onClose={() => setEscalateOpen(false)} branches={myBranches} user={user} />
     </Layout>
   );
 }

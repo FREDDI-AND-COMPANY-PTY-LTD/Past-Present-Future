@@ -55,7 +55,7 @@ export default function Layout({ children }) {
 
   const navItemsWithAdmin = [
     ...navItems,
-    ...(isAdmin ? [{ label: 'Admin', path: '/admin', icon: Shield }] : []),
+    ...(isAdmin ? [{ label: 'Global Admin', path: '/admin', icon: Shield }] : []),
     ...(isBranchAdmin ? [{ label: 'Branch Admin', path: '/branch-admin', icon: Shield }] : []),
   ];
 

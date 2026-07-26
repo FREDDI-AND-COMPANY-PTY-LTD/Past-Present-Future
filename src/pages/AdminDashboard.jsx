@@ -115,8 +115,8 @@ export default function AdminDashboard() {
             <Activity size={24} className="text-gold" />
           </div>
           <div>
-            <h1 className="font-display text-3xl text-parchment">Admin Dashboard</h1>
-            <p className="text-parchment/50 text-sm">Everything needing your attention, organised by the kind of work</p>
+            <h1 className="font-display text-3xl text-parchment">Global Admin</h1>
+            <p className="text-parchment/50 text-sm">Oversight capacity — a backdoor into the archive for anything the system can't resolve on its own (AI proposals, branch-admin escalations, stuck workflows)</p>
           </div>
         </div>
 

@@ -1,11 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertCircle, Loader2, Check, Clock, User, Sparkles } from 'lucide-react';
+import { AlertCircle, Loader2, Check, Clock, User, Sparkles, LifeBuoy } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
 const actionFromDesc = (desc) => {
   const m = (desc || '').match(/Suggested action:\s*(\/[^\s\n]+)/);
   return m ? m[1] : null;
+};
+
+const sourceBadge = {
+  branch_admin_request: { label: 'Branch Escalation', icon: LifeBuoy, color: 'text-amber-light', bg: 'bg-[rgba(201,145,58,0.12)]', border: 'border-[rgba(201,145,58,0.25)]' },
+  ai_handoff: { label: 'AI Handoff', icon: Sparkles, color: 'text-amber-light', bg: 'bg-[rgba(201,145,58,0.12)]', border: 'border-[rgba(201,145,58,0.25)]' },
+  user_report: { label: 'User Report', icon: AlertCircle, color: 'text-parchment/50', bg: 'bg-[rgba(245,236,215,0.05)]', border: 'border-[rgba(245,236,215,0.1)]' },
+};
+
+const resolveSource = (problem) => {
+  if (problem.source) return problem.source;
+  if (String(problem.title || '').startsWith('AI Handoff:')) return 'ai_handoff';
+  return 'user_report';
 };
 
 const statusConfig = {
@@ -75,9 +87,19 @@ export default function AdminProblems({ refreshKey }) {
               <div className="flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h3 className="font-display text-lg text-parchment">{problem.title}</h3>
-                  {String(problem.title).startsWith('AI Handoff:') && (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-[rgba(201,145,58,0.12)] text-amber-light border border-[rgba(201,145,58,0.25)] font-medium flex items-center gap-1">
-                      <Sparkles size={9} /> AI Handoff
+                  {(() => {
+                    const src = resolveSource(problem);
+                    const badge = sourceBadge[src] || sourceBadge.user_report;
+                    const BadgeIcon = badge.icon;
+                    return (
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full ${badge.bg} ${badge.color} ${badge.border} border font-medium flex items-center gap-1`}>
+                        <BadgeIcon size={9} /> {badge.label}
+                      </span>
+                    );
+                  })()}
+                  {problem.branch_name && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-[rgba(201,145,58,0.06)] text-parchment/50 border border-[rgba(201,145,58,0.12)]">
+                      {problem.branch_name}
                     </span>
                   )}
                 </div>

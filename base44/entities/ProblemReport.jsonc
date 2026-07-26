@@ -10,6 +10,24 @@
       "type": "string",
       "description": "Detailed description of the problem reported by the user"
     },
+    "source": {
+      "type": "string",
+      "enum": [
+        "user_report",
+        "branch_admin_request",
+        "ai_handoff"
+      ],
+      "default": "user_report",
+      "description": "Origin of the report \u2014 user_report = a family member hit a snag; branch_admin_request = a branch admin escalating to the global admin (stuck/jammed, unresolvable AI proposal, etc.); ai_handoff = the AI assistant couldn't resolve something and handed it off"
+    },
+    "branch_id": {
+      "type": "string",
+      "description": "For branch_admin_request source \u2014 the branch this escalation came from"
+    },
+    "branch_name": {
+      "type": "string",
+      "description": "Denormalised branch name at time of escalation"
+    },
     "status": {
       "type": "string",
       "enum": [
