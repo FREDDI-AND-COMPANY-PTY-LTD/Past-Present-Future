@@ -30,10 +30,15 @@ export default function GoLiveTaskCard({ branchId, descendantAncestorIds, scopeL
 
       if (!isDone) {
         const items = await base44.entities.ContentItem.list('-created_date', 200);
-        const pending = (items || []).filter(i =>
+        const pendingItems = (items || []).filter(i =>
           (!i.review_status || i.review_status === 'pending' || i.review_status === 'flagged') && inScope(i)
         );
-        setPendingCount(pending.length);
+        const ancs = await base44.entities.Ancestor.list();
+        const pendingAncs = (ancs || []).filter(a =>
+          (a.review_status === 'auto_approved' || a.review_status === 'staged') &&
+          (!branchId || a.branch_id === branchId || (descendantAncestorIds || []).includes(a.id))
+        );
+        setPendingCount(pendingItems.length + pendingAncs.length);
       }
     } catch (e) {}
     setLoading(false);
@@ -57,11 +62,11 @@ export default function GoLiveTaskCard({ branchId, descendantAncestorIds, scopeL
               <span className="text-xs px-2 py-0.5 rounded-full bg-[rgba(201,145,58,0.15)] text-amber-light border border-[rgba(201,145,58,0.25)] font-medium">GOING LIVE</span>
               <span className="text-xs text-parchment/30">{scopeLabel ? `${scopeLabel} Branch` : 'Master Task'}</span>
             </div>
-            <p className="text-sm text-parchment font-medium mb-1">Review all uploaded events before going live{scopeSuffix}</p>
+            <p className="text-sm text-parchment font-medium mb-1">Review all events and ancestors before going live{scopeSuffix}</p>
             <p className="text-xs text-parchment/50 mb-3">
               {pendingCount > 0
-                ? `${pendingCount} event${pendingCount !== 1 ? 's' : ''} awaiting review. Swipe through each one — right to confirm, left to flag for further review.`
-                : `All events reviewed. Ready to go live${scopeSuffix} and invite family members.`}
+                ? `${pendingCount} item${pendingCount !== 1 ? 's' : ''} awaiting review (events + ancestor profiles). Swipe through each one — right to confirm, left to flag for further review.`
+                : `All events and ancestors reviewed. Ready to go live${scopeSuffix} and invite family members.`}
             </p>
             <button
               onClick={() => setShowModal(true)}

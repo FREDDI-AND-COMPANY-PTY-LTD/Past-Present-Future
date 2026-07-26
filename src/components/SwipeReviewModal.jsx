@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, useDragControls } from 'framer-motion';
-import { X, Check, Flag, Loader2, Rocket, CheckCircle2 } from 'lucide-react';
+import { X, Check, Flag, Loader2, Rocket, CheckCircle2, User } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import SwipeReviewForm from '@/components/SwipeReviewForm';
+import SwipeAncestorForm from '@/components/SwipeAncestorForm';
 import InviteFamilyDialog from '@/components/InviteFamilyDialog';
 
 export default function SwipeReviewModal({ onClose, branchId, descendantAncestorIds, scopeLabel }) {
@@ -22,15 +23,22 @@ export default function SwipeReviewModal({ onClose, branchId, descendantAncestor
     try {
       const user = await base44.auth.me();
       const allItems = await base44.entities.ContentItem.list('-created_date', 200);
-      const inScope = (i) => !branchId ? true
+      const inScopeItem = (i) => !branchId ? true
         : (i.branch_id === branchId || (i.ancestor_ids || []).some(aid => (descendantAncestorIds || []).includes(aid)));
-      const pending = (allItems || []).filter(i =>
-        (!i.review_status || i.review_status === 'pending' || i.review_status === 'flagged') && inScope(i)
-      );
-      setItems(pending);
+      const pendingItems = (allItems || []).filter(i =>
+        (!i.review_status || i.review_status === 'pending' || i.review_status === 'flagged') && inScopeItem(i)
+      ).map(i => ({ ...i, _kind: 'event' }));
 
       const ancList = await base44.entities.Ancestor.list();
       setAncestors(ancList || []);
+      const inScopeAnc = (a) => !branchId ? true
+        : (a.branch_id === branchId || (descendantAncestorIds || []).includes(a.id));
+      const pendingAncestors = (ancList || []).filter(a =>
+        (a.review_status === 'auto_approved' || a.review_status === 'staged') && inScopeAnc(a)
+      ).map(a => ({ ...a, _kind: 'ancestor' }));
+
+      const pending = [...pendingItems, ...pendingAncestors];
+      setItems(pending);
 
       const sessions = await base44.entities.GoLiveSession.list().catch(() => []);
       const mySessions = branchId
@@ -67,7 +75,22 @@ export default function SwipeReviewModal({ onClose, branchId, descendantAncestor
 
   useEffect(() => {
     const item = items[currentIndex];
-    if (item) {
+    if (!item) return;
+    if (item._kind === 'ancestor') {
+      setFormData({
+        full_name: item.full_name || '',
+        birth_date: item.birth_date || '',
+        birth_place: item.birth_place || '',
+        death_date: item.death_date || '',
+        death_place: item.death_place || '',
+        nationality: item.nationality || '',
+        biography: item.biography || '',
+        living: item.living !== false,
+        mother_id: item.mother_id || '',
+        father_id: item.father_id || '',
+        partner_id: item.partner_id || '',
+      });
+    } else {
       setFormData({
         title: item.title || '',
         content_type: item.content_type || 'uncategorized',
@@ -86,6 +109,7 @@ export default function SwipeReviewModal({ onClose, branchId, descendantAncestor
   }, [currentIndex, items]);
 
   const currentItem = items[currentIndex];
+  const isAncestor = currentItem?._kind === 'ancestor';
 
   const triggerSwipe = useCallback(async (direction) => {
     if (processing || !currentItem) return;
@@ -95,22 +119,35 @@ export default function SwipeReviewModal({ onClose, branchId, descendantAncestor
     await new Promise(r => setTimeout(r, 300));
 
     try {
-      const newStatus = direction === 'right' ? 'reviewed' : 'flagged';
-      await base44.entities.ContentItem.update(currentItem.id, {
-        title: formData.title,
-        content_type: formData.content_type,
-        description: formData.description,
-        date: formData.date || null,
-        era: formData.era || null,
-        location_name: formData.location_name || null,
-        latitude: formData.latitude ? parseFloat(formData.latitude) : null,
-        longitude: formData.longitude ? parseFloat(formData.longitude) : null,
-        ancestor_ids: formData.ancestor_ids,
-        transcribed_text: formData.transcribed_text || null,
-        extracted_fields: formData.extracted_fields && Object.keys(formData.extracted_fields).length > 0 ? formData.extracted_fields : null,
-        tags: formData.tags,
-        review_status: newStatus,
-      });
+      if (isAncestor) {
+        await base44.entities.Ancestor.update(currentItem.id, {
+          full_name: formData.full_name,
+          birth_date: formData.birth_date || null,
+          birth_place: formData.birth_place || null,
+          death_date: formData.death_date || null,
+          death_place: formData.death_place || null,
+          nationality: formData.nationality || null,
+          biography: formData.biography || null,
+          living: formData.living,
+          review_status: direction === 'right' ? 'admin_verified' : 'staged',
+        });
+      } else {
+        await base44.entities.ContentItem.update(currentItem.id, {
+          title: formData.title,
+          content_type: formData.content_type,
+          description: formData.description,
+          date: formData.date || null,
+          era: formData.era || null,
+          location_name: formData.location_name || null,
+          latitude: formData.latitude ? parseFloat(formData.latitude) : null,
+          longitude: formData.longitude ? parseFloat(formData.longitude) : null,
+          ancestor_ids: formData.ancestor_ids,
+          transcribed_text: formData.transcribed_text || null,
+          extracted_fields: formData.extracted_fields && Object.keys(formData.extracted_fields).length > 0 ? formData.extracted_fields : null,
+          tags: formData.tags,
+          review_status: direction === 'right' ? 'reviewed' : 'flagged',
+        });
+      }
 
       const newStats = {
         confirmed: stats.confirmed + (direction === 'right' ? 1 : 0),
@@ -134,7 +171,7 @@ export default function SwipeReviewModal({ onClose, branchId, descendantAncestor
     } catch (e) {}
     setExitDir(null);
     setProcessing(false);
-  }, [processing, currentItem, formData, currentIndex, items.length, session, stats]);
+  }, [processing, currentItem, formData, currentIndex, items.length, session, stats, isAncestor]);
 
   const handleDragEnd = (e, info) => {
     if (info.offset.x > 100 || info.velocity.x > 500) {
@@ -163,8 +200,8 @@ export default function SwipeReviewModal({ onClose, branchId, descendantAncestor
           <div className="w-16 h-16 rounded-full bg-[rgba(201,145,58,0.12)] border border-[#C9913A] flex items-center justify-center mx-auto mb-4">
             <CheckCircle2 size={32} className="text-gold" />
           </div>
-          <h2 className="font-display text-2xl text-parchment mb-2">All Events Reviewed</h2>
-          <p className="text-parchment/50 text-sm mb-6">There are no pending events to review. You're ready to go live and invite family members.</p>
+          <h2 className="font-display text-2xl text-parchment mb-2">All Events & Ancestors Reviewed</h2>
+          <p className="text-parchment/50 text-sm mb-6">There are no pending events or ancestor profiles to review. You're ready to go live and invite family members.</p>
           <button
             onClick={async () => {
               if (session) {
@@ -250,12 +287,23 @@ export default function SwipeReviewModal({ onClose, branchId, descendantAncestor
         >
           {/* Drag handle area (image + swipe hints) */}
           <div onPointerDown={(e) => dragControls.start(e)} className="cursor-grab active:cursor-grabbing">
-            {currentItem?.file_url && (
+            {isAncestor ? (
+              <div className="relative h-44 bg-[#0D0B0A] flex-shrink-0 overflow-hidden flex items-center justify-center">
+                <div className="w-24 h-24 rounded-full bg-[rgba(201,145,58,0.1)] border border-[rgba(201,145,58,0.25)] flex items-center justify-center">
+                  <User size={40} className="text-gold" />
+                </div>
+                <div className="absolute top-2 left-2 px-2 py-1 rounded-full bg-black/60 backdrop-blur-sm text-xs text-amber-light">
+                  Ancestor Profile
+                </div>
+              </div>
+            ) : (
               <div className="relative h-44 bg-[#0D0B0A] flex-shrink-0 overflow-hidden">
-                {currentItem.file_url.match(/\.(pdf)$/i) ? (
-                  <iframe src={currentItem.file_url} title="preview" className="w-full h-full bg-parchment" />
-                ) : (
-                  <img src={currentItem.file_url} alt={currentItem.title} className="w-full h-full object-contain sepia-tint" />
+                {currentItem?.file_url && (
+                  currentItem.file_url.match(/\.(pdf)$/i) ? (
+                    <iframe src={currentItem.file_url} title="preview" className="w-full h-full bg-parchment" />
+                  ) : (
+                    <img src={currentItem.file_url} alt={currentItem.title} className="w-full h-full object-contain sepia-tint" />
+                  )
                 )}
                 <div className="absolute top-2 left-2 px-2 py-1 rounded-full bg-black/60 backdrop-blur-sm text-xs text-amber-light">
                   {currentItem.content_type}
@@ -270,7 +318,11 @@ export default function SwipeReviewModal({ onClose, branchId, descendantAncestor
 
           {/* Scrollable form */}
           <div className="flex-1 overflow-y-auto">
-            <SwipeReviewForm item={currentItem} formData={formData} setFormData={setFormData} ancestors={ancestors} />
+            {isAncestor ? (
+              <SwipeAncestorForm formData={formData} setFormData={setFormData} ancestors={ancestors} />
+            ) : (
+              <SwipeReviewForm item={currentItem} formData={formData} setFormData={setFormData} ancestors={ancestors} />
+            )}
           </div>
 
           {/* Action buttons */}
@@ -288,7 +340,7 @@ export default function SwipeReviewModal({ onClose, branchId, descendantAncestor
               className="flex-1 py-2.5 rounded-lg bg-gradient-to-r from-[#C9913A] to-[#E8C97A] text-charcoal text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {processing ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
-              Confirm Details
+              {isAncestor ? 'Confirm Profile' : 'Confirm Details'}
             </button>
           </div>
         </motion.div>
