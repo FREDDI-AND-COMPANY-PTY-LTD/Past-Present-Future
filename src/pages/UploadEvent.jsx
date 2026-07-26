@@ -18,7 +18,7 @@ import LocationAutocompleteInput from '@/components/LocationAutocompleteInput';
 import DateSelectInput from '@/components/DateSelectInput';
 import { analyzeCrop } from '@/lib/cropAnalysis';
 import { generatePdfThumbnail } from '@/lib/pdfThumbnail';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAccessRights } from '@/hooks/useAccessRights';
 
 const STEPS = {
@@ -115,6 +115,7 @@ export default function UploadEvent() {
   const cameraInputRef = useRef(null);
 
   const access = useAccessRights();
+  const navigate = useNavigate();
 
 
   const filteredAncestors = ancestorSearch
@@ -531,6 +532,13 @@ Return JSON with this structure:
     setFormData(INITIAL_FORM);
   };
 
+  // Abandon the upload at any stage — clears state and returns home. Navigating
+  // away unmounts the page, so any in-flight AI analysis becomes a no-op.
+  const handleCancelUpload = () => {
+    resetForm();
+    navigate('/');
+  };
+
   // ── Required field checks at save time ──
   const effectiveAncestorIds = selectedAncestorId
     ? [...new Set([...formData.ancestor_ids, selectedAncestorId])]
@@ -705,7 +713,17 @@ Return JSON with this structure:
   return (
     <Layout>
       <div className="px-6 lg:px-12 py-12 max-w-3xl mx-auto">
-        <h1 className="font-display text-4xl text-parchment mb-2">Upload an Event</h1>
+        <div className="flex items-start justify-between gap-4 mb-2">
+          <h1 className="font-display text-4xl text-parchment">Upload an Event</h1>
+          {step !== STEPS.SAVED && (
+            <button
+              onClick={handleCancelUpload}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-[rgba(245,236,215,0.15)] text-parchment/70 text-sm font-medium hover:bg-[rgba(245,236,215,0.05)] hover:text-parchment transition-colors whitespace-nowrap mt-1.5"
+            >
+              <X size={16} /> Cancel
+            </button>
+          )}
+        </div>
         <p className="text-parchment/50 text-sm mb-8">Share a piece of family history — the system will analyse it and help you tag it.</p>
 
         {step === STEPS.CAPTURE && (
