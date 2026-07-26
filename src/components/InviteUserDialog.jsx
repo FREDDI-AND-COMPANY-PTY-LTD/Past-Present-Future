@@ -6,7 +6,7 @@ import LocationAutocompleteInput from '@/components/LocationAutocompleteInput';
 import LocationPicker from '@/components/LocationPicker';
 
 export default function InviteUserDialog({ open, onClose, user }) {
-  const [form, setForm] = useState({ full_name: '', email: '', birth_date: '', birth_place: '', living: true });
+  const [form, setForm] = useState({ full_name: '', email: '', birth_date: '', birth_place: '', living: true, newsletter_opt_in: true });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -15,7 +15,7 @@ export default function InviteUserDialog({ open, onClose, user }) {
   if (!open) return null;
 
   const reset = () => {
-    setForm({ full_name: '', email: '', birth_date: '', birth_place: '', living: true });
+    setForm({ full_name: '', email: '', birth_date: '', birth_place: '', living: true, newsletter_opt_in: true });
     setError('');
     setSuccess('');
   };
@@ -39,6 +39,7 @@ export default function InviteUserDialog({ open, onClose, user }) {
         birth_place: form.birth_place || null,
         living: form.living,
         review_status: 'auto_approved',
+        newsletter_opt_in: form.newsletter_opt_in,
         created_by_id: currentUser?.id || null,
         created_by_name: currentUser?.full_name || currentUser?.email || null,
       });
@@ -47,7 +48,7 @@ export default function InviteUserDialog({ open, onClose, user }) {
       await base44.users.inviteUser(form.email.trim(), 'user');
 
       setSuccess(`Invitation sent to ${form.email.trim()}. When they register, they can claim ${form.full_name.trim()}'s profile from the dropdown.`);
-      setForm({ full_name: '', email: '', birth_date: '', birth_place: '', living: true });
+      setForm({ full_name: '', email: '', birth_date: '', birth_place: '', living: true, newsletter_opt_in: true });
       // keep ancestor created even if dialog closes
     } catch (e) {
       setError(e.message || 'Failed to send invitation');
@@ -142,6 +143,19 @@ export default function InviteUserDialog({ open, onClose, user }) {
                     className="accent-[#C9913A]"
                   />
                   Currently living
+                </label>
+
+                <label className="flex items-start gap-2 text-sm text-parchment/60 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={form.newsletter_opt_in}
+                    onChange={e => setForm(f => ({ ...f, newsletter_opt_in: e.target.checked }))}
+                    className="accent-[#C9913A] mt-0.5"
+                  />
+                  <span>
+                    Auto-subscribe to the family newsletter
+                    <span className="block text-xs text-parchment/40">The family member will be subscribed when they register and claim their profile.</span>
+                  </span>
                 </label>
 
                 {error && <p className="text-xs text-red-400">{error}</p>}

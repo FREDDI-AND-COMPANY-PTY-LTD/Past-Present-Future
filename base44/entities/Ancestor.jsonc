@@ -81,6 +81,11 @@
       "type": "string",
       "description": "If this ancestor is a registered user, their user ID"
     },
+    "newsletter_opt_in": {
+      "type": "boolean",
+      "default": false,
+      "description": "Set on an unclaimed placeholder when the inviting admin requested auto-subscription to the family newsletter. When the invitee registers and claims this profile, the onboarding flow copies this onto their user account."
+    },
     "review_status": {
       "type": "string",
       "enum": [

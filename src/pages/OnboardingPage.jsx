@@ -43,6 +43,10 @@ export default function OnboardingPage({ user, onCompleted }) {
           living: form.living,
         });
         createdId = existing.id;
+        // Carry over the inviting admin's newsletter request onto the new user account
+        if (existing.newsletter_opt_in) {
+          await base44.auth.updateMe({ newsletter_opt_in: true }).catch(() => {});
+        }
       } else {
         const created = await base44.entities.Ancestor.create({
           full_name: normalizedName,
