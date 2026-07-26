@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { ZoomIn, ZoomOut, ChevronRight, ChevronLeft, ChevronUp, ChevronDown, X, GitBranch, Maximize2 } from 'lucide-react';
+import { ZoomIn, ZoomOut, ChevronRight, ChevronLeft, ChevronUp, ChevronDown, X, GitBranch, Maximize2, UserPlus, Link2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
+import NewAncestorDialog from '@/components/NewAncestorDialog';
+import LinkRelativeDialog from '@/components/LinkRelativeDialog';
 import { useBranchRoot } from '@/hooks/useBranchRoot';
 
 export default function FamilyTree() {
@@ -14,6 +16,8 @@ export default function FamilyTree() {
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const dragStart = useRef({ x: 0, y: 0 });
+  const [showAddAncestor, setShowAddAncestor] = useState(false);
+  const [linkTarget, setLinkTarget] = useState(null);
   const { descendantIds, rootAncestorId, parentAncestors, setBranchRoot, loading: branchLoading } = useBranchRoot();
 
   useEffect(() => {
@@ -139,6 +143,10 @@ export default function FamilyTree() {
             <p className="text-parchment/50 text-sm">Youngest members appear at the top. Drag to pan, or use arrows to scroll across the extended tree.</p>
           </div>
           <div className="flex gap-2">
+            <button onClick={() => setShowAddAncestor(true)} className="flex items-center gap-1.5 px-3 h-10 rounded-lg bg-gradient-to-r from-[#C9913A] to-[#E8C97A] text-charcoal text-sm font-semibold hover:opacity-90 transition-opacity" title="Add a new ancestor to the tree">
+              <UserPlus size={16} /> Add Ancestor
+            </button>
+            <div className="w-px h-10 bg-[rgba(201,145,58,0.2)]" />
             <button onClick={() => setPan(p => ({ ...p, x: p.x + 250 }))} className="w-10 h-10 rounded-lg aged-card flex items-center justify-center text-gold hover:border-[rgba(201,145,58,0.4)]" title="Scroll left">
               <ChevronLeft size={18} />
             </button>
@@ -296,9 +304,15 @@ export default function FamilyTree() {
                 <GitBranch size={16} /> Set as Branch Root
               </button>
             )}
-            <Link to={`/ancestor/${selectedAncestor.id}`} className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-[#C9913A] text-charcoal text-sm font-semibold hover:opacity-90 transition-opacity mb-6">
+            <Link to={`/ancestor/${selectedAncestor.id}`} className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-[#C9913A] text-charcoal text-sm font-semibold hover:opacity-90 transition-opacity mb-3">
               View Full Profile <ChevronRight size={16} />
             </Link>
+            <button
+              onClick={() => setLinkTarget(selectedAncestor)}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-[rgba(201,145,58,0.3)] text-amber-light text-sm font-semibold hover:bg-[rgba(201,145,58,0.08)] transition-colors mb-6 w-full"
+            >
+              <Link2 size={16} /> Link a Relative
+            </button>
 
             <div>
               <h3 className="font-display text-lg text-parchment mb-3">Content ({selectedContent.length})</h3>
@@ -317,6 +331,19 @@ export default function FamilyTree() {
             </div>
           </div>
         </div>
+      )}
+      <NewAncestorDialog
+        open={showAddAncestor}
+        onClose={() => setShowAddAncestor(false)}
+        onCreated={(a) => setAncestors(prev => [...prev, a])}
+      />
+      {linkTarget && (
+        <LinkRelativeDialog
+          ancestor={linkTarget}
+          allAncestors={ancestors}
+          onClose={() => setLinkTarget(null)}
+          onSubmitted={() => setLinkTarget(null)}
+        />
       )}
     </Layout>
   );
