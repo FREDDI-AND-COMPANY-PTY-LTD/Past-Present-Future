@@ -15,7 +15,6 @@ import AdminDisputesList from '@/components/admin/AdminDisputesList';
 import AdminActivityFeed from '@/components/admin/AdminActivityFeed';
 import AdminIncompleteUploads from '@/components/admin/AdminIncompleteUploads';
 import AdminNewAncestors from '@/components/admin/AdminNewAncestors';
-import GoLiveTaskCard from '@/components/GoLiveTaskCard';
 
 const TOP_TABS = [
   { key: 'review', label: 'Needs Review', icon: AlertCircle },
@@ -200,7 +199,6 @@ export default function AdminDashboard() {
             {tab === 'activity' && <AdminActivityFeed logs={logs} />}
             {tab === 'setup' && (
               <div className="space-y-5">
-                <GoLiveTaskCard />
                 {user?.role === 'admin' && (
                 <Link to="/crop-reedit" className="block aged-card rounded-xl p-5 hover:border-[rgba(201,145,58,0.45)] transition-colors group">
                   <div className="flex items-start gap-4">

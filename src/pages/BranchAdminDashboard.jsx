@@ -4,28 +4,9 @@ import { Shield, UserPlus, Loader2, Check, X, GitBranch, Mail, Clock, AlertCircl
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import BranchAdminInviteDialog from '@/components/BranchAdminInviteDialog';
-import GoLiveTaskCard from '@/components/GoLiveTaskCard';
 import BranchNewsletterFrequency from '@/components/BranchNewsletterFrequency';
 import BranchAdminEscalationDialog from '@/components/BranchAdminEscalationDialog';
 import BranchAdminSuccession from '@/components/BranchAdminSuccession';
-
-function computeDescendants(rootId, allAncestors) {
-  const ids = new Set(rootId ? [rootId] : []);
-  let changed = true;
-  while (changed) {
-    changed = false;
-    for (const a of allAncestors) {
-      if (ids.has(a.id)) continue;
-      if ((a.mother_id && ids.has(a.mother_id)) || (a.father_id && ids.has(a.father_id))) {
-        ids.add(a.id); changed = true;
-      }
-    }
-  }
-  for (const a of allAncestors) {
-    if (ids.has(a.id) && a.partner_id) ids.add(a.partner_id);
-  }
-  return ids;
-}
 
 const statusBadge = {
   pending: 'bg-[rgba(201,145,58,0.1)] text-amber-light border-[rgba(201,145,58,0.25)]',
@@ -47,7 +28,6 @@ export default function BranchAdminDashboard() {
   const [pendingUploads, setPendingUploads] = useState([]);
   const [newAncestors, setNewAncestors] = useState([]);
   const [disputes, setDisputes] = useState([]);
-  const [branchScopes, setBranchScopes] = useState([]);
   const [escalateOpen, setEscalateOpen] = useState(false);
 
   const load = async () => {
@@ -66,11 +46,6 @@ export default function BranchAdminDashboard() {
       const myBr = (brs || []).filter(b => b.admin_user_id && u && b.admin_user_id === u.id);
       const myBranchIds = myBr.map(b => b.id);
       setInvites((allInvites || []).filter(i => myBranchIds.includes(i.branch_id)));
-      setBranchScopes(myBr.map(b => ({
-        branchId: b.id,
-        branchName: b.name,
-        descendantIds: [...computeDescendants(b.ancestor_id, anc || [])],
-      })));
 
       // Branch-scoped admin queues — descendants of this branch's root ancestor(s)
       const rootIds = myBr.map(b => b.ancestor_id).filter(Boolean);
@@ -212,9 +187,6 @@ export default function BranchAdminDashboard() {
           <h2 className="font-display text-xl text-parchment mb-4 flex items-center gap-2">
             <AlertCircle size={18} className="text-gold" /> Branch Queues
           </h2>
-          {branchScopes.map(s => (
-            <GoLiveTaskCard key={s.branchId} branchId={s.branchId} descendantAncestorIds={s.descendantIds} scopeLabel={s.branchName} />
-          ))}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div className="aged-card rounded-xl p-4">
               <div className="flex items-center gap-2 mb-3">
