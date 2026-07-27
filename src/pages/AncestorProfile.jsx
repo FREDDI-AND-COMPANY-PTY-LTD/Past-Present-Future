@@ -169,7 +169,7 @@ export default function AncestorProfile() {
                 <Link to={`/ancestor/${partner.id}`} className="flex items-center gap-3 p-3 rounded-lg hover:bg-[rgba(201,145,58,0.06)] transition-colors">
                   <AncestorAvatar ancestor={partner} size="sm" />
                   <div>
-                    <p className="text-xs text-parchment/40">Partner</p>
+                    <p className="text-xs text-parchment/40">Husband / Wife</p>
                     <p className="text-sm text-parchment">{formatAncestorName(partner)}</p>
                   </div>
                 </Link>

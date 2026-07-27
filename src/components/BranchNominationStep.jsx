@@ -95,7 +95,7 @@ export default function BranchNominationStep({ user, myAncestorId, invite, onCom
   const canSubmit = mother.mode !== 'none' || father.mode !== 'none';
 
   const handleSubmit = async () => {
-    if (!canSubmit) { setError('Nominate at least one parent link to connect you to the branch.'); return; }
+    if (!canSubmit) { setError('Nominate at least one mother or father link to connect you to the branch.'); return; }
     setSubmitting(true); setError('');
     try {
       const newAncestorIds = [];
@@ -194,7 +194,7 @@ export default function BranchNominationStep({ user, myAncestorId, invite, onCom
                 <ParentSelector label="Father" value={father} onChange={setFather} branchAncestors={branchAncestors} excludeId={myAncestorId} />
               </div>
               <p className="text-[11px] text-parchment/40 mt-2">
-                Choose "In tree" if your parent is already in the branch. Choose "Add new" to add a parent not yet recorded — they'll be added as placeholders pending the branch admin's approval.
+                Choose "In tree" if your mother or father is already in the branch. Choose "Add new" to add a mother or father not yet recorded — they'll be added as placeholders pending the branch admin's approval.
               </p>
             </div>
 

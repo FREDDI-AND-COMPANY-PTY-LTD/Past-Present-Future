@@ -13,7 +13,7 @@ const ANCESTOR_FIELDS = [
   { key: 'bloodline', label: 'Bloodline' },
   { key: 'mother_id', label: 'Mother' },
   { key: 'father_id', label: 'Father' },
-  { key: 'partner_id', label: 'Partner / Spouse' },
+  { key: 'partner_id', label: 'Husband / Wife' },
   { key: 'general', label: 'General / Other' },
 ];
 

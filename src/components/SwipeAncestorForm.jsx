@@ -13,7 +13,7 @@ export default function SwipeAncestorForm({ formData, setFormData, ancestors }) 
   const rels = [
     mother && `Mother: ${mother.full_name}`,
     father && `Father: ${father.full_name}`,
-    partner && `Partner: ${partner.full_name}`,
+    partner && `Husband / Wife: ${partner.full_name}`,
   ].filter(Boolean);
 
   return (

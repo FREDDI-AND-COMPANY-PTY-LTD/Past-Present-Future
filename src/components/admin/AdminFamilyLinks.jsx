@@ -114,7 +114,7 @@ export default function AdminFamilyLinks({ refreshKey }) {
               {/* Parents row */}
               {(mother || father) && (
                 <div className="flex items-center gap-3 flex-wrap">
-                  <span className="text-xs text-parchment/40 uppercase tracking-wider w-16">Parents</span>
+                  <span className="text-xs text-parchment/40 uppercase tracking-wider w-20">Mother & Father</span>
                   {father && (
                     <AncestorChip ancestor={father} isNew={link.father_is_new} label="Father" name={link.father_name} />
                   )}
@@ -133,8 +133,8 @@ export default function AdminFamilyLinks({ refreshKey }) {
               {/* Partner row */}
               {partner && (
                 <div className="flex items-center gap-3 flex-wrap">
-                  <span className="text-xs text-parchment/40 uppercase tracking-wider w-16">Partner</span>
-                  <AncestorChip ancestor={partner} isNew={link.partner_is_new} label="Spouse" name={link.partner_name} />
+                  <span className="text-xs text-parchment/40 uppercase tracking-wider w-20">Husband / Wife</span>
+                  <AncestorChip ancestor={partner} isNew={link.partner_is_new} label="Husband / Wife" name={link.partner_name} />
                 </div>
               )}
             </div>

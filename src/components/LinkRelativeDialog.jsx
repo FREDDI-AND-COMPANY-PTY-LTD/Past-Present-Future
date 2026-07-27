@@ -10,7 +10,7 @@ import { base44 } from '@/api/base44Client';
 const RELATIONS = [
   { key: 'mother', label: 'Mother', field: 'mother_id', newKey: 'new_mother' },
   { key: 'father', label: 'Father', field: 'father_id', newKey: 'new_father' },
-  { key: 'partner', label: 'Partner / Spouse', field: 'partner_id', newKey: 'new_partner' },
+  { key: 'partner', label: 'Husband / Wife', field: 'partner_id', newKey: 'new_partner' },
 ];
 
 export default function LinkRelativeDialog({ ancestor, allAncestors, onClose, onSubmitted }) {
