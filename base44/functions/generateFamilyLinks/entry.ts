@@ -68,15 +68,16 @@ Deno.serve(async (req) => {
     let subjectAncestor = null;
     let subjectIsNew = false;
 
-    // First: try from tagged ancestors on the content item
-    if (item.ancestor_ids && item.ancestor_ids.length > 0) {
-      subjectAncestor = allAncestors.find(a => a.id === item.ancestor_ids[0]);
-    }
-    // Then: try name match
-    if (!subjectAncestor && subjectName) {
+    // Prefer the extracted subject name — the first tagged ancestor may be the
+    // uploader/parent, not the person the certificate is actually about.
+    if (subjectName) {
       subjectAncestor = findByName(subjectName);
     }
-    // Create placeholder if no match
+    // Fall back to the first tagged ancestor if no name was extracted
+    if (!subjectAncestor && item.ancestor_ids && item.ancestor_ids.length > 0) {
+      subjectAncestor = allAncestors.find(a => a.id === item.ancestor_ids[0]);
+    }
+    // Create placeholder if still no match
     if (!subjectAncestor && subjectName) {
       subjectAncestor = await createPlaceholder(subjectName, {
         birth_date: ef.date_of_birth,

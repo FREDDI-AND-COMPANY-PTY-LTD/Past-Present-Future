@@ -88,10 +88,12 @@ Deno.serve(async (req) => {
           };
 
           const subjectName = ef.full_name || [ef.given_names, ef.surname].filter(Boolean).join(' ').trim();
-          let subject = (item.ancestor_ids && item.ancestor_ids.length > 0)
-            ? (allAncestors || []).find(a => a.id === item.ancestor_ids[0])
-            : null;
-          if (!subject && subjectName) subject = findByName(subjectName);
+          // Prefer the extracted subject name — the first tagged ancestor may be
+          // the uploader/parent, not the person the certificate is about.
+          let subject = subjectName ? findByName(subjectName) : null;
+          if (!subject && item.ancestor_ids && item.ancestor_ids.length > 0) {
+            subject = (allAncestors || []).find(a => a.id === item.ancestor_ids[0]);
+          }
           const mother = ef.mother_name ? findByName(ef.mother_name) : null;
           const father = ef.father_name ? findByName(ef.father_name) : null;
           const partner = ef.spouse_name ? findByName(ef.spouse_name) : null;
