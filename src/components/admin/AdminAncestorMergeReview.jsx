@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Loader2, GitMerge, X, Check, AlertTriangle, ExternalLink, ArrowRight, ShieldCheck, Flag } from 'lucide-react';
+import { Users, Loader2, GitMerge, X, Check, AlertTriangle, ExternalLink, ArrowRight, ShieldCheck, Flag, ScanSearch } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-AU') : '');
@@ -130,13 +130,30 @@ export default function AdminAncestorMergeReview() {
         </p>
       )}
 
-      {/* Family-reported duplicates — submitted via the "Flag as Duplicate" button on a profile */}
+      {/* Duplicate flags — auto-detected by the creation scan, or reported by family via "Flag as Duplicate" */}
       {flagPairs.filter(f => !flagResolved.has(f.id)).length > 0 && (
         <div className="space-y-4">
-          <div className="flex items-center gap-2 px-1">
-            <Flag size={14} className="text-amber-light" />
-            <span className="text-xs text-amber-light/70 uppercase tracking-wider">Requested by family</span>
-          </div>
+          {(() => {
+            const auto = flagPairs.filter(f => !flagResolved.has(f.id) && f.raised_by_name === 'Duplicate Scan');
+            const family = flagPairs.filter(f => !flagResolved.has(f.id) && f.raised_by_name !== 'Duplicate Scan');
+            return (
+              <>
+                {auto.length > 0 && (
+                  <div className="flex items-center gap-2 px-1">
+                    <ScanSearch size={14} className="text-gold" />
+                    <span className="text-xs text-gold/80 uppercase tracking-wider">Auto-detected duplicates</span>
+                    <span className="text-[10px] text-parchment/40">{auto.length} pair{auto.length !== 1 ? 's' : ''} found by the family-name scan</span>
+                  </div>
+                )}
+                {family.length > 0 && (
+                  <div className="flex items-center gap-2 px-1">
+                    <Flag size={14} className="text-amber-light" />
+                    <span className="text-xs text-amber-light/70 uppercase tracking-wider">Requested by family</span>
+                  </div>
+                )}
+              </>
+            );
+          })()}
           {flagPairs.filter(f => !flagResolved.has(f.id)).map(flag => {
             const a = ancestorsById[flag.ancestor_id];
             const b = ancestorsById[flag.duplicate_of_ancestor_id];
@@ -144,13 +161,18 @@ export default function AdminAncestorMergeReview() {
             const aIsEarlier = new Date(a.created_date) <= new Date(b.created_date);
             const earlier = aIsEarlier ? a : b;
             const later = aIsEarlier ? b : a;
+            const isAuto = flag.raised_by_name === 'Duplicate Scan';
             return (
               <div key={flag.id} className="aged-card rounded-xl p-5 border-[rgba(201,145,58,0.25)]">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <AlertTriangle size={18} className="text-amber-light" />
-                    <span className="text-sm text-parchment font-medium">Family-reported duplicate</span>
-                    <span className="text-xs text-parchment/40">by {flag.raised_by_name || 'a family member'}</span>
+                    {isAuto ? <ScanSearch size={18} className="text-gold" /> : <AlertTriangle size={18} className="text-amber-light" />}
+                    <span className="text-sm text-parchment font-medium">
+                      {isAuto ? 'Auto-detected duplicate' : 'Family-reported duplicate'}
+                    </span>
+                    {isAuto
+                      ? <span className="text-xs text-parchment/40">{Math.round((flag.duplicate_confidence || 0) * 100)}% match</span>
+                      : <span className="text-xs text-parchment/40">by {flag.raised_by_name || 'a family member'}</span>}
                   </div>
                 </div>
                 <p className="text-xs text-parchment/50 mb-3 italic">{flag.dispute_description}</p>
