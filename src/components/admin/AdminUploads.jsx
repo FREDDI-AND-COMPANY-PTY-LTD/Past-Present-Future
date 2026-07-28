@@ -28,7 +28,7 @@ export default function AdminUploads({ refreshKey }) {
     setLoading(true);
     try {
       const data = await base44.entities.ContentItem.list('-created_date', 50);
-      setItems(data || []);
+      setItems((data || []).filter(i => !i.parent_content_item_id));
     } catch (e) {}
     setLoading(false);
   };

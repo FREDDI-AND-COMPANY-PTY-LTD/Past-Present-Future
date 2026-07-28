@@ -49,7 +49,7 @@ export default function AncestorProfile() {
       setParents({ mother, father });
       setPartner(part);
       const tagged = (items || []).filter(item =>
-        item.ancestor_ids?.includes(id)
+        item.ancestor_ids?.includes(id) && !item.parent_content_item_id
       );
       setContentItems(tagged);
     }).catch(() => {}).finally(() => setLoading(false));

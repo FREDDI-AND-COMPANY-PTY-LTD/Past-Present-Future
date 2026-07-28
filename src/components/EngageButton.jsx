@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Upload, Loader2, X, FileText, Image as ImageIcon, Link2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
@@ -11,6 +11,15 @@ export default function EngageButton({ item, user }) {
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [linkedItems, setLinkedItems] = useState([]);
+
+  // Related events are attached to THIS event via parent_content_item_id.
+  // They are viewable only here (within the parent event), never as standalone events.
+  useEffect(() => {
+    if (!item?.id) return;
+    base44.entities.ContentItem.filter({ parent_content_item_id: item.id })
+      .then(setLinkedItems)
+      .catch(() => {});
+  }, [item?.id]);
 
   const handleUpload = async () => {
     if (!file || !title.trim()) return;
@@ -25,6 +34,8 @@ export default function EngageButton({ item, user }) {
         ancestor_ids: item.ancestor_ids || [],
         uploaded_by_id: user?.id || null,
         tags: ['related event'],
+        parent_content_item_id: item.id,
+        review_status: 'reviewed',
       });
       setLinkedItems([...linkedItems, newItem]);
       setTitle('');

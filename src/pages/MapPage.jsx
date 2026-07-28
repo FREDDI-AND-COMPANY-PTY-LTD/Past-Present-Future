@@ -56,7 +56,7 @@ export default function MapPage() {
   }, []);
 
   // Only show admin-reviewed content on the public map
-  const reviewedItems = contentItems.filter(i => i.review_status === 'reviewed');
+  const reviewedItems = contentItems.filter(i => i.review_status === 'reviewed' && !i.parent_content_item_id);
   const branchScoped = scope === 'branch' && descendantIds.size > 0;
   const branchItems = branchScoped
     ? reviewedItems.filter(i => (i.ancestor_ids || []).some(aid => descendantIds.has(aid)))

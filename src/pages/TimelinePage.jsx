@@ -43,7 +43,7 @@ export default function TimelinePage() {
   }, []);
 
   // Only show admin-reviewed content on the public timeline
-  const reviewedItems = items.filter(i => i.review_status === 'reviewed');
+  const reviewedItems = items.filter(i => i.review_status === 'reviewed' && !i.parent_content_item_id);
   const branchScoped = scope === 'branch' && descendantIds.size > 0;
   const branchItems = branchScoped
     ? reviewedItems.filter(i => (i.ancestor_ids || []).some(aid => descendantIds.has(aid)))

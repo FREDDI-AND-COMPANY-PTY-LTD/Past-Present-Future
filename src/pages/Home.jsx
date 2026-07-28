@@ -31,7 +31,7 @@ export default function Home() {
       base44.entities.ContentItem.list('-created_date', 6),
       base44.entities.Ancestor.list('-created_date', 8),
     ]).then(([items, ancs]) => {
-      setRecentItems(items || []);
+      setRecentItems((items || []).filter(i => !i.parent_content_item_id));
       setAncestors(ancs || []);
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);

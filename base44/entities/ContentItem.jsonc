@@ -287,6 +287,10 @@
       "type": "string",
       "description": "User ID of uploader"
     },
+    "parent_content_item_id": {
+      "type": "string",
+      "description": "When this item was uploaded as a 'related event' from within another event's discussion, this holds the parent ContentItem ID. Such items are viewable ONLY from within their parent event (the Engage / Add Related Event area) and are excluded from the Timeline, Map, ancestor galleries, Home feed, and admin review queue \u2014 they are never treated as standalone events."
+    },
     "branch_id": {
       "type": "string",
       "description": "Branch this content originated from"
