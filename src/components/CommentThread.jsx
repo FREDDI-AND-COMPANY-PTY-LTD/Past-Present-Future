@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, MessageCircle, Send, CornerDownRight, AtSign, X, HelpCircle, Heart, Lock } from 'lucide-react';
+import { Loader2, MessageCircle, Send, CornerDownRight, AtSign, X, HelpCircle, Heart, Lock, Pencil, Trash2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useAccessRights } from '@/hooks/useAccessRights';
 
@@ -22,7 +22,7 @@ function Avatar({ name, size = 'sm' }) {
   );
 }
 
-export default function CommentThread({ entityType, entityId, fieldName, user: initialUser }) {
+export default function CommentThread({ entityType, entityId, fieldName, user: initialUser, recordBranchId }) {
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [newComment, setNewComment] = useState('');
@@ -37,8 +37,14 @@ export default function CommentThread({ entityType, entityId, fieldName, user: i
   const [replyTaggedIds, setReplyTaggedIds] = useState({});
   const [replyShowTagPicker, setReplyShowTagPicker] = useState({});
   const [likedComments, setLikedComments] = useState(new Set());
+  const [editingId, setEditingId] = useState(null);
+  const [editContent, setEditContent] = useState('');
+  const [deletingId, setDeletingId] = useState(null);
+  const [busy, setBusy] = useState(false);
   const access = useAccessRights();
   const canInteract = access.canInteract;
+  // Branch admins moderate comments on their own branch's records; global admins moderate anything.
+  const canModerate = access.status === 'admin' || (access.isBranchAdmin && (!recordBranchId || (access.adminBranchIds || []).includes(recordBranchId)));
 
   useEffect(() => {
     if (!initialUser) {
@@ -108,6 +114,43 @@ export default function CommentThread({ entityType, entityId, fieldName, user: i
       await loadComments();
     } catch (e) {}
     setSubmitting(false);
+  };
+
+  const startEdit = (comment) => {
+    setEditingId(comment.id);
+    setEditContent(comment.content || '');
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditContent('');
+  };
+
+  const saveEdit = async (commentId) => {
+    if (!editContent.trim()) return;
+    setBusy(true);
+    try {
+      await base44.entities.Comment.update(commentId, { content: editContent.trim() });
+      setEditingId(null);
+      setEditContent('');
+      await loadComments();
+    } catch (e) {}
+    setBusy(false);
+  };
+
+  const deleteComment = async (commentId) => {
+    setBusy(true);
+    try {
+      // Remove replies first, then the comment itself
+      const replies = comments.filter(c => c.parent_comment_id === commentId);
+      for (const r of replies) {
+        await base44.entities.Comment.delete(r.id).catch(() => {});
+      }
+      await base44.entities.Comment.delete(commentId);
+      setDeletingId(null);
+      await loadComments();
+    } catch (e) {}
+    setBusy(false);
   };
 
   const toggleLike = (commentId) => {
@@ -269,6 +312,17 @@ export default function CommentThread({ entityType, entityId, fieldName, user: i
               likedComments={likedComments}
               toggleLike={toggleLike}
               canInteract={canInteract}
+              canModerate={canModerate}
+              editingId={editingId}
+              editContent={editContent}
+              setEditContent={setEditContent}
+              startEdit={startEdit}
+              cancelEdit={cancelEdit}
+              saveEdit={saveEdit}
+              deletingId={deletingId}
+              setDeletingId={setDeletingId}
+              deleteComment={deleteComment}
+              busy={busy}
             />
           ))}
         </div>
@@ -282,6 +336,8 @@ function CommentNode({
   replyTo, setReplyTo, replyText, setReplyText, handleReply, submitting,
   users, currentUser, replyTaggedIds, toggleReplyTag, replyShowTagPicker, setReplyShowTagPicker,
   likedComments, toggleLike, canInteract,
+  canModerate, editingId, editContent, setEditContent, startEdit, cancelEdit, saveEdit,
+  deletingId, setDeletingId, deleteComment, busy,
 }) {
   const isLiked = likedComments.has(comment.id);
   const replyTags = replyTaggedIds[comment.id] || [];
@@ -333,7 +389,61 @@ function CommentNode({
               <CornerDownRight size={12} /> Reply
             </span>
           )}
+          {canModerate && editingId !== comment.id && (
+            <button
+              onClick={() => startEdit(comment)}
+              className="flex items-center gap-1 text-[11px] text-parchment/40 hover:text-amber-light transition-colors"
+            >
+              <Pencil size={11} /> Edit
+            </button>
+          )}
+          {canModerate && (
+            <button
+              onClick={() => setDeletingId(deletingId === comment.id ? null : comment.id)}
+              className="flex items-center gap-1 text-[11px] text-parchment/40 hover:text-red-400 transition-colors"
+            >
+              <Trash2 size={11} /> Delete
+            </button>
+          )}
         </div>
+
+        {/* Moderator edit box */}
+        {editingId === comment.id && (
+          <div className="mt-2 flex flex-col gap-2">
+            <textarea
+              value={editContent}
+              onChange={e => setEditContent(e.target.value)}
+              autoFocus
+              rows={2}
+              className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.25)] rounded-lg px-3 py-2 text-sm text-parchment focus:outline-none focus:border-[#C9913A] resize-none"
+            />
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => saveEdit(comment.id)}
+                disabled={busy || !editContent.trim()}
+                className="flex items-center gap-1 px-3 py-1 rounded-lg bg-[#C9913A] text-charcoal text-xs font-semibold disabled:opacity-40 hover:opacity-90 transition-opacity"
+              >
+                {busy ? <Loader2 size={11} className="animate-spin" /> : <Pencil size={11} />} Save
+              </button>
+              <button onClick={cancelEdit} disabled={busy} className="text-parchment/50 hover:text-parchment text-xs px-2">Cancel</button>
+            </div>
+          </div>
+        )}
+
+        {/* Delete confirm */}
+        {deletingId === comment.id && (
+          <div className="mt-2 flex items-center gap-2 px-3 py-2 rounded-lg bg-red-950/30 border border-red-500/30">
+            <p className="text-xs text-parchment/70 flex-1">Delete this comment{replies.length > 0 ? ` and ${replies.length} repl${replies.length === 1 ? 'y' : 'ies'}` : ''}?</p>
+            <button
+              onClick={() => deleteComment(comment.id)}
+              disabled={busy}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-600/80 text-white text-xs font-semibold disabled:opacity-50 hover:bg-red-600 transition-colors"
+            >
+              {busy ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />} Delete
+            </button>
+            <button onClick={() => setDeletingId(null)} disabled={busy} className="text-parchment/50 hover:text-parchment text-xs px-2">Keep</button>
+          </div>
+        )}
 
         {/* Replies */}
         {replies.length > 0 && (
@@ -361,13 +471,51 @@ function CommentNode({
                         </div>
                       )}
                     </div>
-                    <button
-                      onClick={() => toggleLike(reply.id)}
-                      className={`flex items-center gap-1 text-[11px] ml-1 mt-0.5 transition-colors ${replyLiked ? 'text-red-400' : 'text-parchment/40 hover:text-red-400'}`}
-                    >
-                      <Heart size={11} fill={replyLiked ? 'currentColor' : 'none'} />
-                      {replyLiked ? 'Liked' : 'Like'}
-                    </button>
+                    <div className="flex items-center gap-3 mt-0.5 ml-1">
+                      <button
+                        onClick={() => toggleLike(reply.id)}
+                        className={`flex items-center gap-1 text-[11px] transition-colors ${replyLiked ? 'text-red-400' : 'text-parchment/40 hover:text-red-400'}`}
+                      >
+                        <Heart size={11} fill={replyLiked ? 'currentColor' : 'none'} />
+                        {replyLiked ? 'Liked' : 'Like'}
+                      </button>
+                      {canModerate && editingId !== reply.id && (
+                        <button onClick={() => startEdit(reply)} className="flex items-center gap-1 text-[11px] text-parchment/40 hover:text-amber-light transition-colors">
+                          <Pencil size={10} /> Edit
+                        </button>
+                      )}
+                      {canModerate && (
+                        <button onClick={() => setDeletingId(deletingId === reply.id ? null : reply.id)} className="flex items-center gap-1 text-[11px] text-parchment/40 hover:text-red-400 transition-colors">
+                          <Trash2 size={10} /> Delete
+                        </button>
+                      )}
+                    </div>
+                    {editingId === reply.id && (
+                      <div className="mt-1.5 flex flex-col gap-1.5">
+                        <textarea
+                          value={editContent}
+                          onChange={e => setEditContent(e.target.value)}
+                          autoFocus
+                          rows={2}
+                          className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.25)] rounded-lg px-3 py-2 text-sm text-parchment focus:outline-none focus:border-[#C9913A] resize-none"
+                        />
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => saveEdit(reply.id)} disabled={busy || !editContent.trim()} className="flex items-center gap-1 px-3 py-1 rounded-lg bg-[#C9913A] text-charcoal text-xs font-semibold disabled:opacity-40 hover:opacity-90 transition-opacity">
+                            {busy ? <Loader2 size={11} className="animate-spin" /> : <Pencil size={11} />} Save
+                          </button>
+                          <button onClick={cancelEdit} disabled={busy} className="text-parchment/50 hover:text-parchment text-xs px-2">Cancel</button>
+                        </div>
+                      </div>
+                    )}
+                    {deletingId === reply.id && (
+                      <div className="mt-1.5 flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-red-950/30 border border-red-500/30">
+                        <p className="text-xs text-parchment/70 flex-1">Delete this reply?</p>
+                        <button onClick={() => deleteComment(reply.id)} disabled={busy} className="flex items-center gap-1 px-2 py-1 rounded-lg bg-red-600/80 text-white text-xs font-semibold disabled:opacity-50 hover:bg-red-600 transition-colors">
+                          {busy ? <Loader2 size={10} className="animate-spin" /> : <Trash2 size={10} />} Delete
+                        </button>
+                        <button onClick={() => setDeletingId(null)} disabled={busy} className="text-parchment/50 hover:text-parchment text-xs px-1">Keep</button>
+                      </div>
+                    )}
                   </div>
                 </div>
               );

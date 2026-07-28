@@ -9,7 +9,7 @@ import { base44 } from '@/api/base44Client';
 //   none         — no branch relationship
 // canInteract is true for admin, branch_admin, and approved members.
 export function useAccessRights() {
-  const [state, setState] = useState({ status: 'loading', canInteract: false, approvedBranchIds: [], isBranchAdmin: false });
+  const [state, setState] = useState({ status: 'loading', canInteract: false, approvedBranchIds: [], isBranchAdmin: false, adminBranchIds: [] });
 
   useEffect(() => {
     let cancelled = false;
@@ -17,7 +17,7 @@ export function useAccessRights() {
       try {
         const user = await base44.auth.me().catch(() => null);
         if (!user) {
-          if (!cancelled) setState({ status: 'none', canInteract: false, approvedBranchIds: [], isBranchAdmin: false });
+          if (!cancelled) setState({ status: 'none', canInteract: false, approvedBranchIds: [], isBranchAdmin: false, adminBranchIds: [] });
           return;
         }
         const [branches, invites] = await Promise.all([
@@ -28,7 +28,8 @@ export function useAccessRights() {
 
         const email = (user.email || '').toLowerCase();
         const isAdmin = user.role === 'admin';
-        const isBranchAdmin = (branches || []).some(b => b.admin_user_id && b.admin_user_id === user.id);
+        const adminBranchIds = (branches || []).filter(b => b.admin_user_id && b.admin_user_id === user.id).map(b => b.id);
+        const isBranchAdmin = adminBranchIds.length > 0;
         const mine = (invites || []).filter(i => (i.invitee_email || '').toLowerCase() === email);
         const approvedBranchIds = mine.filter(i => i.status === 'approved').map(i => i.branch_id);
         const hasApproved = approvedBranchIds.length > 0;
@@ -41,9 +42,9 @@ export function useAccessRights() {
         else if (hasPending) { status = 'pending'; canInteract = false; }
         else { status = 'none'; canInteract = false; }
 
-        setState({ status, canInteract, approvedBranchIds, isBranchAdmin });
+        setState({ status, canInteract, approvedBranchIds, isBranchAdmin, adminBranchIds });
       } catch (e) {
-        if (!cancelled) setState({ status: 'none', canInteract: false, approvedBranchIds: [], isBranchAdmin: false });
+        if (!cancelled) setState({ status: 'none', canInteract: false, approvedBranchIds: [], isBranchAdmin: false, adminBranchIds: [] });
       }
     })();
     return () => { cancelled = true; };

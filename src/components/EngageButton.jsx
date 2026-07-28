@@ -38,7 +38,7 @@ export default function EngageButton({ item, user }) {
   return (
     <div>
       {/* Comments — always visible, social media style */}
-      <CommentThread entityType="ContentItem" entityId={item.id} fieldName="general_discussion" user={user} />
+      <CommentThread entityType="ContentItem" entityId={item.id} fieldName="general_discussion" user={user} recordBranchId={item.branch_id} />
 
       <div className="mt-4 pt-4 border-t border-[rgba(201,145,58,0.1)]">
         <button

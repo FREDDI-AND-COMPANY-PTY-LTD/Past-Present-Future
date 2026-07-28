@@ -354,7 +354,7 @@ export default function EditEventDialog({ item, onClose, onSubmitted, onDeleted,
                   <h4 className="font-display text-base text-parchment">Comments & Discussion</h4>
                   <span className="text-xs text-parchment/40">— permanently attached to this record</span>
                 </div>
-                <CommentThread entityType="ContentItem" entityId={item.id} fieldName="general_discussion" />
+                <CommentThread entityType="ContentItem" entityId={item.id} fieldName="general_discussion" recordBranchId={item.branch_id} />
               </div>
             </div>
 

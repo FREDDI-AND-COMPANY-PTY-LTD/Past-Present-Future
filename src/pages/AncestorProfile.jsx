@@ -11,6 +11,7 @@ import RaiseDisputeDialog from '@/components/RaiseDisputeDialog';
 import FlagDuplicateAncestorDialog from '@/components/FlagDuplicateAncestorDialog';
 import { formatAncestorName } from '@/lib/ancestorName';
 import BirthBranchLink from '@/components/BirthBranchLink';
+import CommentThread from '@/components/CommentThread';
 
 export default function AncestorProfile() {
   const { id } = useParams();
@@ -265,6 +266,11 @@ export default function AncestorProfile() {
               <p className="text-parchment/50 text-sm">No content has been tagged to this ancestor yet.</p>
             </div>
           )}
+        </div>
+
+        {/* Discussion — branch members can comment; the branch admin moderates */}
+        <div className="aged-card rounded-2xl p-6 mb-8">
+          <CommentThread entityType="Ancestor" entityId={id} fieldName="general_discussion" recordBranchId={ancestor.branch_id} />
         </div>
 
         <AncestorEditDialog
