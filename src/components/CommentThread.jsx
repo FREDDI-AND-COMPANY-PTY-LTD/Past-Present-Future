@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Loader2, MessageCircle, Send, CornerDownRight, AtSign, X, HelpCircle, Heart, Lock, Pencil, Trash2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useAccessRights } from '@/hooks/useAccessRights';
@@ -339,6 +339,14 @@ function CommentNode({
   canModerate, editingId, editContent, setEditContent, startEdit, cancelEdit, saveEdit,
   deletingId, setDeletingId, deleteComment, busy,
 }) {
+  const editRef = useRef(null);
+  useEffect(() => {
+    const el = editRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = Math.max(el.scrollHeight, 96) + 'px';
+  }, [editingId, editContent]);
+
   const isLiked = likedComments.has(comment.id);
   const replyTags = replyTaggedIds[comment.id] || [];
   const tagged = taggedUsers(comment.tagged_user_ids);
@@ -411,11 +419,12 @@ function CommentNode({
         {editingId === comment.id && (
           <div className="mt-2 flex flex-col gap-2">
             <textarea
+              ref={editRef}
               value={editContent}
               onChange={e => setEditContent(e.target.value)}
               autoFocus
-              rows={2}
-              className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.25)] rounded-lg px-3 py-2 text-sm text-parchment focus:outline-none focus:border-[#C9913A] resize-none"
+              rows={4}
+              className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.25)] rounded-lg px-3 py-2 text-sm text-parchment focus:outline-none focus:border-[#C9913A] resize-none overflow-hidden"
             />
             <div className="flex items-center gap-2">
               <button
@@ -493,11 +502,12 @@ function CommentNode({
                     {editingId === reply.id && (
                       <div className="mt-1.5 flex flex-col gap-1.5">
                         <textarea
+                          ref={editRef}
                           value={editContent}
                           onChange={e => setEditContent(e.target.value)}
                           autoFocus
-                          rows={2}
-                          className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.25)] rounded-lg px-3 py-2 text-sm text-parchment focus:outline-none focus:border-[#C9913A] resize-none"
+                          rows={4}
+                          className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.25)] rounded-lg px-3 py-2 text-sm text-parchment focus:outline-none focus:border-[#C9913A] resize-none overflow-hidden"
                         />
                         <div className="flex items-center gap-2">
                           <button onClick={() => saveEdit(reply.id)} disabled={busy || !editContent.trim()} className="flex items-center gap-1 px-3 py-1 rounded-lg bg-[#C9913A] text-charcoal text-xs font-semibold disabled:opacity-40 hover:opacity-90 transition-opacity">
