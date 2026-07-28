@@ -12,6 +12,7 @@ import FlagDuplicateAncestorDialog from '@/components/FlagDuplicateAncestorDialo
 import { formatAncestorName } from '@/lib/ancestorName';
 import BirthBranchLink from '@/components/BirthBranchLink';
 import CommentThread from '@/components/CommentThread';
+import AncestorBiography from '@/components/AncestorBiography';
 
 export default function AncestorProfile() {
   const { id } = useParams();
@@ -142,6 +143,14 @@ export default function AncestorProfile() {
             </div>
           </div>
         </div>
+
+        {/* AI-composed biographical overview */}
+        <AncestorBiography
+          ancestorId={id}
+          biography={ancestor.ai_biography}
+          generatedAt={ancestor.ai_biography_generated_at}
+          onGenerated={(bio, at) => setAncestor(prev => ({ ...prev, ai_biography: bio, ai_biography_generated_at: at }))}
+        />
 
         {/* Family connections */}
         {(parents.mother || parents.father || partner) && (
