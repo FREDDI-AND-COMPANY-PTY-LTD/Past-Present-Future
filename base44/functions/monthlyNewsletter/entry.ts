@@ -154,7 +154,10 @@ function teaserHtml({ preheader, headline, body, periodLabel, itemCount, ctaUrl,
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const origin = (() => { try { return new URL(req.url).origin; } catch { return ''; } })();
+    // Scheduled runs receive req.url from the backend dispatcher (not the app),
+    // so links built from new URL(req.url).origin point at the function host and
+    // fail with "invalid dispatcher secret". Prefer the configured public URL.
+    const origin = Deno.env.get('APP_PUBLIC_URL') || (() => { try { return new URL(req.url).origin; } catch { return ''; } })();
 
     const now = new Date();
     const monthName = now.toLocaleDateString('en-AU', { month: 'long', year: 'numeric' });
