@@ -32,7 +32,7 @@ Deno.serve(async (req) => {
 
     // Scheduled runs receive req.url from the backend dispatcher (not the app),
     // so prefer the configured public URL for in-app links.
-    const origin = Deno.env.get('APP_PUBLIC_URL') || new URL(req.url).origin;
+    const origin = (Deno.env.get('APP_PUBLIC_URL') || new URL(req.url).origin).replace(/\/+$/, '');
     const html = buildEmailHtml(dateStr, openProblems || [], inProgressProblems || [], openFlags || [], pendingUploads, totalTasks, origin);
 
     const subject = `Weekly Admin Digest — Freddi Ancestry Archive (${totalTasks} task${totalTasks !== 1 ? 's' : ''})`;
