@@ -145,6 +145,8 @@ export default function GoogleMap({ markers = [], routes = [], loading = false, 
           streetViewControl: true,
           fullscreenControl: true,
           zoomControl: true,
+          draggable: true,
+          gestureHandling: 'greedy',
         });
         try {
           await loadMarkerClusterer();
