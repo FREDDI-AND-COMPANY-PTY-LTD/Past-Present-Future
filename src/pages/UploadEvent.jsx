@@ -380,10 +380,15 @@ Return JSON with this structure:
     const matchedAncestorId = exactMatchIds[0] || selectedAncestorId || '';
     if (matchedAncestorId) setSelectedAncestorId(matchedAncestorId);
 
+    // For certificates the AI records the registration/issue details under
+    // place_of_event / date_of_event — those are the INSTRUMENT details, not
+    // the event. Prefer the specific birth/death place+date first; the generic
+    // event fields fall through last so they remain available for the
+    // instrument (publication) mapping below instead of being consumed here.
     const eventLocation = result.event_location
-      || result.extracted_fields?.place_of_event
       || result.extracted_fields?.place_of_birth
       || result.extracted_fields?.place_of_death
+      || result.extracted_fields?.place_of_event
       || result.extracted_fields?.place_of_issue
       || result.extracted_fields?.residence_address
       || result.extracted_fields?.port_of_arrival
@@ -392,9 +397,9 @@ Return JSON with this structure:
 
     const eventDate = result.event_date
       || result.extracted_fields?.date_of_award
-      || result.extracted_fields?.date_of_event
       || result.extracted_fields?.date_of_birth
       || result.extracted_fields?.date_of_death
+      || result.extracted_fields?.date_of_event
       || '';
     const eventDescription = result.suggested_description || '';
 
@@ -413,8 +418,13 @@ Return JSON with this structure:
     // For press clippings: the masthead publication date / newspaper city
     //   (often not in extracted_fields, so fall back to event_location only if
     //   it's clearly a publication city \u2014 otherwise leave blank for the user).
-    let publicationDate = result.extracted_fields?.date_of_issue || '';
-    let publicationLocation = result.extracted_fields?.place_of_issue || '';
+    // The AI often files the certificate's registration/issue date+place under
+    // date_of_event / place_of_event rather than date_of_issue / place_of_issue.
+    // Fall back to those so the instrument's own date+location populate. The
+    // dedup below clears it when it matches the event (e.g. a degree's award
+    // date IS the event, so there is no separate instrument date).
+    let publicationDate = result.extracted_fields?.date_of_issue || result.extracted_fields?.date_of_event || '';
+    let publicationLocation = result.extracted_fields?.place_of_issue || result.extracted_fields?.place_of_event || '';
     // If the issue date/place is the same as the event date/place, it's not a
     // separate publication detail (e.g. a degree certificate's award date IS the
     // event) — don't duplicate it into the publication fields.
