@@ -119,16 +119,20 @@ export default function FamilyTree() {
   const svgWidth = Math.max((maxY + 1) * yGap + 200, 1200);
   const svgHeight = Math.max((maxLevel - minLevel + 2) * levelGap + 100, 600);
 
-  const handleMouseDown = (e) => {
+  const handlePointerDown = (e) => {
     setIsDragging(true);
     dragStart.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch (_) {}
   };
-  const handleMouseMove = (e) => {
+  const handlePointerMove = (e) => {
     if (isDragging) {
       setPan({ x: e.clientX - dragStart.current.x, y: e.clientY - dragStart.current.y });
     }
   };
-  const handleMouseUp = () => setIsDragging(false);
+  const handlePointerUp = (e) => {
+    setIsDragging(false);
+    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch (_) {}
+  };
 
   const selectedContent = selectedAncestor
     ? contentItems.filter(c => c.ancestor_ids?.includes(selectedAncestor.id))
@@ -176,11 +180,12 @@ export default function FamilyTree() {
 
       <div
         className="relative overflow-hidden bg-charcoal border-y border-[rgba(201,145,58,0.1)]"
-        style={{ height: '70vh', cursor: isDragging ? 'grabbing' : 'grab' }}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
+        style={{ height: '70vh', cursor: isDragging ? 'grabbing' : 'grab', touchAction: 'none' }}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        onPointerLeave={handlePointerUp}
       >
         {(loading || branchLoading) ? (
           <div className="flex items-center justify-center h-full">
