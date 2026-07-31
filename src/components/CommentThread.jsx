@@ -358,7 +358,30 @@ function CommentNode({
             )}
             <span className="text-[10px] text-parchment/30">{formatTime(comment.created_date)}</span>
           </div>
-          <p className="text-sm text-parchment/80 leading-relaxed whitespace-pre-wrap break-words">{comment.content}</p>
+          {editingId === comment.id ? (
+            <div className="flex flex-col gap-2">
+              <AutoGrowTextarea
+                value={editContent}
+                onChange={e => setEditContent(e.target.value)}
+                autoFocus
+                rows={2}
+                expandedRows={14}
+                className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.3)] rounded-lg px-3 py-2 text-sm text-parchment focus:outline-none focus:border-[#C9913A] resize-none overflow-hidden"
+              />
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => saveEdit(comment.id)}
+                  disabled={busy || !editContent.trim()}
+                  className="flex items-center gap-1 px-3 py-1 rounded-lg bg-[#C9913A] text-charcoal text-xs font-semibold disabled:opacity-40 hover:opacity-90 transition-opacity"
+                >
+                  {busy ? <Loader2 size={11} className="animate-spin" /> : <Pencil size={11} />} Save
+                </button>
+                <button onClick={cancelEdit} disabled={busy} className="text-parchment/50 hover:text-parchment text-xs px-2">Cancel</button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-parchment/80 leading-relaxed whitespace-pre-wrap break-words">{comment.content}</p>
+          )}
           {tagged?.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-1">
               {tagged.map(u => (
@@ -409,29 +432,7 @@ function CommentNode({
           )}
         </div>
 
-        {/* Moderator edit box */}
-        {editingId === comment.id && (
-          <div className="mt-2 flex flex-col gap-2">
-            <AutoGrowTextarea
-              value={editContent}
-              onChange={e => setEditContent(e.target.value)}
-              autoFocus
-              rows={3}
-              expandedRows={14}
-              className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.25)] rounded-lg px-3 py-2 text-sm text-parchment focus:outline-none focus:border-[#C9913A] resize-none overflow-hidden"
-            />
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => saveEdit(comment.id)}
-                disabled={busy || !editContent.trim()}
-                className="flex items-center gap-1 px-3 py-1 rounded-lg bg-[#C9913A] text-charcoal text-xs font-semibold disabled:opacity-40 hover:opacity-90 transition-opacity"
-              >
-                {busy ? <Loader2 size={11} className="animate-spin" /> : <Pencil size={11} />} Save
-              </button>
-              <button onClick={cancelEdit} disabled={busy} className="text-parchment/50 hover:text-parchment text-xs px-2">Cancel</button>
-            </div>
-          </div>
-        )}
+
 
         {/* Delete confirm */}
         {deletingId === comment.id && (
@@ -463,7 +464,26 @@ function CommentNode({
                         <span className="text-xs text-amber-light font-semibold">{reply.author_name || 'Family Member'}</span>
                         <span className="text-[10px] text-parchment/30">{formatTime(reply.created_date)}</span>
                       </div>
-                      <p className="text-sm text-parchment/80 leading-relaxed whitespace-pre-wrap break-words">{reply.content}</p>
+                      {editingId === reply.id ? (
+                        <div className="flex flex-col gap-1.5">
+                          <AutoGrowTextarea
+                            value={editContent}
+                            onChange={e => setEditContent(e.target.value)}
+                            autoFocus
+                            rows={2}
+                            expandedRows={14}
+                            className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.3)] rounded-lg px-3 py-2 text-sm text-parchment focus:outline-none focus:border-[#C9913A] resize-none overflow-hidden"
+                          />
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => saveEdit(reply.id)} disabled={busy || !editContent.trim()} className="flex items-center gap-1 px-3 py-1 rounded-lg bg-[#C9913A] text-charcoal text-xs font-semibold disabled:opacity-40 hover:opacity-90 transition-opacity">
+                              {busy ? <Loader2 size={11} className="animate-spin" /> : <Pencil size={11} />} Save
+                            </button>
+                            <button onClick={cancelEdit} disabled={busy} className="text-parchment/50 hover:text-parchment text-xs px-2">Cancel</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-parchment/80 leading-relaxed whitespace-pre-wrap break-words">{reply.content}</p>
+                      )}
                       {replyTagged?.length > 0 && (
                         <div className="mt-1.5 flex flex-wrap gap-1">
                           {replyTagged.map(u => (
@@ -493,24 +513,7 @@ function CommentNode({
                         </button>
                       )}
                     </div>
-                    {editingId === reply.id && (
-                      <div className="mt-1.5 flex flex-col gap-1.5">
-                        <AutoGrowTextarea
-                          value={editContent}
-                          onChange={e => setEditContent(e.target.value)}
-                          autoFocus
-                          rows={3}
-                          expandedRows={14}
-                          className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.25)] rounded-lg px-3 py-2 text-sm text-parchment focus:outline-none focus:border-[#C9913A] resize-none overflow-hidden"
-                        />
-                        <div className="flex items-center gap-2">
-                          <button onClick={() => saveEdit(reply.id)} disabled={busy || !editContent.trim()} className="flex items-center gap-1 px-3 py-1 rounded-lg bg-[#C9913A] text-charcoal text-xs font-semibold disabled:opacity-40 hover:opacity-90 transition-opacity">
-                            {busy ? <Loader2 size={11} className="animate-spin" /> : <Pencil size={11} />} Save
-                          </button>
-                          <button onClick={cancelEdit} disabled={busy} className="text-parchment/50 hover:text-parchment text-xs px-2">Cancel</button>
-                        </div>
-                      </div>
-                    )}
+
                     {deletingId === reply.id && (
                       <div className="mt-1.5 flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-red-950/30 border border-red-500/30">
                         <p className="text-xs text-parchment/70 flex-1">Delete this reply?</p>
