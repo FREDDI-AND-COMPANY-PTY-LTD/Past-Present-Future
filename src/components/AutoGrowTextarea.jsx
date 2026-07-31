@@ -22,7 +22,8 @@ export default function AutoGrowTextarea({
     el.style.height = 'auto';
     const lineHeight = parseFloat(getComputedStyle(el).lineHeight) || 22;
     const maxHeight = lineHeight * expandedRows;
-    el.style.height = Math.min(el.scrollHeight, maxHeight) + 'px';
+    const minHeight = lineHeight * Math.min(expandedRows, 4);
+    el.style.height = Math.min(Math.max(el.scrollHeight, minHeight), maxHeight) + 'px';
   };
 
   const collapse = () => {
@@ -31,11 +32,16 @@ export default function AutoGrowTextarea({
     el.style.height = '';
   };
 
+  const handleChange = (e) => {
+    if (onChange) onChange(e);
+    requestAnimationFrame(expand);
+  };
+
   return (
     <textarea
       ref={ref}
       value={value}
-      onChange={onChange}
+      onChange={handleChange}
       onFocus={expand}
       onBlur={collapse}
       rows={rows}

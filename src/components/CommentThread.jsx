@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
+import AutoGrowTextarea from '@/components/AutoGrowTextarea';
 import { Loader2, MessageCircle, Send, CornerDownRight, AtSign, X, HelpCircle, Heart, Lock, Pencil, Trash2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useAccessRights } from '@/hooks/useAccessRights';
@@ -209,13 +210,14 @@ export default function CommentThread({ entityType, entityId, fieldName, user: i
       <div className="mb-5 flex gap-3">
         <Avatar name={myName} size="md" />
         <div className="flex-1">
-          <textarea
+          <AutoGrowTextarea
             value={newComment}
             onChange={e => setNewComment(e.target.value)}
             onKeyDown={e => {
               if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSubmit();
             }}
             rows={2}
+            expandedRows={8}
             className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A] resize-none placeholder:text-parchment/30"
             placeholder="Share a memory, ask a question, or add context to this story..."
           />
@@ -339,14 +341,6 @@ function CommentNode({
   canModerate, editingId, editContent, setEditContent, startEdit, cancelEdit, saveEdit,
   deletingId, setDeletingId, deleteComment, busy,
 }) {
-  const editRef = useRef(null);
-  useEffect(() => {
-    const el = editRef.current;
-    if (!el) return;
-    el.style.height = 'auto';
-    el.style.height = Math.max(el.scrollHeight, 96) + 'px';
-  }, [editingId, editContent]);
-
   const isLiked = likedComments.has(comment.id);
   const replyTags = replyTaggedIds[comment.id] || [];
   const tagged = taggedUsers(comment.tagged_user_ids);
@@ -418,12 +412,12 @@ function CommentNode({
         {/* Moderator edit box */}
         {editingId === comment.id && (
           <div className="mt-2 flex flex-col gap-2">
-            <textarea
-              ref={editRef}
+            <AutoGrowTextarea
               value={editContent}
               onChange={e => setEditContent(e.target.value)}
               autoFocus
-              rows={4}
+              rows={3}
+              expandedRows={14}
               className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.25)] rounded-lg px-3 py-2 text-sm text-parchment focus:outline-none focus:border-[#C9913A] resize-none overflow-hidden"
             />
             <div className="flex items-center gap-2">
@@ -501,12 +495,12 @@ function CommentNode({
                     </div>
                     {editingId === reply.id && (
                       <div className="mt-1.5 flex flex-col gap-1.5">
-                        <textarea
-                          ref={editRef}
+                        <AutoGrowTextarea
                           value={editContent}
                           onChange={e => setEditContent(e.target.value)}
                           autoFocus
-                          rows={4}
+                          rows={3}
+                          expandedRows={14}
                           className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.25)] rounded-lg px-3 py-2 text-sm text-parchment focus:outline-none focus:border-[#C9913A] resize-none overflow-hidden"
                         />
                         <div className="flex items-center gap-2">
@@ -538,7 +532,7 @@ function CommentNode({
           <div className="mt-2 flex gap-2">
             <Avatar name={currentUser?.full_name || currentUser?.email || 'You'} size="sm" />
             <div className="flex-1">
-              <textarea
+              <AutoGrowTextarea
                 value={replyText}
                 onChange={e => setReplyText(e.target.value)}
                 onKeyDown={e => {
@@ -546,6 +540,7 @@ function CommentNode({
                 }}
                 autoFocus
                 rows={1}
+                expandedRows={6}
                 className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-3 py-2 text-sm text-parchment focus:outline-none focus:border-[#C9913A] resize-none placeholder:text-parchment/30"
                 placeholder={`Reply to ${comment.author_name}...`}
               />
