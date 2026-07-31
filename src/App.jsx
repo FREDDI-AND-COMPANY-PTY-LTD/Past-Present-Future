@@ -9,6 +9,7 @@ import ScrollToTop from './components/ScrollToTop';
 import Home from '@/pages/Home';
 import Ancestors from '@/pages/Ancestors';
 import AncestorProfile from '@/pages/AncestorProfile';
+import AncestorTimeline from '@/pages/AncestorTimeline';
 import MapPage from '@/pages/MapPage';
 import TimelinePage from '@/pages/TimelinePage';
 import FamilyTree from '@/pages/FamilyTree';
@@ -63,6 +64,7 @@ const AuthenticatedApp = () => {
         <Route path="/" element={<Home />} />
         <Route path="/ancestors" element={<Ancestors />} />
         <Route path="/ancestor/:id" element={<AncestorProfile />} />
+        <Route path="/ancestor/:id/timeline" element={<AncestorTimeline />} />
         <Route path="/map" element={<MapPage />} />
         <Route path="/timeline" element={<TimelinePage />} />
         <Route path="/family-tree" element={<FamilyTree />} />

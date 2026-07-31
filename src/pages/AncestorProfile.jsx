@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { MapPin, Calendar, Globe, Heart, FileText, Award, Flag, GitMerge, ChevronLeft, BookUser, Pencil } from 'lucide-react';
+import { MapPin, Calendar, Globe, Heart, FileText, Award, Flag, GitMerge, ChevronLeft, BookUser, Pencil, Clock } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import AncestorAvatar from '@/components/AncestorAvatar';
@@ -87,12 +87,18 @@ export default function AncestorProfile() {
           <Link to="/ancestors" className="inline-flex items-center gap-1 text-parchment/50 hover:text-gold transition-colors text-sm">
             <ChevronLeft size={16} /> All Ancestors
           </Link>
-          {currentUser?.role === 'admin' && (
-            <button onClick={() => setEditOpen(true)}
+          <div className="flex items-center gap-2">
+            <Link to={`/ancestor/${id}/timeline`}
               className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-[rgba(201,145,58,0.3)] text-amber-light text-sm font-medium hover:bg-[rgba(201,145,58,0.08)] transition-colors">
-              <Pencil size={14} /> Edit Profile
-            </button>
-          )}
+              <Clock size={14} /> Life Timeline
+            </Link>
+            {currentUser?.role === 'admin' && (
+              <button onClick={() => setEditOpen(true)}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-[rgba(201,145,58,0.3)] text-amber-light text-sm font-medium hover:bg-[rgba(201,145,58,0.08)] transition-colors">
+                <Pencil size={14} /> Edit Profile
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Profile header */}
