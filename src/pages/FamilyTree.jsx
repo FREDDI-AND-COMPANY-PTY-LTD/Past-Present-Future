@@ -5,6 +5,7 @@ import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import NewAncestorDialog from '@/components/NewAncestorDialog';
 import LinkRelativeDialog from '@/components/LinkRelativeDialog';
+import FamilyTreeOrphanTray from '@/components/FamilyTreeOrphanTray';
 import { useBranchRoot } from '@/hooks/useBranchRoot';
 
 export default function FamilyTree() {
@@ -275,6 +276,8 @@ export default function FamilyTree() {
           </div>
         )}
       </div>
+
+      <FamilyTreeOrphanTray ancestors={ancestors} descendantIds={descendantIds} rootAncestorId={rootAncestorId} />
 
       {/* Side panel */}
       {selectedAncestor && (

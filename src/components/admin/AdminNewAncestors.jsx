@@ -1,26 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Users, UserPlus, CheckCircle } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { UserPlus, CheckCircle } from 'lucide-react';
+import VerifyConnectDialog from '@/components/admin/VerifyConnectDialog';
 
 export default function AdminNewAncestors({ ancestors, onVerified }) {
   const [local, setLocal] = useState(ancestors);
+  const [connectTarget, setConnectTarget] = useState(null);
 
-  useEffect(() => { setLocal(ancestors); }, [ancestors]);
-
-  const verify = async (id) => {
-    try {
-      await base44.entities.Ancestor.update(id, { review_status: 'admin_verified' });
-      setLocal(prev => prev.filter(a => a.id !== id));
-      onVerified?.(id);
-    } catch (e) {}
-  };
+  React.useEffect(() => { setLocal(ancestors); }, [ancestors]);
 
   if (!local || local.length === 0) {
     return (
       <div className="aged-card rounded-xl p-12 text-center">
-        <Users size={32} className="text-gold/30 mx-auto mb-3" />
-        <p className="text-parchment/50">No new ancestors awaiting review.</p>
+        <UserPlus size={32} className="text-gold/30 mx-auto mb-3" />
+        <p className="text-parchment/50">No new ancestors awaiting verification.</p>
+        <p className="text-parchment/30 text-xs mt-1">Ancestors added from the Family Tree appear here, staged and hidden from the archive until you connect them.</p>
       </div>
     );
   }
@@ -43,7 +37,7 @@ export default function AdminNewAncestors({ ancestors, onVerified }) {
                 </div>
               </div>
             </div>
-            <span className="text-xs px-2 py-0.5 rounded-full border bg-[rgba(201,145,58,0.08)] text-amber-light border-[rgba(201,145,58,0.2)]">Auto-approved</span>
+            <span className="text-xs px-2 py-0.5 rounded-full border bg-[rgba(201,145,58,0.08)] text-amber-light border-[rgba(201,145,58,0.2)]">Staged</span>
           </div>
           {ancestor.biography && <p className="text-xs text-parchment/50 mb-3">{ancestor.biography}</p>}
           <div className="flex items-center gap-2 text-xs text-parchment/40 mb-3">
@@ -53,12 +47,22 @@ export default function AdminNewAncestors({ ancestors, onVerified }) {
           </div>
           <div className="flex gap-2">
             <Link to={`/ancestor/${ancestor.id}`} className="px-3 py-1.5 rounded-lg bg-[rgba(201,145,58,0.06)] border border-[rgba(201,145,58,0.15)] text-amber-light/80 text-xs hover:border-[rgba(201,145,58,0.35)] transition-colors">View Profile</Link>
-            <button onClick={() => verify(ancestor.id)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-900/20 text-green-400 text-xs border border-green-800/30 hover:bg-green-900/30 transition-colors">
-              <CheckCircle size={14} /> Verify
+            <button onClick={() => setConnectTarget(ancestor)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-900/20 text-green-400 text-xs border border-green-800/30 hover:bg-green-900/30 transition-colors">
+              <CheckCircle size={14} /> Verify & Connect
             </button>
           </div>
         </div>
       ))}
+      {connectTarget && (
+        <VerifyConnectDialog
+          ancestor={connectTarget}
+          onClose={() => setConnectTarget(null)}
+          onVerified={(id) => {
+            setLocal(prev => prev.filter(a => a.id !== id));
+            onVerified?.(id);
+          }}
+        />
+      )}
     </div>
   );
 }

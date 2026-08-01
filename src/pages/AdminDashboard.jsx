@@ -64,7 +64,7 @@ export default function AdminDashboard() {
     Promise.all([
       base44.entities.ActivityLog.list('-created_date', 50),
       base44.entities.ConflictFlag.filter({ status: 'open' }),
-      base44.entities.Ancestor.filter({ review_status: 'auto_approved' }),
+      base44.entities.Ancestor.filter({ review_status: 'staged' }),
       base44.entities.ContentItem.filter({ review_status: 'flagged' }),
       base44.entities.EditRequest.filter({ status: 'pending' }),
       base44.entities.ContentItem.list('-created_date', 100),
