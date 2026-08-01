@@ -15,6 +15,7 @@ import AdminDisputesList from '@/components/admin/AdminDisputesList';
 import AdminActivityFeed from '@/components/admin/AdminActivityFeed';
 import AdminIncompleteUploads from '@/components/admin/AdminIncompleteUploads';
 import AdminNewAncestors from '@/components/admin/AdminNewAncestors';
+import AdminConnectAncestors from '@/components/admin/AdminConnectAncestors';
 
 const TOP_TABS = [
   { key: 'review', label: 'Needs Review', icon: AlertCircle },
@@ -31,6 +32,7 @@ const REVIEW_FILTERS = [
   { key: 'edits', label: 'Edits', icon: Edit3 },
   { key: 'familyLinks', label: 'Family Links', icon: Network },
   { key: 'ancestors', label: 'Ancestors', icon: Users },
+  { key: 'connect', label: 'Connect Tree', icon: Network },
   { key: 'problems', label: 'Problems', icon: Inbox },
   { key: 'proposals', label: 'Proposals', icon: Lightbulb },
 ];
@@ -58,6 +60,7 @@ export default function AdminDashboard() {
   const [uncategorizedCount, setUncategorizedCount] = useState(0);
   const [problemCount, setProblemCount] = useState(0);
   const [proposalCount, setProposalCount] = useState(0);
+  const [unconnectedCount, setUnconnectedCount] = useState(0);
 
   useEffect(() => {
     base44.auth.me().then(setUser).catch(() => {});
@@ -72,7 +75,9 @@ export default function AdminDashboard() {
       base44.entities.ContentItem.filter({ content_type: 'uncategorized' }),
       base44.entities.ProblemReport.filter({ status: 'open' }),
       base44.entities.Proposal.filter({ status: 'pending' }),
-    ]).then(([lg, fl, na, fi, er, items, flk, unc, probs, props]) => {
+      base44.entities.Ancestor.list(),
+      base44.entities.Branch.list(),
+    ]).then(([lg, fl, na, fi, er, items, flk, unc, probs, props, allAnc, brs]) => {
       setLogs(lg || []);
       setFlags(fl || []);
       setNewAncestors(na || []);
@@ -83,6 +88,8 @@ export default function AdminDashboard() {
       setUncategorizedCount((unc || []).length);
       setProblemCount((probs || []).length);
       setProposalCount((props || []).length);
+      const rootIds = new Set((brs || []).map(b => b.ancestor_id).filter(Boolean));
+      setUnconnectedCount((allAnc || []).filter(a => !a.father_id && !a.mother_id && !a.partner_id && !rootIds.has(a.id)).length);
     }).catch(() => {}).finally(() => setLoading(false));
   }, [refreshKey]);
 
@@ -94,6 +101,7 @@ export default function AdminDashboard() {
     edits: editRequestCount,
     familyLinks: familyLinkCount,
     ancestors: newAncestors.length,
+    connect: unconnectedCount,
     problems: problemCount,
     proposals: proposalCount,
   };
@@ -185,6 +193,7 @@ export default function AdminDashboard() {
                 {reviewFilter === 'edits' && <AdminEditRequests />}
                 {reviewFilter === 'familyLinks' && <AdminFamilyLinks refreshKey={refreshKey} />}
                 {reviewFilter === 'ancestors' && <AdminNewAncestors ancestors={newAncestors} onVerified={() => setRefreshKey(k => k + 1)} />}
+                {reviewFilter === 'connect' && <AdminConnectAncestors onResolved={() => setRefreshKey(k => k + 1)} />}
                 {reviewFilter === 'problems' && <AdminProblems refreshKey={refreshKey} />}
                 {reviewFilter === 'proposals' && <AdminProposals refreshKey={refreshKey} />}
               </>
