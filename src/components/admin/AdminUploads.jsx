@@ -17,7 +17,7 @@ const typeLabels = {
   correspondence: 'Correspondence', memorial: 'Memorial', video: 'Video', uncategorized: 'Uncategorized',
 };
 
-export default function AdminUploads({ refreshKey }) {
+export default function AdminUploads({ refreshKey, scope }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(null);
@@ -28,7 +28,14 @@ export default function AdminUploads({ refreshKey }) {
     setLoading(true);
     try {
       const data = await base44.entities.ContentItem.list('-created_date', 50);
-      setItems((data || []).filter(i => !i.parent_content_item_id));
+      let filtered = (data || []).filter(i => !i.parent_content_item_id);
+      if (scope) {
+        filtered = filtered.filter(i =>
+          (scope.branchIds && scope.branchIds.has(i.branch_id)) ||
+          (scope.ancestorIds && (i.ancestor_ids || []).some(aid => scope.ancestorIds.has(aid)))
+        );
+      }
+      setItems(filtered);
     } catch (e) {}
     setLoading(false);
   };

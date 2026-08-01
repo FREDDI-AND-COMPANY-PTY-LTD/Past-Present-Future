@@ -14,7 +14,7 @@ const typeOptions = [
   { value: 'memorial', label: 'Memorial' },
 ];
 
-export default function AdminUncategorized({ refreshKey }) {
+export default function AdminUncategorized({ refreshKey, scope }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -28,7 +28,14 @@ export default function AdminUncategorized({ refreshKey }) {
     setLoading(true);
     try {
       const data = await base44.entities.ContentItem.filter({ content_type: 'uncategorized' });
-      setItems(data || []);
+      let filtered = data || [];
+      if (scope) {
+        filtered = filtered.filter(i =>
+          (scope.branchIds && scope.branchIds.has(i.branch_id)) ||
+          (scope.ancestorIds && (i.ancestor_ids || []).some(aid => scope.ancestorIds.has(aid)))
+        );
+      }
+      setItems(filtered);
     } catch (e) {}
     setLoading(false);
   };

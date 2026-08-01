@@ -42,7 +42,7 @@
     },
     "transfer_request": {
       "type": "object",
-      "description": "A pending invitation to transfer branch admin to an elder (senior living male) ancestor in the bloodline. The first member to register is a placeholder admin; authority naturally devolves upon the eldest living male in the line. The current admin may propose a transfer, which emails the elder an invitation they must accept.",
+      "description": "A courtesy offer to transfer branch admin to an elder (senior living male) ancestor in the bloodline. The first member to register is a placeholder steward who may invite a more senior living male to take on the role; this is a courtesy, not an obligation, and the successor may decline \u2014 leaving the current admin in place.",
       "properties": {
         "to_user_id": {
           "type": "string",

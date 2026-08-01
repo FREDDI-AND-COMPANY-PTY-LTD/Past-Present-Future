@@ -7,7 +7,7 @@ import VerifyConnectDialog from '@/components/admin/VerifyConnectDialog';
 // Manual connection tool — lists every ancestor that has no father, mother,
 // or partner link (and isn't a branch root), so an admin can place them into
 // the tree even when they didn't surface through the staged-review queue.
-export default function AdminConnectAncestors({ onResolved }) {
+export default function AdminConnectAncestors({ onResolved, scope }) {
   const [ancestors, setAncestors] = useState([]);
   const [rootIds, setRootIds] = useState(new Set());
   const [loading, setLoading] = useState(true);
@@ -29,7 +29,8 @@ export default function AdminConnectAncestors({ onResolved }) {
   useEffect(() => { load(); }, []);
 
   const unconnected = ancestors.filter(a =>
-    !a.father_id && !a.mother_id && !a.partner_id && !rootIds.has(a.id)
+    !a.father_id && !a.mother_id && !a.partner_id && !rootIds.has(a.id) &&
+    (!scope || (scope.branchIds && scope.branchIds.has(a.branch_id)))
   );
 
   const handleVerified = (id) => {

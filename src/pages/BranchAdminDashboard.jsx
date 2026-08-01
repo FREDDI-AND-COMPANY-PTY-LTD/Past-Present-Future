@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Shield, UserPlus, Loader2, Check, X, GitBranch, Mail, Clock, AlertCircle, Upload, Users, Flag, Newspaper, LifeBuoy } from 'lucide-react';
+import { Shield, UserPlus, Loader2, Check, X, GitBranch, Mail, Clock, AlertCircle, Upload, Users, Flag, Newspaper, LifeBuoy, Brain, Network } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import BranchAdminInviteDialog from '@/components/BranchAdminInviteDialog';
 import BranchNewsletterFrequency from '@/components/BranchNewsletterFrequency';
 import BranchAdminEscalationDialog from '@/components/BranchAdminEscalationDialog';
 import BranchAdminSuccession from '@/components/BranchAdminSuccession';
+import AdminUploads from '@/components/admin/AdminUploads';
+import AdminUncategorized from '@/components/admin/AdminUncategorized';
+import AdminIncompleteUploads from '@/components/admin/AdminIncompleteUploads';
+import AdminNewAncestors from '@/components/admin/AdminNewAncestors';
+import AdminConnectAncestors from '@/components/admin/AdminConnectAncestors';
 
 const statusBadge = {
   pending: 'bg-[rgba(201,145,58,0.1)] text-amber-light border-[rgba(201,145,58,0.25)]',
@@ -15,6 +20,14 @@ const statusBadge = {
   declined: 'bg-[rgba(245,236,215,0.05)] text-parchment/50 border-[rgba(245,236,215,0.1)]',
   blocked: 'bg-red-900/20 text-red-400 border-red-800/30',
 };
+
+const REVIEW_TABS = [
+  { key: 'uploads', label: 'Uploads', icon: Upload },
+  { key: 'incomplete', label: 'Incomplete', icon: AlertCircle },
+  { key: 'uncategorized', label: 'Uncategorized', icon: Brain },
+  { key: 'ancestors', label: 'New Ancestors', icon: Users },
+  { key: 'connect', label: 'Connect Tree', icon: Network },
+];
 
 export default function BranchAdminDashboard() {
   const [user, setUser] = useState(null);
@@ -29,6 +42,9 @@ export default function BranchAdminDashboard() {
   const [newAncestors, setNewAncestors] = useState([]);
   const [disputes, setDisputes] = useState([]);
   const [escalateOpen, setEscalateOpen] = useState(false);
+  const [reviewTab, setReviewTab] = useState('uploads');
+  const [scope, setScope] = useState(null);
+  const [branchItems, setBranchItems] = useState([]);
 
   const load = async () => {
     try {
@@ -67,6 +83,8 @@ export default function BranchAdminDashboard() {
       const branchContent = (items || []).filter(i =>
         myBranchIds.includes(i.branch_id) || (i.ancestor_ids || []).some(aid => descIds.has(aid))
       );
+      setBranchItems(branchContent);
+      setScope({ branchIds: new Set(myBranchIds), ancestorIds: descIds, contentItemIds: new Set(branchContent.map(i => i.id)) });
       setPendingUploads(branchContent.filter(i => !i.review_status || i.review_status === 'pending'));
       setNewAncestors((anc || []).filter(a => myBranchIds.includes(a.branch_id) && a.review_status === 'staged'));
       setDisputes((flags || []).filter(f =>
@@ -81,6 +99,10 @@ export default function BranchAdminDashboard() {
   const myBranches = (branches || []).filter(b => b.admin_user_id && user && b.admin_user_id === user.id);
   const nominations = invites.filter(i => i.status === 'nominated');
   const others = invites.filter(i => i.status !== 'nominated');
+  const flaggedContent = (branchItems || []).filter(i => i.review_status === 'flagged');
+  const uncategorizedCount = (branchItems || []).filter(i => i.content_type === 'uncategorized').length;
+  const rootIdsSet = new Set((branches || []).filter(b => myBranches.some(mb => mb.id === b.id)).map(b => b.ancestor_id).filter(Boolean));
+  const connectCount = (allAncestors || []).filter(a => !a.father_id && !a.mother_id && !a.partner_id && !rootIdsSet.has(a.id) && myBranches.some(b => b.id === a.branch_id)).length;
 
   const ancestorName = (id) => {
     if (!id) return '—';
@@ -182,56 +204,39 @@ export default function BranchAdminDashboard() {
         {/* Succession — transfer branch admin to an elder living male ancestor */}
         <BranchAdminSuccession branches={myBranches} allAncestors={allAncestors} user={user} onChanged={load} />
 
-        {/* Branch-scoped admin queues */}
+        {/* Branch Review — day-to-day curation tools, scoped to your branch(es) */}
         <div className="mt-8">
           <h2 className="font-display text-xl text-parchment mb-4 flex items-center gap-2">
-            <AlertCircle size={18} className="text-gold" /> Branch Queues
+            <AlertCircle size={18} className="text-gold" /> Branch Review
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div className="aged-card rounded-xl p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <Upload size={16} className="text-gold" />
-                <span className="text-sm text-parchment font-medium">Pending Uploads</span>
-                <span className="ml-auto px-2 py-0.5 rounded-full bg-[#8B6914] text-amber-light text-xs">{pendingUploads.length}</span>
-              </div>
-              {pendingUploads.length === 0 ? <p className="text-xs text-parchment/40">All uploads reviewed.</p> : (
-                <div className="space-y-1.5 max-h-40 overflow-y-auto">
-                  {pendingUploads.slice(0, 6).map(i => (
-                    <Link key={i.id} to={`/content/${i.id}`} className="block text-xs text-parchment/70 hover:text-gold truncate">{i.title || 'Untitled'}</Link>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div className="aged-card rounded-xl p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <Users size={16} className="text-gold" />
-                <span className="text-sm text-parchment font-medium">New Ancestors</span>
-                <span className="ml-auto px-2 py-0.5 rounded-full bg-[#8B6914] text-amber-light text-xs">{newAncestors.length}</span>
-              </div>
-              {newAncestors.length === 0 ? <p className="text-xs text-parchment/40">No staged ancestors.</p> : (
-                <div className="space-y-1.5 max-h-40 overflow-y-auto">
-                  {newAncestors.slice(0, 6).map(a => (
-                    <Link key={a.id} to={`/ancestor/${a.id}`} className="block text-xs text-parchment/70 hover:text-gold truncate">{a.full_name}</Link>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div className="aged-card rounded-xl p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <Flag size={16} className="text-gold" />
-                <span className="text-sm text-parchment font-medium">Open Disputes</span>
-                <span className="ml-auto px-2 py-0.5 rounded-full bg-[#8B6914] text-amber-light text-xs">{disputes.length}</span>
-              </div>
-              {disputes.length === 0 ? <p className="text-xs text-parchment/40">No open disputes.</p> : (
-                <div className="space-y-1.5 max-h-40 overflow-y-auto">
-                  {disputes.slice(0, 6).map(f => (
-                    <div key={f.id} className="text-xs text-parchment/70 truncate" title={f.dispute_description}>{f.dispute_description}</div>
-                  ))}
-                </div>
-              )}
-            </div>
+          <div className="flex flex-wrap gap-1.5 mb-4">
+            {REVIEW_TABS.map(f => {
+              const Icon = f.icon;
+              const isActive = reviewTab === f.key;
+              const count = f.key === 'uploads' ? pendingUploads.length
+                : f.key === 'incomplete' ? flaggedContent.length
+                : f.key === 'uncategorized' ? uncategorizedCount
+                : f.key === 'ancestors' ? newAncestors.length
+                : connectCount;
+              return (
+                <button key={f.key} onClick={() => setReviewTab(f.key)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${isActive ? 'bg-[rgba(201,145,58,0.15)] text-gold border-[rgba(201,145,58,0.4)]' : 'text-parchment/60 border-[rgba(201,145,58,0.12)] hover:text-amber-light'}`}>
+                  <Icon size={13} /> {f.label}
+                  {count > 0 && <span className="px-1.5 py-0.5 rounded-full bg-[#8B6914] text-amber-light text-[10px] leading-none">{count}</span>}
+                </button>
+              );
+            })}
           </div>
-          <p className="text-xs text-parchment/30 mt-2">Queues are scoped to the branch(es) you administer. Full review tools are in the global Admin Dashboard.</p>
+          <div>
+            {reviewTab === 'uploads' && <AdminUploads scope={scope} />}
+            {reviewTab === 'incomplete' && <AdminIncompleteUploads items={flaggedContent} onResolved={load} />}
+            {reviewTab === 'uncategorized' && <AdminUncategorized scope={scope} />}
+            {reviewTab === 'ancestors' && <AdminNewAncestors ancestors={newAncestors} onVerified={load} />}
+            {reviewTab === 'connect' && <AdminConnectAncestors scope={scope} onResolved={load} />}
+          </div>
+          {disputes.length > 0 && (
+            <p className="text-xs text-parchment/40 mt-3">Open disputes in your branch: {disputes.length}. Cross-branch and contested disputes are resolved by the Global Admin — use "Escalate to Global Admin" if a dispute is stuck.</p>
+          )}
         </div>
 
         {/* Newsletter frequency — per branch */}
