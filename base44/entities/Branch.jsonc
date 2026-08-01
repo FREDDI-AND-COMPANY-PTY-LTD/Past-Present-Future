@@ -40,6 +40,55 @@
       "default": "monthly",
       "description": "How often this branch's family newsletter is generated. Set by the branch admin; defaults to monthly."
     },
+    "activation_status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "pending_acknowledgment",
+        "declined"
+      ],
+      "default": "active",
+      "description": "Activation state. An additional bloodline joined to an existing branch by marriage is created as 'pending_acknowledgment' and only becomes 'active' once BOTH branch admins have acknowledged the marriage connection (two-admin mutual agreement). 'declined' = the connected branch's admin declined the connection."
+    },
+    "connected_by_marriage_to_branch_id": {
+      "type": "string",
+      "description": "When this branch was created as a bloodline joined by marriage, the existing branch it connects to. Two-admin mutual acknowledgment is required to activate."
+    },
+    "connected_by_marriage_to_branch_name": {
+      "type": "string",
+      "description": "Denormalised name of the connected branch at creation time"
+    },
+    "requester_acknowledged": {
+      "type": "boolean",
+      "default": false,
+      "description": "True once the creating branch admin checked the marriage-connection acknowledgment box"
+    },
+    "requester_acknowledged_by_id": {
+      "type": "string",
+      "description": "User ID of the creating admin who acknowledged"
+    },
+    "requester_acknowledged_by_name": {
+      "type": "string",
+      "description": "Display name of the creating admin who acknowledged"
+    },
+    "spouse_acknowledged": {
+      "type": "boolean",
+      "default": false,
+      "description": "True once the connected (marriage) branch's admin acknowledged the connection \u2014 completes two-admin activation"
+    },
+    "spouse_acknowledged_by_id": {
+      "type": "string",
+      "description": "User ID of the connected branch's admin who acknowledged"
+    },
+    "spouse_acknowledged_by_name": {
+      "type": "string",
+      "description": "Display name of the connected branch's admin who acknowledged"
+    },
+    "spouse_acknowledged_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the connected branch's admin acknowledged (or declined) the connection"
+    },
     "transfer_request": {
       "type": "object",
       "description": "A courtesy offer to transfer branch admin to an elder (senior living male) ancestor in the bloodline. The first member to register is a placeholder steward who may invite a more senior living male to take on the role; this is a courtesy, not an obligation, and the successor may decline \u2014 leaving the current admin in place.",

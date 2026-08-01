@@ -26,11 +26,19 @@ const statusConfig = {
   resolved: { label: 'Resolved', color: 'text-green-300', bg: 'bg-green-500/10', border: 'border-green-500/25' },
 };
 
+const categoryConfig = {
+  dispute_between_bloodlines: { label: 'Bloodline Dispute', color: 'text-red-300', bg: 'bg-red-500/10', border: 'border-red-500/25' },
+  dispute_branch_authority: { label: 'Authority Dispute', color: 'text-red-300', bg: 'bg-red-500/10', border: 'border-red-500/25' },
+  appeal_global_admin: { label: 'Appeal', color: 'text-amber-light', bg: 'bg-[rgba(201,145,58,0.12)]', border: 'border-[rgba(201,145,58,0.25)]' },
+  general_problem: { label: 'General', color: 'text-parchment/50', bg: 'bg-[rgba(245,236,215,0.05)]', border: 'border-[rgba(245,236,215,0.1)]' },
+};
+
 export default function AdminProblems({ refreshKey }) {
   const [problems, setProblems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(null);
   const [responses, setResponses] = useState({});
+  const [catFilter, setCatFilter] = useState('all');
 
   const fetchProblems = async () => {
     setLoading(true);
@@ -68,6 +76,13 @@ export default function AdminProblems({ refreshKey }) {
     );
   }
 
+  const filtered = (problems || []).filter(p => {
+    const cat = p.category || 'general_problem';
+    if (catFilter === 'all') return true;
+    if (catFilter === 'disputes') return cat === 'dispute_between_bloodlines' || cat === 'dispute_branch_authority';
+    return cat === catFilter;
+  });
+
   if (problems.length === 0) {
     return (
       <div className="aged-card rounded-xl p-12 text-center">
@@ -79,7 +94,16 @@ export default function AdminProblems({ refreshKey }) {
 
   return (
     <div className="space-y-3">
-      {problems.map(problem => {
+      <div className="flex flex-wrap gap-1.5">
+        {[{ k: 'all', l: 'All' }, { k: 'disputes', l: 'Disputes' }, { k: 'appeal_global_admin', l: 'Appeals' }, { k: 'general_problem', l: 'General' }].map(f => (
+          <button key={f.k} onClick={() => setCatFilter(f.k)}
+            className={`px-3 py-1.5 rounded-full text-xs font-medium border ${catFilter === f.k ? 'bg-[rgba(201,145,58,0.15)] text-gold border-[rgba(201,145,58,0.4)]' : 'text-parchment/60 border-[rgba(201,145,58,0.12)] hover:text-amber-light'}`}>{f.l}</button>
+        ))}
+      </div>
+      {filtered.length === 0 && (
+        <div className="aged-card rounded-xl p-8 text-center"><p className="text-parchment/50">No reports in this category.</p></div>
+      )}
+      {filtered.map(problem => {
         const cfg = statusConfig[problem.status] || statusConfig.open;
         return (
           <div key={problem.id} className="aged-card rounded-xl p-5">
@@ -97,11 +121,16 @@ export default function AdminProblems({ refreshKey }) {
                       </span>
                     );
                   })()}
-                  {problem.branch_name && (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-[rgba(201,145,58,0.06)] text-parchment/50 border border-[rgba(201,145,58,0.12)]">
-                      {problem.branch_name}
-                    </span>
-                  )}
+                  {(() => {
+                     const cc = categoryConfig[(problem.category || 'general_problem')];
+                     if (!cc || problem.category === 'general_problem') return null;
+                     return <span className={`text-[10px] px-2 py-0.5 rounded-full ${cc.bg} ${cc.color} ${cc.border} border font-medium`}>{cc.label}</span>;
+                   })()}
+                   {problem.branch_name && (
+                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-[rgba(201,145,58,0.06)] text-parchment/50 border border-[rgba(201,145,58,0.12)]">
+                       {problem.branch_name}
+                     </span>
+                   )}
                 </div>
                 <p className="text-sm text-parchment/60 mt-1 whitespace-pre-wrap">{problem.description}</p>
                 {actionFromDesc(problem.description) && (

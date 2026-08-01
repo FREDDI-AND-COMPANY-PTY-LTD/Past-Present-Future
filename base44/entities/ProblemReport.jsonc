@@ -20,6 +20,17 @@
       "default": "user_report",
       "description": "Origin of the report \u2014 user_report = a family member hit a snag; branch_admin_request = a branch admin escalating to the global admin (stuck/jammed, unresolvable AI proposal, etc.); ai_handoff = the AI assistant couldn't resolve something and handed it off"
     },
+    "category": {
+      "type": "string",
+      "enum": [
+        "general_problem",
+        "dispute_between_bloodlines",
+        "dispute_branch_authority",
+        "appeal_global_admin"
+      ],
+      "default": "general_problem",
+      "description": "Reporting category \u2014 the intake structure for the Contact Admin tasks. 'dispute_between_bloodlines' = a disagreement between two bloodlines (e.g. over a shared record or marriage connection); 'dispute_branch_authority' = a dispute over a branch admin's role or authority; 'appeal_global_admin' = a user appealing to the global admin of the family complex for resolution."
+    },
     "branch_id": {
       "type": "string",
       "description": "For branch_admin_request source \u2014 the branch this escalation came from"
@@ -27,6 +38,14 @@
     "branch_name": {
       "type": "string",
       "description": "Denormalised branch name at time of escalation"
+    },
+    "connected_branch_id": {
+      "type": "string",
+      "description": "For a dispute_between_bloodlines report \u2014 the other branch involved in the dispute"
+    },
+    "connected_branch_name": {
+      "type": "string",
+      "description": "Denormalised name of the connected branch at report time"
     },
     "status": {
       "type": "string",

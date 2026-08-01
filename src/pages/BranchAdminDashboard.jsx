@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Shield, UserPlus, Loader2, Check, X, GitBranch, Mail, Clock, AlertCircle, Upload, Users, Flag, Newspaper, LifeBuoy, Brain, Network } from 'lucide-react';
+import { Shield, UserPlus, Loader2, Check, X, GitBranch, Mail, Clock, AlertCircle, Upload, Users, Flag, Newspaper, LifeBuoy, Brain, Network, Heart } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import BranchAdminInviteDialog from '@/components/BranchAdminInviteDialog';
@@ -97,6 +97,11 @@ export default function BranchAdminDashboard() {
   useEffect(() => { load(); }, []);
 
   const myBranches = (branches || []).filter(b => b.admin_user_id && user && b.admin_user_id === user.id);
+  const pendingMarriageRequests = (branches || []).filter(b =>
+    b.activation_status === 'pending_acknowledgment' &&
+    myBranches.some(mb => mb.id === b.connected_by_marriage_to_branch_id) &&
+    !b.spouse_acknowledged
+  );
   const nominations = invites.filter(i => i.status === 'nominated');
   const others = invites.filter(i => i.status !== 'nominated');
   const flaggedContent = (branchItems || []).filter(i => i.review_status === 'flagged');
@@ -159,6 +164,35 @@ export default function BranchAdminDashboard() {
     setBusy(null);
   };
 
+  const handleAcknowledgeMarriage = async (b) => {
+    setBusy(b.id);
+    try {
+      await base44.entities.Branch.update(b.id, {
+        activation_status: 'active',
+        spouse_acknowledged: true,
+        spouse_acknowledged_by_id: user?.id || null,
+        spouse_acknowledged_by_name: user?.full_name || null,
+        spouse_acknowledged_at: new Date().toISOString(),
+      });
+      load();
+    } catch (e) {}
+    setBusy(null);
+  };
+
+  const handleDeclineMarriage = async (b) => {
+    setBusy(b.id);
+    try {
+      await base44.entities.Branch.update(b.id, {
+        activation_status: 'declined',
+        spouse_acknowledged_by_id: user?.id || null,
+        spouse_acknowledged_by_name: user?.full_name || null,
+        spouse_acknowledged_at: new Date().toISOString(),
+      });
+      load();
+    } catch (e) {}
+    setBusy(null);
+  };
+
   if (loading) {
     return <Layout><div className="flex justify-center py-12"><Loader2 size={24} className="text-gold animate-spin" /></div></Layout>;
   }
@@ -200,6 +234,33 @@ export default function BranchAdminDashboard() {
             </button>
           </div>
         </div>
+
+        {/* Marriage connection requests — two-admin mutual acknowledgment */}
+        {pendingMarriageRequests.length > 0 && (
+          <div className="mt-8">
+            <h2 className="font-display text-xl text-parchment mb-4 flex items-center gap-2">
+              <Heart size={18} className="text-gold" /> Marriage Connection Requests
+            </h2>
+            <div className="space-y-3">
+              {pendingMarriageRequests.map(b => (
+                <div key={b.id} className="aged-card rounded-xl p-5">
+                  <p className="text-sm text-parchment"><span className="text-amber-light font-medium">{b.name}</span> was created as a bloodline connected by marriage to <span className="text-amber-light">{b.connected_by_marriage_to_branch_name}</span>.</p>
+                  <p className="text-xs text-parchment/40 mt-1">Acknowledged by the requester: {b.requester_acknowledged_by_name || '—'}. Awaiting your acknowledgment as representative of {b.connected_by_marriage_to_branch_name}.</p>
+                  <div className="flex gap-2 mt-3">
+                    <button onClick={() => handleAcknowledgeMarriage(b)} disabled={busy === b.id}
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-green-900/20 text-green-400 text-xs border border-green-800/30 hover:bg-green-900/30 transition-colors disabled:opacity-50">
+                      {busy === b.id ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Acknowledge & Activate
+                    </button>
+                    <button onClick={() => handleDeclineMarriage(b)} disabled={busy === b.id}
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[rgba(245,236,215,0.05)] text-parchment/60 text-xs border border-[rgba(245,236,215,0.1)] hover:bg-[rgba(245,236,215,0.08)] transition-colors disabled:opacity-50">
+                      <X size={14} /> Decline
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Succession — transfer branch admin to an elder living male ancestor */}
         <BranchAdminSuccession branches={myBranches} allAncestors={allAncestors} user={user} onChanged={load} />

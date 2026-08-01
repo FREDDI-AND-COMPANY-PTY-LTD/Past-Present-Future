@@ -1,4 +1,8 @@
-import React, { useState, useRef } from 'react';
+// TODO (go-to-market): Implement the full dispute resolution process — a mediated resolution
+// workflow between bloodlines, formal branch-admin authority review, and an appeals escalation
+// ladder. The category intake below is the reporting structure; the resolution process itself
+// is to be designed before public launch.
+import React, { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Mic, MicOff, Send, Loader2, Check, AlertCircle } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
@@ -7,8 +11,18 @@ const SpeechRecognition = typeof window !== 'undefined'
   ? (window.SpeechRecognition || window.webkitSpeechRecognition)
   : null;
 
+const CATEGORY_OPTIONS = [
+  { value: 'general_problem', label: 'General Problem' },
+  { value: 'dispute_between_bloodlines', label: 'Dispute Between Bloodlines' },
+  { value: 'dispute_branch_authority', label: 'Branch Admin Authority' },
+  { value: 'appeal_global_admin', label: 'Appeal to Global Admin' },
+];
+
 export default function ReportProblemDialog({ children }) {
   const [open, setOpen] = useState(false);
+  const [category, setCategory] = useState('general_problem');
+  const [connectedBranchId, setConnectedBranchId] = useState('');
+  const [branches, setBranches] = useState([]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -16,6 +30,8 @@ export default function ReportProblemDialog({ children }) {
   const [listening, setListening] = useState(false);
   const recognitionRef = useRef(null);
   const baseTextRef = useRef('');
+
+  useEffect(() => { base44.entities.Branch.list().then(setBranches).catch(() => {}); }, []);
 
   const startListening = () => {
     if (!SpeechRecognition) return;
@@ -48,6 +64,8 @@ export default function ReportProblemDialog({ children }) {
   const reset = () => {
     setTitle('');
     setDescription('');
+    setCategory('general_problem');
+    setConnectedBranchId('');
     setSubmitted(false);
   };
 
@@ -59,6 +77,9 @@ export default function ReportProblemDialog({ children }) {
       await base44.entities.ProblemReport.create({
         title: title.trim() || 'Reported Problem',
         description: description.trim(),
+        category,
+        connected_branch_id: category === 'dispute_between_bloodlines' ? (connectedBranchId || null) : null,
+        connected_branch_name: (category === 'dispute_between_bloodlines' && connectedBranchId) ? ((branches.find(b => b.id === connectedBranchId)?.name) || '') : null,
         status: 'open',
         reported_by_id: user?.id || null,
         reported_by_name: user?.full_name || user?.email || 'Anonymous',
@@ -66,6 +87,8 @@ export default function ReportProblemDialog({ children }) {
       setSubmitted(true);
       setTitle('');
       setDescription('');
+      setCategory('general_problem');
+      setConnectedBranchId('');
     } catch (e) {
       // error
     }
@@ -110,6 +133,27 @@ export default function ReportProblemDialog({ children }) {
             </DialogHeader>
 
             <div className="space-y-4 py-2">
+              <div>
+                <label className="text-sm text-parchment/60 mb-1 block">Report Type</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {CATEGORY_OPTIONS.map(o => (
+                    <button key={o.value} type="button" onClick={() => setCategory(o.value)}
+                      className={`px-3 py-2 rounded-lg text-xs border text-left transition-all ${category === o.value ? 'bg-[rgba(201,145,58,0.1)] border-[#C9913A] text-gold' : 'bg-[#0D0B0A] border-[rgba(201,145,58,0.15)] text-parchment/50 hover:border-[rgba(201,145,58,0.3)]'}`}>
+                      {o.label}
+                    </button>
+                  ))}
+                </div>
+                {category === 'dispute_between_bloodlines' && branches.length > 0 && (
+                  <select value={connectedBranchId} onChange={e => setConnectedBranchId(e.target.value)}
+                    className="mt-2 w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]">
+                    <option value="">Connected branch (optional)...</option>
+                    {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                  </select>
+                )}
+                {category === 'appeal_global_admin' && (
+                  <p className="mt-2 text-xs text-amber-light/70 bg-[rgba(201,145,58,0.06)] border border-[rgba(201,145,58,0.15)] rounded-lg p-3">Your appeal will be routed to the Global Admin of the family complex for review.</p>
+                )}
+              </div>
               <div>
                 <label className="text-sm text-parchment/60 mb-1 block">Title (optional)</label>
                 <input
