@@ -100,30 +100,27 @@ Deno.serve(async (req) => {
         }).catch(() => {});
       }
 
-      // Resolve the branch admin's email and alert them.
-      let adminEmail = null;
-      try {
-        const adminUser = await base44.asServiceRole.entities.User.get(branch.admin_user_id);
-        adminEmail = adminUser?.email || null;
-      } catch (e) {}
-
-      if (adminEmail) {
-        const list = newPairs
-          .map((p) => `• "${p.item_a.title}" \u2194 "${p.item_b.title}" (${Math.round((p.confidence || 0) * 100)}%)`)
-          .join('\n');
-        await base44.asServiceRole.integrations.Core.SendEmail({
-          to: adminEmail,
-          subject: `[${branch.name}] ${newPairs.length} new potential duplicate${newPairs.length > 1 ? 's' : ''} detected`,
-          body:
-            `An automated scan of the ${branch.name} bloodline archive detected ${newPairs.length} new potential duplicate ${newPairs.length > 1 ? 'entries' : 'entry'}:\n\n` +
-            `${list}\n\n` +
-            `Please review and resolve them in your Branch Admin dashboard \u2192 Branch Review \u2192 Duplicates (click "Scan for Duplicates" to see the current pairs and merge or dismiss).\n\n` +
-            `This is an automated alert from the family archive.`,
-        }).catch(() => {});
-      }
+      // Send the branch admin a task (a Comment tagging them) so it surfaces in
+      // their Tasks list and notification popup — no email for these minor conflicts.
+      const list = newPairs
+        .map((p) => `\u2022 "${p.item_a.title}" \u2194 "${p.item_b.title}" (${Math.round((p.confidence || 0) * 100)}%)`)
+        .join('\n');
+      await base44.asServiceRole.entities.Comment.create({
+        entity_type: 'ContentItem',
+        entity_id: newPairs[0].item_a.id,
+        field_name: 'duplicate_review',
+        author_id: null,
+        author_name: 'Automated Duplicate Scan',
+        content:
+          `${newPairs.length} new potential duplicate ${newPairs.length > 1 ? 'entries were' : 'entry was'} detected in the ${branch.name} bloodline during the nightly archive scan:\n\n` +
+          `${list}\n\n` +
+          `Review and resolve them under Branch Admin \u2192 Branch Review \u2192 Duplicates (click "Scan for Duplicates").`,
+        tagged_user_ids: [branch.admin_user_id],
+        is_query: false,
+      }).catch(() => {});
 
       totalNew += newPairs.length;
-      results.push({ branch: branch.name, adminEmail, newDuplicates: newPairs.length });
+      results.push({ branch: branch.name, newDuplicates: newPairs.length, taskSent: true });
     }
 
     return Response.json({
