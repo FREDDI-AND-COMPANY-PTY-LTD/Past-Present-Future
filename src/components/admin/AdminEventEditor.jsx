@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, Check, MapPin, Tag, Award, FileText, Eye, Calendar, Image as ImageIcon, Newspaper, BookUser, IdCard, Mail, Heart, HelpCircle, X, Network, User, Users, Video, Music, Link2, MessageSquare, UserPlus, Trash2, AlertTriangle } from 'lucide-react';
+import { Loader2, Check, MapPin, Award, FileText, Eye, Calendar, Image as ImageIcon, Newspaper, BookUser, IdCard, Mail, Heart, HelpCircle, X, Network, User, Users, Video, Music, Link2, MessageSquare, UserPlus, Trash2, AlertTriangle } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import TagInput from '@/components/TagInput';
 import LocationPicker from '@/components/LocationPicker';
 import MentionTextarea from '@/components/MentionTextarea';
 import LocationAutocompleteInput from '@/components/LocationAutocompleteInput';
@@ -33,7 +34,6 @@ export default function AdminEventEditor({ item, onApproved, onDeleted }) {
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [locationPickerOpen, setLocationPickerOpen] = useState(false);
-  const [newTag, setNewTag] = useState('');
   const [familyLink, setFamilyLink] = useState(null);
   const [externalUrl, setExternalUrl] = useState('');
   const [comment, setComment] = useState('');
@@ -85,14 +85,6 @@ export default function AdminEventEditor({ item, onApproved, onDeleted }) {
       ? formData.ancestor_ids.filter(a => a !== id)
       : [...formData.ancestor_ids, id]);
   };
-
-  const addTag = () => {
-    const t = newTag.trim();
-    if (t && !tags.includes(t)) setTags([...tags, t]);
-    setNewTag('');
-  };
-
-  const removeTag = (t) => setTags(tags.filter(x => x !== t));
 
   const handleLocationPick = ({ location_name, latitude, longitude }) => {
     setFormData(f => ({ ...f, location_name, latitude, longitude }));
@@ -363,23 +355,7 @@ export default function AdminEventEditor({ item, onApproved, onDeleted }) {
       )}
 
       {/* Tags — editable */}
-      <div className="aged-card rounded-xl p-5">
-        <label className="text-sm text-parchment/60 mb-2 flex items-center gap-1.5"><Tag size={14} /> Tags</label>
-        <div className="flex flex-wrap gap-2 mb-2">
-          {tags.map((tag, i) => (
-            <span key={i} className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-[rgba(201,145,58,0.08)] text-amber-light/80 border border-[rgba(201,145,58,0.15)]">
-              {tag}
-              <button onClick={() => removeTag(tag)} className="text-parchment/30 hover:text-parchment"><X size={10} /></button>
-            </span>
-          ))}
-        </div>
-        <div className="flex gap-2">
-          <input value={newTag} onChange={e => setNewTag(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTag(); } }}
-            className="flex-1 bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-3 py-2 text-sm text-parchment focus:outline-none focus:border-[#C9913A]"
-            placeholder="Add a tag..." />
-          <button onClick={addTag} className="px-3 py-2 rounded-lg bg-[rgba(201,145,58,0.1)] border border-[rgba(201,145,58,0.2)] text-amber-light text-sm hover:bg-[rgba(201,145,58,0.15)] transition-colors">Add</button>
-        </div>
-      </div>
+      <TagInput tags={tags} onChange={setTags} />
 
       {/* Comment / Query — same as the user upload form */}
       <div className="aged-card rounded-xl p-5">
