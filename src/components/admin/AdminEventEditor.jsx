@@ -451,8 +451,8 @@ export default function AdminEventEditor({ item, onApproved, onDeleted }) {
         </div>
       )}
 
-      {/* Approve + Delete buttons — sticky so they stay visible while scrolling the long review form */}
-      <div className="sticky bottom-0 z-10 flex gap-3 pt-4 pb-1 -mx-1 px-1 bg-[#1A1614] border-t border-[rgba(201,145,58,0.15)]">
+      {/* Approve + Delete buttons */}
+      <div className="flex gap-3">
         <button
           onClick={handleApprove}
           disabled={saving || deleting || !formData.title?.trim()}
