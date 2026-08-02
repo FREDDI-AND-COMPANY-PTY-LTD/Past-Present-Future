@@ -13,10 +13,12 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    if (user.role !== 'admin') return Response.json({ error: 'Admin access required' }, { status: 403 });
+
+    const body = await req.json().catch(() => ({}));
+    const scopeAncestorIds = Array.isArray(body?.ancestor_ids) && body.ancestor_ids.length > 0 ? new Set(body.ancestor_ids) : null;
 
     const all = await base44.asServiceRole.entities.Ancestor.list('-created_date', 500);
-    const ancestors = all || [];
+    const ancestors = scopeAncestorIds ? (all || []).filter(a => scopeAncestorIds.has(a.id)) : (all || []);
 
     // Candidate pairs: share a normalised name, or share birth date + birth place.
     const byName = new Map();

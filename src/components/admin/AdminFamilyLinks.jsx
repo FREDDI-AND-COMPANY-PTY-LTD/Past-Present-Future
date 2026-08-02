@@ -2,11 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { Network, Loader2, Check, X, User, Users, Heart, FileText, AlertCircle } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
-export default function AdminFamilyLinks({ refreshKey }) {
+export default function AdminFamilyLinks({ refreshKey, scope }) {
   const [links, setLinks] = useState([]);
   const [ancestors, setAncestors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actioning, setActioning] = useState(null);
+
+  const inScope = (link) => !scope ||
+    (scope.contentItemIds && scope.contentItemIds.has(link.content_item_id)) ||
+    (scope.ancestorIds && [link.subject_ancestor_id, link.mother_ancestor_id, link.father_ancestor_id, link.partner_ancestor_id].some(aid => aid && scope.ancestorIds.has(aid)));
 
   const loadData = async () => {
     setLoading(true);
@@ -16,7 +20,7 @@ export default function AdminFamilyLinks({ refreshKey }) {
         base44.entities.Ancestor.list(),
       ]);
       // Show pending and approved first, then integrated
-      const sorted = (allLinks || []).sort((a, b) => {
+      const sorted = (allLinks || []).filter(inScope).sort((a, b) => {
         const order = { pending: 0, approved: 1, rejected: 2, integrated: 3 };
         return (order[a.status] ?? 9) - (order[b.status] ?? 9);
       });

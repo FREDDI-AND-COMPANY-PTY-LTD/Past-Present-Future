@@ -5,7 +5,9 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    if (user.role !== 'admin') return Response.json({ error: 'Admin access required' }, { status: 403 });
+
+    const body = await req.json().catch(() => ({}));
+    const scopeAncestorIds = Array.isArray(body?.ancestor_ids) && body.ancestor_ids.length > 0 ? new Set(body.ancestor_ids) : null;
 
     const allItems = await base44.asServiceRole.entities.ContentItem.list('-created_date', 500);
 
@@ -14,6 +16,7 @@ Deno.serve(async (req) => {
     for (const item of allItems) {
       const aids = item.ancestor_ids || [];
       if (aids.length === 0) continue;
+      if (scopeAncestorIds && !aids.some(aid => scopeAncestorIds.has(aid))) continue;
       for (const aid of aids) {
         if (!groups.has(aid)) groups.set(aid, []);
         groups.get(aid).push(item);

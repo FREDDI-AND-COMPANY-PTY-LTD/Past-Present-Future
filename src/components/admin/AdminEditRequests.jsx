@@ -3,17 +3,19 @@ import { Link } from 'react-router-dom';
 import { Edit3, CheckCircle, XCircle, ExternalLink, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
-export default function AdminEditRequests() {
+export default function AdminEditRequests({ scope }) {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState(null);
   const [reviewNote, setReviewNote] = useState({});
   const [processing, setProcessing] = useState({});
 
+  const inScope = (r) => !scope || (scope.contentItemIds && scope.contentItemIds.has(r.content_item_id));
+
   const loadRequests = () => {
     setLoading(true);
     base44.entities.EditRequest.filter({ status: 'pending' }, '-created_date', 50)
-      .then(reqs => setRequests(reqs || []))
+      .then(reqs => setRequests((reqs || []).filter(inScope)))
       .catch(() => {})
       .finally(() => setLoading(false));
   };

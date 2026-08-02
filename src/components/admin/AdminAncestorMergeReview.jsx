@@ -36,7 +36,7 @@ function ProfileCard({ ancestor, badge, badgeClass }) {
   );
 }
 
-export default function AdminAncestorMergeReview() {
+export default function AdminAncestorMergeReview({ scope }) {
   const [scanning, setScanning] = useState(false);
   const [merging, setMerging] = useState(null);
   const [dismissed, setDismissed] = useState(new Set());
@@ -48,9 +48,11 @@ export default function AdminAncestorMergeReview() {
   const [flagBusy, setFlagBusy] = useState(null);
   const [flagResolved, setFlagResolved] = useState(new Set());
 
+  const flagInScope = (f) => !scope || (scope.ancestorIds && f.ancestor_id && scope.ancestorIds.has(f.ancestor_id));
+
   useEffect(() => {
     base44.entities.ConflictFlag.filter({ flag_type: 'duplicate_ancestor', status: 'open' })
-      .then(setFlagPairs).catch(() => {});
+      .then(flags => setFlagPairs((flags || []).filter(flagInScope))).catch(() => {});
     base44.entities.Ancestor.list().then(list => {
       const map = {}; (list || []).forEach(a => { map[a.id] = a; });
       setAncestorsById(map);
@@ -79,7 +81,9 @@ export default function AdminAncestorMergeReview() {
   const handleScan = async () => {
     setScanning(true);
     try {
-      const res = await base44.functions.invoke('scanAncestorDuplicates', {});
+      const res = await base44.functions.invoke('scanAncestorDuplicates', {
+        ...(scope && scope.ancestorIds ? { ancestor_ids: [...scope.ancestorIds] } : {}),
+      });
       setPairs(res.data?.duplicate_pairs || []);
       setScanned(res.data?.scanned ?? null);
       setResolved(new Set());

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Copy, Loader2, GitMerge, X, Check, AlertTriangle, ExternalLink, ArrowRight } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
-export default function AdminDuplicateReview({ duplicates, onResolved }) {
+export default function AdminDuplicateReview({ duplicates, onResolved, scope }) {
   const [scanning, setScanning] = useState(false);
   const [merging, setMerging] = useState(null); // pair index being merged
   const [dismissed, setDismissed] = useState(new Set());
@@ -12,7 +12,9 @@ export default function AdminDuplicateReview({ duplicates, onResolved }) {
   const handleScan = async () => {
     setScanning(true);
     try {
-      const res = await base44.functions.invoke('scanForDuplicates', {});
+      const res = await base44.functions.invoke('scanForDuplicates', {
+        ...(scope && scope.ancestorIds ? { ancestor_ids: [...scope.ancestorIds] } : {}),
+      });
       const pairs = res.data?.duplicate_pairs || [];
       setLocalDups(pairs);
       setResolvedPairs(new Set());

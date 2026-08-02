@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Shield, UserPlus, Loader2, Check, X, GitBranch, Mail, Clock, AlertCircle, Upload, Users, Flag, Newspaper, LifeBuoy, Brain, Network, Heart } from 'lucide-react';
+import { Shield, UserPlus, Loader2, Check, X, GitBranch, Mail, Clock, AlertCircle, Upload, Users, Flag, Newspaper, LifeBuoy, Brain, Network, Heart, Edit3, Copy } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import BranchAdminInviteDialog from '@/components/BranchAdminInviteDialog';
@@ -12,6 +12,10 @@ import AdminUncategorized from '@/components/admin/AdminUncategorized';
 import AdminIncompleteUploads from '@/components/admin/AdminIncompleteUploads';
 import AdminNewAncestors from '@/components/admin/AdminNewAncestors';
 import AdminConnectAncestors from '@/components/admin/AdminConnectAncestors';
+import AdminEditRequests from '@/components/admin/AdminEditRequests';
+import AdminFamilyLinks from '@/components/admin/AdminFamilyLinks';
+import AdminDuplicateReview from '@/components/admin/AdminDuplicateReview';
+import AdminAncestorMergeReview from '@/components/admin/AdminAncestorMergeReview';
 
 const statusBadge = {
   pending: 'bg-[rgba(201,145,58,0.1)] text-amber-light border-[rgba(201,145,58,0.25)]',
@@ -27,6 +31,9 @@ const REVIEW_TABS = [
   { key: 'uncategorized', label: 'Uncategorized', icon: Brain },
   { key: 'ancestors', label: 'New Ancestors', icon: Users },
   { key: 'connect', label: 'Connect Tree', icon: Network },
+  { key: 'edits', label: 'Edits', icon: Edit3 },
+  { key: 'familyLinks', label: 'Family Links', icon: Heart },
+  { key: 'duplicates', label: 'Duplicates', icon: Copy },
 ];
 
 export default function BranchAdminDashboard() {
@@ -45,16 +52,21 @@ export default function BranchAdminDashboard() {
   const [reviewTab, setReviewTab] = useState('uploads');
   const [scope, setScope] = useState(null);
   const [branchItems, setBranchItems] = useState([]);
+  const [editCount, setEditCount] = useState(0);
+  const [familyLinkCount, setFamilyLinkCount] = useState(0);
+  const [duplicateFlagCount, setDuplicateFlagCount] = useState(0);
 
   const load = async () => {
     try {
-      const [u, brs, anc, allInvites, items, flags] = await Promise.all([
+      const [u, brs, anc, allInvites, items, flags, editReqs, famLinks] = await Promise.all([
         base44.auth.me().catch(() => null),
         base44.entities.Branch.list(),
         base44.entities.Ancestor.list(),
         base44.entities.BranchInvite.list('-created_date', 200),
         base44.entities.ContentItem.list('-created_date', 200),
         base44.entities.ConflictFlag.filter({ status: 'open' }),
+        base44.entities.EditRequest.filter({ status: 'pending' }),
+        base44.entities.FamilyLink.list('-created_date', 100),
       ]);
       setUser(u);
       setBranches(brs || []);
@@ -90,6 +102,16 @@ export default function BranchAdminDashboard() {
       setDisputes((flags || []).filter(f =>
         (f.ancestor_id && descIds.has(f.ancestor_id)) || branchContent.some(i => i.id === f.content_item_id)
       ));
+      const branchContentIds = new Set(branchContent.map(i => i.id));
+      setEditCount((editReqs || []).filter(r => branchContentIds.has(r.content_item_id)).length);
+      setFamilyLinkCount((famLinks || []).filter(l =>
+        branchContentIds.has(l.content_item_id) ||
+        [l.subject_ancestor_id, l.mother_ancestor_id, l.father_ancestor_id, l.partner_ancestor_id].some(aid => aid && descIds.has(aid))
+      ).length);
+      setDuplicateFlagCount((flags || []).filter(f =>
+        (f.flag_type === 'duplicate_upload' || f.flag_type === 'duplicate_ancestor') &&
+        ((f.ancestor_id && descIds.has(f.ancestor_id)) || branchContent.some(i => i.id === f.content_item_id))
+      ).length);
     } catch (e) {}
     setLoading(false);
   };
@@ -278,7 +300,11 @@ export default function BranchAdminDashboard() {
                 : f.key === 'incomplete' ? flaggedContent.length
                 : f.key === 'uncategorized' ? uncategorizedCount
                 : f.key === 'ancestors' ? newAncestors.length
-                : connectCount;
+                : f.key === 'connect' ? connectCount
+                : f.key === 'edits' ? editCount
+                : f.key === 'familyLinks' ? familyLinkCount
+                : f.key === 'duplicates' ? duplicateFlagCount
+                : 0;
               return (
                 <button key={f.key} onClick={() => setReviewTab(f.key)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${isActive ? 'bg-[rgba(201,145,58,0.15)] text-gold border-[rgba(201,145,58,0.4)]' : 'text-parchment/60 border-[rgba(201,145,58,0.12)] hover:text-amber-light'}`}>
@@ -294,6 +320,14 @@ export default function BranchAdminDashboard() {
             {reviewTab === 'uncategorized' && <AdminUncategorized scope={scope} />}
             {reviewTab === 'ancestors' && <AdminNewAncestors ancestors={newAncestors} onVerified={load} />}
             {reviewTab === 'connect' && <AdminConnectAncestors scope={scope} onResolved={load} />}
+            {reviewTab === 'edits' && <AdminEditRequests scope={scope} />}
+            {reviewTab === 'familyLinks' && <AdminFamilyLinks scope={scope} onResolved={load} />}
+            {reviewTab === 'duplicates' && (
+              <div className="space-y-6">
+                <AdminDuplicateReview duplicates={[]} onResolved={load} scope={scope} />
+                <AdminAncestorMergeReview scope={scope} />
+              </div>
+            )}
           </div>
           {disputes.length > 0 && (
             <p className="text-xs text-parchment/40 mt-3">Open disputes in your branch: {disputes.length}. Cross-branch and contested disputes are resolved by the Global Admin — use "Escalate to Global Admin" if a dispute is stuck.</p>
