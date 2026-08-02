@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Activity, Flag, Copy, Users, AlertCircle, Edit3, Upload, Network, Brain, Inbox, Settings, Crop, ArrowRight, Loader2, Lightbulb } from 'lucide-react';
+import { Activity, Flag, Copy, Users, AlertCircle, Edit3, Upload, Network, Brain, Inbox, Settings, Crop, ArrowRight, Loader2, Lightbulb, Shield } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import AdminEditRequests from '@/components/admin/AdminEditRequests';
@@ -49,6 +49,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
   const [user, setUser] = useState(null);
+  const [globalScope, setGlobalScope] = useState(null);
 
   const [logs, setLogs] = useState([]);
   const [flags, setFlags] = useState([]);
@@ -80,16 +81,52 @@ export default function AdminDashboard() {
     ]).then(([lg, fl, na, fi, er, items, flk, unc, probs, props, allAnc, brs]) => {
       setLogs(lg || []);
       setFlags(fl || []);
-      setNewAncestors(na || []);
-      setFlaggedItems(fi || []);
       setEditRequestCount((er || []).length);
-      setUploadCount((items || []).filter(i => !i.review_status || i.review_status === 'pending').length);
       setFamilyLinkCount((flk || []).length);
-      setUncategorizedCount((unc || []).length);
       setProblemCount((probs || []).length);
       setProposalCount((props || []).length);
-      const rootIds = new Set((brs || []).map(b => b.ancestor_id).filter(Boolean));
-      setUnconnectedCount((allAnc || []).filter(a => !a.father_id && !a.mother_id && !a.partner_id && !rootIds.has(a.id)).length);
+
+      // ── Branch ownership ──
+      // Day-to-day approvals/verifications for a CLAIMED branch are the Branch
+      // Admin's job. The Global Admin only sees the unclaimed/orphaned backlog
+      // (items no Branch Admin owns yet), plus the oversight queues above.
+      const branches = brs || [];
+      const claimedBranchIds = new Set(branches.filter(b => b.admin_user_id).map(b => b.id));
+      const claimedRootIds = new Set(branches.filter(b => b.admin_user_id && b.ancestor_id).map(b => b.ancestor_id));
+      // Descendants + partners of claimed roots = ancestors owned by a claimed branch
+      const claimedAncestorIds = new Set(claimedRootIds);
+      let changed = true;
+      while (changed) {
+        changed = false;
+        for (const a of (allAnc || [])) {
+          if (claimedAncestorIds.has(a.id)) continue;
+          if ((a.mother_id && claimedAncestorIds.has(a.mother_id)) || (a.father_id && claimedAncestorIds.has(a.father_id))) {
+            claimedAncestorIds.add(a.id);
+            changed = true;
+          }
+        }
+      }
+      for (const a of (allAnc || [])) {
+        if (claimedAncestorIds.has(a.id) && a.partner_id) claimedAncestorIds.add(a.partner_id);
+      }
+      const isClaimedItem = (i) => claimedBranchIds.has(i.branch_id) || (i.ancestor_ids || []).some(aid => claimedAncestorIds.has(aid));
+
+      // Pending uploads — unclaimed backlog only
+      setUploadCount((items || []).filter(i => (!i.review_status || i.review_status === 'pending') && !isClaimedItem(i)).length);
+      // Uncategorized — unclaimed backlog only
+      setUncategorizedCount((unc || []).filter(i => !isClaimedItem(i)).length);
+      // Staged ancestors — unclaimed branches / branchless only
+      setNewAncestors((na || []).filter(a => !claimedBranchIds.has(a.branch_id)));
+      // Flagged (incomplete) uploads — unclaimed backlog only
+      setFlaggedItems((fi || []).filter(i => !isClaimedItem(i)));
+      // Unconnected ancestors — unclaimed branches / branchless only
+      const rootIds = new Set(branches.map(b => b.ancestor_id).filter(Boolean));
+      setUnconnectedCount((allAnc || []).filter(a => !a.father_id && !a.mother_id && !a.partner_id && !rootIds.has(a.id) && !claimedBranchIds.has(a.branch_id)).length);
+
+      // Positive-include scope for the review components = the unclaimed set
+      const unclaimedBranchIds = new Set([...branches.filter(b => !b.admin_user_id).map(b => b.id), null, undefined]);
+      const globalAncestorIds = new Set((allAnc || []).filter(a => !claimedAncestorIds.has(a.id)).map(a => a.id));
+      setGlobalScope({ branchIds: unclaimedBranchIds, ancestorIds: globalAncestorIds });
     }).catch(() => {}).finally(() => setLoading(false));
   }, [refreshKey]);
 
@@ -187,13 +224,19 @@ export default function AdminDashboard() {
           <>
             {tab === 'review' && (
               <>
-                {reviewFilter === 'uploads' && <AdminUploads refreshKey={refreshKey} />}
+                <div className="aged-card rounded-xl p-4 mb-4 flex items-start gap-3">
+                  <Shield size={16} className="text-gold flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-parchment/60 leading-relaxed">
+                    Day-to-day approvals for a claimed branch are handled by its <span className="text-amber-light">Branch Admin</span>. The queues below show only <span className="text-amber-light">unclaimed and orphaned</span> items nobody owns yet — the Global Admin backlog. Branch-admin escalations, disputes, AI proposals and duplicates live in their own tabs.
+                  </p>
+                </div>
+                {reviewFilter === 'uploads' && <AdminUploads refreshKey={refreshKey} scope={globalScope} />}
                 {reviewFilter === 'incomplete' && <AdminIncompleteUploads items={flaggedItems} onResolved={() => setRefreshKey(k => k + 1)} />}
-                {reviewFilter === 'uncategorized' && <AdminUncategorized refreshKey={refreshKey} />}
+                {reviewFilter === 'uncategorized' && <AdminUncategorized refreshKey={refreshKey} scope={globalScope} />}
                 {reviewFilter === 'edits' && <AdminEditRequests />}
                 {reviewFilter === 'familyLinks' && <AdminFamilyLinks refreshKey={refreshKey} />}
                 {reviewFilter === 'ancestors' && <AdminNewAncestors ancestors={newAncestors} onVerified={() => setRefreshKey(k => k + 1)} />}
-                {reviewFilter === 'connect' && <AdminConnectAncestors onResolved={() => setRefreshKey(k => k + 1)} />}
+                {reviewFilter === 'connect' && <AdminConnectAncestors onResolved={() => setRefreshKey(k => k + 1)} scope={globalScope} />}
                 {reviewFilter === 'problems' && <AdminProblems refreshKey={refreshKey} />}
                 {reviewFilter === 'proposals' && <AdminProposals refreshKey={refreshKey} />}
               </>
