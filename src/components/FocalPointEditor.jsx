@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Crop, Check, Loader2, X, Sparkles, Scan, Crosshair, Maximize } from 'lucide-react';
+import { Crop, Check, Loader2, X, Sparkles, Scan, Crosshair } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
-import Cropper from 'react-easy-crop';
+import MaskDragCropper from '@/components/MaskDragCropper';
 import CropBoxOverlay from '@/components/CropBoxOverlay';
 import CropImage from '@/components/CropImage';
 
@@ -31,8 +31,7 @@ export default function FocalPointEditor({ itemId, fileUrl, title, focalX, focal
   // Pan/zoom cropper state (Instagram-style — no drag handles)
   const [naturalAspect, setNaturalAspect] = useState(null);
   const [aspect, setAspect] = useState(null);
-  const [cropPos, setCropPos] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(() => (cropBounds && !isFullFrame(cropBounds)) ? Math.min(2, 1 / (cropBounds.x_max - cropBounds.x_min)) : 1);
+  const [resetKey, setResetKey] = useState(0);
   const userInteracted = useRef(false);
 
   useEffect(() => {
@@ -93,15 +92,13 @@ export default function FocalPointEditor({ itemId, fileUrl, title, focalX, focal
   const pickAspect = (a) => {
     userInteracted.current = true;
     setAspect(a.value ?? naturalAspect ?? 1);
-    setZoom(1);
-    setCropPos({ x: 0, y: 0 });
+    setResetKey(k => k + 1);
   };
 
   const resetCrop = () => {
     setAspect(naturalAspect ?? 1);
-    setZoom(1);
-    setCropPos({ x: 0, y: 0 });
     setCrop({ ...FULL });
+    setResetKey(k => k + 1);
     setChanged(true);
   };
 
@@ -191,21 +188,7 @@ export default function FocalPointEditor({ itemId, fileUrl, title, focalX, focal
                 </div>
               ) : (
                 <div className="w-full">
-                  <div className="relative w-full bg-black rounded-lg overflow-hidden" style={{ height: 360 }}>
-                    {aspect != null && (
-                      <Cropper
-                        image={fileUrl}
-                        crop={cropPos}
-                        zoom={zoom}
-                        aspect={aspect}
-                        onCropChange={setCropPos}
-                        onZoomChange={setZoom}
-                        onCropComplete={handleCropComplete}
-                        onInteractionStart={() => { userInteracted.current = true; }}
-                      />
-                    )}
-                  </div>
-                  <div className="mt-3 flex flex-wrap justify-center gap-2">
+                  <div className="flex flex-wrap justify-center gap-2 mb-3">
                     {ASPECTS.map(a => {
                       const val = a.value ?? naturalAspect;
                       const isActive = aspect != null && val != null && Math.abs(val - aspect) < 0.001;
@@ -220,23 +203,14 @@ export default function FocalPointEditor({ itemId, fileUrl, title, focalX, focal
                       );
                     })}
                   </div>
-                  <div className="mt-3 flex items-center gap-3">
-                    <span className="text-xs text-parchment/50 flex-shrink-0">Zoom</span>
-                    <input
-                      type="range" min={1} max={3} step={0.01} value={zoom}
-                      onChange={(e) => { userInteracted.current = true; setZoom(Number(e.target.value)); }}
-                      className="flex-1 accent-[#C9913A]"
-                    />
-                    <span className="text-xs text-amber-light/70 tabular-nums w-10 text-right">{zoom.toFixed(2)}×</span>
-                  </div>
-                  <div className="flex justify-center mt-3">
-                    <button
-                      onClick={resetCrop}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(201,145,58,0.1)] border border-[rgba(201,145,58,0.2)] text-amber-light text-xs font-medium hover:bg-[rgba(201,145,58,0.15)] transition-colors"
-                    >
-                      <Maximize size={14} /> Reset to Full Frame
-                    </button>
-                  </div>
+                  <MaskDragCropper
+                    key={`${aspect}-${resetKey}`}
+                    image={fileUrl}
+                    aspect={aspect}
+                    initialCropBounds={crop}
+                    onCropComplete={handleCropComplete}
+                    onInteractionStart={() => { userInteracted.current = true; }}
+                  />
                 </div>
               )}
             </div>
