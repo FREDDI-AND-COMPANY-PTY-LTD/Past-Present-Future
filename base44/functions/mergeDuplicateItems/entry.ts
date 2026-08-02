@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { authorizeBranchAdminAction } from '../../shared/branchAdminAuth.ts';
 
 Deno.serve(async (req) => {
   try {
@@ -14,6 +15,12 @@ Deno.serve(async (req) => {
     if (keep_item_id === remove_item_id) {
       return Response.json({ error: 'Cannot merge an item with itself' }, { status: 400 });
     }
+
+    // Gate to branch admin (over both items) or global admin override.
+    const auth = await authorizeBranchAdminAction(base44, user, {
+      contentItemIds: [keep_item_id, remove_item_id],
+    });
+    if (!auth.ok) return Response.json({ error: auth.error }, { status: auth.status });
 
     const keepItem = await base44.asServiceRole.entities.ContentItem.get(keep_item_id);
     const removeItem = await base44.asServiceRole.entities.ContentItem.get(remove_item_id);

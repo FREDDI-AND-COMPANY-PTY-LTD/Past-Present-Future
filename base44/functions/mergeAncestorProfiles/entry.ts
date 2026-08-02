@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
+import { authorizeBranchAdminAction } from '../../shared/branchAdminAuth.ts';
 
 Deno.serve(async (req) => {
   try {
@@ -14,6 +15,12 @@ Deno.serve(async (req) => {
     if (keep_ancestor_id === remove_ancestor_id) {
       return Response.json({ error: 'Cannot merge a profile with itself' }, { status: 400 });
     }
+
+    // Gate to branch admin (over both profiles) or global admin override.
+    const auth = await authorizeBranchAdminAction(base44, user, {
+      ancestorIds: [keep_ancestor_id, remove_ancestor_id],
+    });
+    if (!auth.ok) return Response.json({ error: auth.error }, { status: auth.status });
 
     const keep = await base44.asServiceRole.entities.Ancestor.get(keep_ancestor_id);
     const remove = await base44.asServiceRole.entities.Ancestor.get(remove_ancestor_id);

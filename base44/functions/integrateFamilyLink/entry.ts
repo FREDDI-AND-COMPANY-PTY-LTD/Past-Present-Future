@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { authorizeBranchAdminAction } from '../../shared/branchAdminAuth.ts';
 
 Deno.serve(async (req) => {
   try {
@@ -13,6 +14,13 @@ Deno.serve(async (req) => {
     const link = await base44.asServiceRole.entities.FamilyLink.get(family_link_id);
     if (!link) return Response.json({ error: 'Family link not found' }, { status: 404 });
     if (link.status === 'integrated') return Response.json({ error: 'Already integrated' }, { status: 400 });
+
+    // Gate to branch admin (over the link's subject/content) or global admin override.
+    const auth = await authorizeBranchAdminAction(base44, user, {
+      ancestorIds: [link.subject_ancestor_id, link.mother_ancestor_id, link.father_ancestor_id, link.partner_ancestor_id].filter(Boolean),
+      contentItemIds: link.content_item_id ? [link.content_item_id] : [],
+    });
+    if (!auth.ok) return Response.json({ error: auth.error }, { status: auth.status });
 
     const ef = link.extracted_data || {};
 
