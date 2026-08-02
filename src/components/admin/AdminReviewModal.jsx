@@ -8,7 +8,7 @@ export default function AdminReviewModal({ item, onClose, onApproved, onDeleted 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 animate-fade-in overflow-y-auto" onClick={onClose}>
       <div className="min-h-screen flex items-start justify-center p-4 py-8">
-        <div className="aged-card rounded-2xl w-full max-w-3xl overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="aged-card rounded-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-[rgba(201,145,58,0.2)] sticky top-0 bg-[#1A1614] z-10">
             <div className="flex items-center gap-2">
@@ -21,7 +21,7 @@ export default function AdminReviewModal({ item, onClose, onApproved, onDeleted 
           </div>
 
           {/* Body — full editable form, identical to the user upload form */}
-          <div className="p-5">
+          <div className="p-5 flex-1 overflow-y-auto">
             <AdminEventEditor item={item} onApproved={onApproved} onDeleted={onDeleted} />
           </div>
         </div>
