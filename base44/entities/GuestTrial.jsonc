@@ -1,0 +1,78 @@
+{
+  "name": "GuestTrial",
+  "type": "object",
+  "properties": {
+    "token": {
+      "type": "string",
+      "description": "Unique random token forming the trial URL (/trial/:token). The link is the guest's automatic pass \u2014 no account or password needed."
+    },
+    "viewer_email": {
+      "type": "string",
+      "description": "Email of the guest viewer the trial was created for (lowercased)"
+    },
+    "viewer_name": {
+      "type": "string",
+      "description": "Optional display name of the guest viewer"
+    },
+    "note": {
+      "type": "string",
+      "description": "Optional note from the creating admin"
+    },
+    "created_by_id": {
+      "type": "string",
+      "description": "User ID of the admin who created the trial"
+    },
+    "created_by_name": {
+      "type": "string",
+      "description": "Display name of the creating admin"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the trial expires (created_date + 14 days)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "expired",
+        "revoked"
+      ],
+      "default": "active",
+      "description": "Trial status \u2014 'revoked' = admin revoked access before expiry"
+    },
+    "last_accessed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the guest last opened the trial link"
+    },
+    "access_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of times the trial link has been opened"
+    }
+  },
+  "required": [
+    "token",
+    "viewer_email",
+    "expires_at",
+    "status"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

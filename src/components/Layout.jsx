@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Users, Map, Clock, Network, GitBranch, Upload, Shield, Search, Menu, X, Sparkles, Database, AlertCircle, Newspaper, CheckSquare, UserPlus } from 'lucide-react';
+import { Home, Users, Map, Clock, Network, GitBranch, Upload, Shield, Search, Menu, X, Sparkles, Database, AlertCircle, Newspaper, CheckSquare, UserPlus, Share2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import ReportProblemDialog from '@/components/ReportProblemDialog';
 import InviteUserDialog from '@/components/InviteUserDialog';
+import ShareTrialDialog from '@/components/ShareTrialDialog';
 import NewsletterOptIn from '@/components/NewsletterOptIn';
 import NotificationPopup from '@/components/NotificationPopup';
 import BranchUpgradeForm from '@/components/BranchUpgradeForm';
@@ -29,6 +30,7 @@ const navItems = [
 export default function Layout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [shareTrialOpen, setShareTrialOpen] = useState(false);
   const [user, setUser] = useState(null);
   const [adminBranches, setAdminBranches] = useState([]);
   const location = useLocation();
@@ -133,6 +135,16 @@ export default function Layout({ children }) {
               Invite New User
             </button>
           )}
+
+          {isAdmin && (
+            <button
+              onClick={() => { setSidebarOpen(false); setShareTrialOpen(true); }}
+              className="flex items-center gap-3 px-4 py-3 rounded-lg bg-[rgba(201,145,58,0.08)] border border-[rgba(201,145,58,0.25)] text-amber-light text-sm font-medium hover:bg-[rgba(201,145,58,0.15)] transition-colors w-full"
+            >
+              <Share2 size={18} />
+              Share 14-Day Trial
+            </button>
+          )}
         </nav>
 
         <div className="p-4 border-t border-[rgba(201,145,58,0.15)]">
@@ -206,6 +218,7 @@ export default function Layout({ children }) {
       <UploadAssistant rootAncestor={rootAncestor} />
 
       <InviteUserDialog open={inviteOpen} onClose={() => setInviteOpen(false)} user={user} />
+      <ShareTrialDialog open={shareTrialOpen} onClose={() => setShareTrialOpen(false)} user={user} />
     </div>
   );
 }

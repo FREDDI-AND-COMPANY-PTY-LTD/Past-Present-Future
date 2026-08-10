@@ -31,6 +31,7 @@ import Login from '@/pages/Login';
 import Register from '@/pages/Register';
 import ForgotPassword from '@/pages/ForgotPassword';
 import ResetPassword from '@/pages/ResetPassword';
+import GuestViewer from '@/pages/GuestViewer';
 
 const AuthenticatedApp = () => {
   const { user, isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -58,6 +59,7 @@ const AuthenticatedApp = () => {
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/trial/:token" element={<GuestViewer />} />
 
       {/* Gated application routes — behind the welcome popup (if not logged in) and the onboarding gate */}
       <Route element={showAuthGate ? <WelcomeAuthPopup /> : <OnboardingGate user={user} />}>
