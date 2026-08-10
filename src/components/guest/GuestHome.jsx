@@ -1,48 +1,112 @@
-import React from 'react';
-import { Image as ImageIcon, FileText, Newspaper, Award, Calendar, MapPin } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ChevronRight, MapPin, Clock, Users, Sparkles } from 'lucide-react';
+import GuestContentCard from '@/components/guest/GuestContentCard';
+import CropImage from '@/components/CropImage';
 
-const typeIcons = {
-  photo: ImageIcon, story: FileText, press_clipping: Newspaper, certificate: Award,
-  video: ImageIcon, narrative: FileText, uncategorized: FileText,
-};
+// Mirrors the real Home page: full hero, quick-nav cards, recent items grid.
+// Quick-nav cards switch the guest view instead of routing.
+export default function GuestHome({ items, ancestors, onSelect, onNavigate }) {
+  const [heroIdx, setHeroIdx] = useState(null);
+  const photos = (items || []).filter(
+    (i) => i.file_url && i.content_type === 'photo' && !i.parent_content_item_id
+  );
 
-export default function GuestHome({ items, onSelect }) {
+  useEffect(() => {
+    if (photos.length > 0 && heroIdx === null) {
+      setHeroIdx(Math.floor(Math.random() * photos.length));
+    }
+  }, [photos.length]);
+
+  const heroPhoto = heroIdx !== null ? photos[heroIdx] : null;
   const standalone = (items || []).filter((i) => !i.parent_content_item_id);
-  if (standalone.length === 0) {
-    return <p className="text-parchment/50 text-sm">No stories in the archive yet.</p>;
-  }
+  const recent = standalone.slice(0, 6);
+
   return (
-    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      {standalone.map((item) => {
-        const Icon = typeIcons[item.content_type] || FileText;
-        return (
-          <button key={item.id} onClick={() => onSelect(item)}
-            className="aged-card rounded-xl overflow-hidden text-left hover:border-[rgba(201,145,58,0.4)] transition-colors group">
-            {item.file_url && item.content_type === 'photo' ? (
-              <div className="aspect-[4/3] overflow-hidden bg-[#0D0B0A]">
-                <img src={item.file_url} alt={item.title} className="w-full h-full object-cover sepia-tint group-hover:scale-105 transition-transform duration-500"
-                  style={{ objectPosition: `${(item.focal_point_x || 0.5) * 100}% ${(item.focal_point_y || 0.4) * 100}%` }} />
-              </div>
-            ) : item.thumbnail_url ? (
-              <div className="aspect-[4/3] overflow-hidden bg-[#0D0B0A]">
-                <img src={item.thumbnail_url} alt={item.title} className="w-full h-full object-cover sepia-tint" />
-              </div>
-            ) : (
-              <div className="aspect-[4/3] bg-[rgba(201,145,58,0.06)] flex items-center justify-center">
-                <Icon size={32} className="text-gold/40" />
-              </div>
-            )}
-            <div className="p-4">
-              <p className="text-xs text-gold/70 uppercase tracking-wider mb-1">{item.content_type}</p>
-              <h3 className="font-display text-base text-parchment leading-snug group-hover:text-amber-light transition-colors">{item.title}</h3>
-              <div className="flex items-center gap-3 mt-2 text-xs text-parchment/40">
-                {item.date && <span className="flex items-center gap-1"><Calendar size={11} />{new Date(item.date).getFullYear()}</span>}
-                {item.location_name && <span className="flex items-center gap-1 truncate"><MapPin size={11} />{item.location_name}</span>}
-              </div>
-            </div>
+    <>
+      {/* Hero */}
+      <section className="relative h-[70vh] min-h-[500px] flex items-center justify-center">
+        <div className="absolute inset-0 overflow-hidden">
+          {heroPhoto ? (
+            <CropImage
+              src={heroPhoto.file_url}
+              alt={heroPhoto.title || 'Family archive'}
+              focalX={heroPhoto.focal_point_x}
+              focalY={heroPhoto.focal_point_y}
+              cropBounds={heroPhoto.crop_bounds}
+              className="w-full h-full"
+              imgClassName="sepia-tint"
+            />
+          ) : (
+            <div
+              className="w-full h-full"
+              style={{
+                background:
+                  'radial-gradient(ellipse at 30% 20%, rgba(201,145,58,0.18), transparent 55%),' +
+                  'radial-gradient(ellipse at 75% 80%, rgba(232,201,122,0.10), transparent 60%),' +
+                  'linear-gradient(135deg, #1A1614 0%, #0D0B0A 70%)',
+              }}
+            />
+          )}
+          <div className="absolute inset-0 hero-overlay" />
+        </div>
+        <div className="relative z-10 text-center px-6 max-w-3xl animate-fade-in-up">
+          <p className="text-amber-light/60 text-sm tracking-[0.3em] uppercase mb-4">The Freddi Family Archive</p>
+          <h1 className="font-display text-5xl md:text-7xl text-parchment leading-tight mb-6">
+            Where bloodlines<br />become stories
+          </h1>
+          <p className="text-parchment/60 text-lg mb-8 max-w-xl mx-auto leading-relaxed">
+            A private archive of the Freddi family — photographs, stories, and the journey of generations across the world to Victoria, Australia.
+          </p>
+        </div>
+      </section>
+
+      {/* Quick navigation cards */}
+      <section className="px-6 lg:px-12 py-16 max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            { label: 'Ancestors', desc: 'Browse family profiles', view: 'ancestors', icon: Users },
+            { label: 'Interactive Map', desc: 'Trace migration routes', view: 'map', icon: MapPin },
+            { label: 'Timeline', desc: 'Journey through eras', view: 'timeline', icon: Clock },
+          ].map(card => {
+            const Icon = card.icon;
+            return (
+              <button key={card.view} onClick={() => onNavigate(card.view)}
+                className="text-left aged-card rounded-xl p-6 hover:border-[rgba(201,145,58,0.4)] transition-all duration-300 group">
+                <Icon size={28} className="text-gold mb-4" />
+                <h3 className="font-display text-xl text-parchment mb-1 group-hover:text-gold transition-colors">{card.label}</h3>
+                <p className="text-sm text-parchment/50">{card.desc}</p>
+                <ChevronRight size={18} className="text-gold/40 mt-3 group-hover:text-gold group-hover:translate-x-1 transition-all" />
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Recent items */}
+      <section className="px-6 lg:px-12 py-16 max-w-7xl mx-auto">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h2 className="font-display text-3xl text-parchment">From the Archive</h2>
+            <p className="text-parchment/50 text-sm mt-1">Recently added pieces of family history</p>
+          </div>
+          <button onClick={() => onNavigate('timeline')} className="text-amber-light text-sm hover:text-gold transition-colors flex items-center gap-1">
+            View all <ChevronRight size={16} />
           </button>
-        );
-      })}
-    </div>
+        </div>
+
+        {recent.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {recent.map(item => (
+              <GuestContentCard key={item.id} item={item} ancestors={ancestors} onSelect={onSelect} />
+            ))}
+          </div>
+        ) : (
+          <div className="aged-card rounded-xl p-12 text-center">
+            <Sparkles size={28} className="text-gold/40 mx-auto mb-3" />
+            <p className="text-parchment/50">The archive awaits its first piece of history.</p>
+          </div>
+        )}
+      </section>
+    </>
   );
 }

@@ -8,6 +8,7 @@ import GuestMap from '@/components/guest/GuestMap';
 import GuestTimeline from '@/components/guest/GuestTimeline';
 import GuestChronicle from '@/components/guest/GuestChronicle';
 import GuestContentDetail from '@/components/guest/GuestContentDetail';
+import GuestPageHero from '@/components/guest/GuestPageHero';
 
 const NAV = [
   { key: 'home', label: 'Home', icon: Home },
@@ -16,6 +17,13 @@ const NAV = [
   { key: 'timeline', label: 'Timeline', icon: Clock },
   { key: 'chronicle', label: 'Chronicle', icon: Newspaper },
 ];
+
+const PAGE_TITLES = {
+  ancestors: 'Ancestors',
+  map: 'Interactive Map',
+  timeline: 'Timeline',
+  chronicle: 'Chronicle',
+};
 
 export default function GuestViewer() {
   const { token } = useParams();
@@ -61,9 +69,11 @@ export default function GuestViewer() {
   const ancestors = archive.ancestors || [];
   const newsletters = archive.newsletters || [];
   const relatedOf = (item) => (item ? items.filter((i) => i.parent_content_item_id === item.id) : []);
+  const navigate = (v) => { setView(v); window.scrollTo({ top: 0, behavior: 'smooth' }); };
 
   return (
     <div className="min-h-screen bg-charcoal flex flex-col lg:flex-row">
+      {/* Sidebar — mirrors the app's Layout sidebar */}
       <aside className="lg:sticky lg:top-0 lg:h-screen w-full lg:w-64 bg-charcoal border-b lg:border-b-0 lg:border-r border-[rgba(201,145,58,0.15)] flex flex-col flex-shrink-0">
         <div className="p-6 border-b border-[rgba(201,145,58,0.15)]">
           <h1 className="font-display text-xl text-gold leading-tight">Freddi Family Archive</h1>
@@ -74,7 +84,7 @@ export default function GuestViewer() {
             const Icon = item.icon;
             const active = view === item.key;
             return (
-              <button key={item.key} onClick={() => setView(item.key)}
+              <button key={item.key} onClick={() => navigate(item.key)}
                 className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors whitespace-nowrap ${active ? 'bg-[rgba(201,145,58,0.12)] text-gold border border-[rgba(201,145,58,0.25)]' : 'text-parchment/60 hover:text-parchment hover:bg-[rgba(201,145,58,0.06)] border border-transparent'}`}>
                 <Icon size={18} /><span className="text-sm font-medium">{item.label}</span>
               </button>
@@ -94,12 +104,47 @@ export default function GuestViewer() {
         </div>
       </aside>
 
-      <div className="flex-1 p-6 lg:p-10 max-w-6xl mx-auto w-full">
-        {view === 'home' && <GuestHome items={items} onSelect={setSelectedItem} />}
-        {view === 'ancestors' && <GuestAncestors ancestors={ancestors} contentItems={items} onSelectContent={setSelectedItem} />}
-        {view === 'map' && <GuestMap items={items} onSelect={setSelectedItem} />}
-        {view === 'timeline' && <GuestTimeline items={items} onSelect={setSelectedItem} />}
-        {view === 'chronicle' && <GuestChronicle newsletters={newsletters} />}
+      {/* Main content area — mirrors the app's Layout: PageHero on non-Home, content, footer */}
+      <div className="flex-1 flex flex-col min-w-0">
+        <main className="flex-1">
+          {view === 'home' ? (
+            <GuestHome items={items} ancestors={ancestors} onSelect={setSelectedItem} onNavigate={navigate} />
+          ) : (
+            <>
+              <GuestPageHero items={items} />
+              <div className="px-6 lg:px-12 py-12 max-w-6xl mx-auto w-full">
+                <div className="flex items-center gap-3 mb-8">
+                  {(() => {
+                    const NavIcon = NAV.find((n) => n.key === view)?.icon || Home;
+                    return (
+                      <div className="w-11 h-11 rounded-xl bg-[rgba(201,145,58,0.1)] border border-[rgba(201,145,58,0.2)] flex items-center justify-center">
+                        <NavIcon size={22} className="text-gold" />
+                      </div>
+                    );
+                  })()}
+                  <h1 className="font-display text-3xl text-parchment">{PAGE_TITLES[view]}</h1>
+                </div>
+                {view === 'ancestors' && <GuestAncestors ancestors={ancestors} contentItems={items} onSelectContent={setSelectedItem} />}
+                {view === 'map' && <GuestMap items={items} onSelect={setSelectedItem} />}
+                {view === 'timeline' && <GuestTimeline items={items} onSelect={setSelectedItem} />}
+                {view === 'chronicle' && <GuestChronicle newsletters={newsletters} />}
+              </div>
+            </>
+          )}
+        </main>
+
+        {/* Footer — mirrors the app's Layout footer */}
+        <footer className="border-t border-[rgba(201,145,58,0.15)] px-6 lg:px-12 py-8 mt-auto">
+          <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+            <div>
+              <p className="font-display text-lg text-gold">Freddi Family Archive</p>
+              <p className="text-xs text-parchment/40 mt-1">A private family history — preserved for generations</p>
+            </div>
+            <p className="text-xs text-parchment/40 flex items-center gap-1.5">
+              <Eye size={12} className="text-gold/50" /> Guest preview · read-only
+            </p>
+          </div>
+        </footer>
       </div>
 
       {selectedItem && (
