@@ -28,7 +28,7 @@ export default function AdminUploads({ refreshKey, scope }) {
     setLoading(true);
     try {
       const data = await base44.entities.ContentItem.list('-created_date', 50);
-      let filtered = (data || []).filter(i => !i.parent_content_item_id);
+      let filtered = (data || []).filter(i => !i.parent_content_item_id && (!i.review_status || i.review_status === 'pending'));
       if (scope) {
         filtered = filtered.filter(i =>
           (scope.branchIds && scope.branchIds.has(i.branch_id)) ||
