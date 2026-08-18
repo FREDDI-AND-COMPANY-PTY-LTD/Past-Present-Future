@@ -38,7 +38,7 @@ export default async function(req) {
       return Response.json({ error: 'No recipient email (pass to_email or invoke as a logged-in user)' }, { status: 400 });
     }
 
-    const origin = Deno.env.get('APP_PUBLIC_URL') || (() => { try { return new URL(req.url).origin; } catch { return ''; } })();
+    const origin = (Deno.env.get('APP_PUBLIC_URL') || (() => { try { return new URL(req.url).origin; } catch { return ''; } })()).replace(/\/+$/, '');
     const since = new Date(Date.now() - days * 86400000);
 
     const [allItems, ancestors, branches, allComments] = await Promise.all([
