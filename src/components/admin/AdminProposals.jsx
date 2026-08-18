@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Lightbulb, CheckCircle, XCircle, ExternalLink, Loader2, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
+import { Lightbulb, CheckCircle, XCircle, ExternalLink, Loader2, ChevronDown, ChevronUp, Sparkles, Zap } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import { setPendingPrompt } from '@/lib/assistantStore';
 
 // A proposal is auto-applicable when it targets a concrete ancestor/content
 // record by id with simple field:value changes (incl. linking an EXISTING
@@ -78,6 +79,13 @@ export default function AdminProposals({ refreshKey }) {
     setProcessing((prev) => ({ ...prev, [p.id]: null }));
   };
 
+  const expediteViaAssistant = (p) => {
+    const parts = [`Please action this suggestion: ${p.summary}.`];
+    if (p.reason) parts.push(`Reason: ${p.reason}`);
+    if (p.target_label) parts.push(`Target: ${p.target_label}.`);
+    setPendingPrompt(parts.join(' '));
+  };
+
   const handleReject = async (p) => {
     setProcessing((prev) => ({ ...prev, [p.id]: 'rejecting' }));
     try {
@@ -143,6 +151,12 @@ export default function AdminProposals({ refreshKey }) {
                 <Link to={`/proposal/${p.id}`} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(201,145,58,0.06)] border border-[rgba(201,145,58,0.15)] text-amber-light/80 text-xs hover:border-[rgba(201,145,58,0.35)] transition-colors">
                   <ExternalLink size={14} /> Link
                 </Link>
+                {p.source === 'ai_assistant' && (
+                  <button onClick={() => expediteViaAssistant(p)} title="Open this suggestion in the assistant chat box to action immediately"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#C9913A] to-[#E8C97A] text-charcoal text-xs font-semibold hover:opacity-90 transition-opacity">
+                    <Zap size={14} /> Expedite
+                  </button>
+                )}
               </div>
             </div>
 

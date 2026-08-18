@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sparkles, X, Send, Loader2, MessageCircle, Volume2, Square, Mic } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
-import { getMessages, setMessages, subscribe } from '@/lib/assistantStore';
+import { getMessages, setMessages, subscribe, consumePendingPrompt, subscribePrompt } from '@/lib/assistantStore';
 
 const SYSTEM_CONTEXT = `You are the AI Help Assistant for the Jason Freddi Family History Archive — a private, federated family history platform. You are available across all pages of the family history archive and your role is to help family members understand how to use the archive and its features.
 
@@ -208,6 +208,20 @@ export default function UploadAssistant({ rootAncestor }) {
       inputRef.current.focus();
     }
   }, [isOpen]);
+
+  // Another part of the app (e.g. the admin proposals queue) can hand the
+  // assistant a pre-filled prompt. Open the panel and seed the input so the
+  // admin can review and send it to expedite the suggestion.
+  useEffect(() => {
+    const unsub = subscribePrompt((p) => {
+      if (!p) return;
+      setInput(p);
+      setIsOpen(true);
+      consumePendingPrompt();
+      setTimeout(() => inputRef.current && inputRef.current.focus(), 50);
+    });
+    return unsub;
+  }, []);
 
   const sendQuestion = async (questionText) => {
     const question = questionText || input.trim();

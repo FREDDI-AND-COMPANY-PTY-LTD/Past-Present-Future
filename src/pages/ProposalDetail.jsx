@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Lightbulb, CheckCircle, XCircle, ExternalLink, Loader2, Sparkles, ArrowLeft } from 'lucide-react';
+import { Lightbulb, CheckCircle, XCircle, ExternalLink, Loader2, Sparkles, ArrowLeft, Zap } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import { setPendingPrompt } from '@/lib/assistantStore';
 import Layout from '@/components/Layout';
 
 const AUTO_APPLICABLE = (p) =>
@@ -103,6 +104,20 @@ export default function ProposalDetail() {
               <Link to={proposal.action_path} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(201,145,58,0.06)] border border-[rgba(201,145,58,0.15)] text-amber-light/80 text-xs hover:border-[rgba(201,145,58,0.35)] transition-colors mb-4">
                 <ExternalLink size={14} /> Open target record
               </Link>
+            )}
+
+            {proposal.source === 'ai_assistant' && proposal.status === 'pending' && (
+              <button
+                onClick={() => {
+                  const parts = [`Please action this suggestion: ${proposal.summary}.`];
+                  if (proposal.reason) parts.push(`Reason: ${proposal.reason}`);
+                  if (proposal.target_label) parts.push(`Target: ${proposal.target_label}.`);
+                  setPendingPrompt(parts.join(' '));
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#C9913A] to-[#E8C97A] text-charcoal text-xs font-semibold hover:opacity-90 transition-opacity mb-4"
+              >
+                <Zap size={14} /> Expedite via Assistant
+              </button>
             )}
 
             {done ? (
