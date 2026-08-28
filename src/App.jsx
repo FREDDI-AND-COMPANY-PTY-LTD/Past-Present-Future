@@ -25,6 +25,7 @@ import NewsletterDetail from '@/pages/NewsletterDetail';
 import Tasks from '@/pages/Tasks';
 import CropReedit from '@/pages/CropReedit';
 import ProposalDetail from '@/pages/ProposalDetail';
+import Quiz from '@/pages/Quiz';
 import OnboardingGate from '@/components/OnboardingGate';
 import WelcomeAuthPopup from '@/components/WelcomeAuthPopup';
 import Login from '@/pages/Login';
@@ -82,6 +83,7 @@ const AuthenticatedApp = () => {
         <Route path="/tasks" element={<Tasks />} />
         <Route path="/crop-reedit" element={<CropReedit />} />
         <Route path="/proposal/:id" element={<ProposalDetail />} />
+        <Route path="/quiz" element={<Quiz />} />
       </Route>
 
       <Route path="*" element={<PageNotFound />} />

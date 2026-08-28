@@ -1,0 +1,27 @@
+{
+  "name": "QuizResult",
+  "type": "object",
+  "properties": {
+    "player_name": {
+      "type": "string",
+      "description": "Display name of the player (the signed-in family member)"
+    },
+    "score": {
+      "type": "number",
+      "description": "Number of questions answered correctly"
+    },
+    "total": {
+      "type": "number",
+      "description": "Total number of questions in the round"
+    },
+    "round_label": {
+      "type": "string",
+      "description": "Human-readable label for the round (e.g. 'Family Trivia \u2014 Aug 2026')"
+    }
+  },
+  "required": [
+    "player_name",
+    "score",
+    "total"
+  ]
+}
