@@ -3,7 +3,7 @@ import { Brain, Loader2, CheckCircle2, XCircle, Trophy, RotateCcw, Sparkles } fr
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 
-const QUESTIONS_PER_ROUND = 5;
+const QUESTIONS_PER_ROUND = 10;
 
 export default function Quiz() {
   const [user, setUser] = useState(null);
