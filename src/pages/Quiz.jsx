@@ -104,12 +104,30 @@ ${JSON.stringify(facts, null, 2)}`;
       setFinished(true);
       const name = user?.full_name || user?.email || 'Family Member';
       const label = `Family Trivia — ${new Date().toLocaleDateString('en-AU', { month: 'short', year: 'numeric' })}`;
-      base44.entities.QuizResult.create({
-        player_name: name,
-        score: score,
-        total: questions.length,
-        round_label: label,
-      }).then(() => base44.entities.QuizResult.list('-score', 10).then(setLeaderboard).catch(() => {}));
+      (async () => {
+        try {
+          const existing = await base44.entities.QuizResult.filter({ player_name: name });
+          const prev = (existing || [])[0];
+          if (prev) {
+            // Keep the player's best score — only raise it, never lower it
+            const best = Math.max(prev.score || 0, score);
+            await base44.entities.QuizResult.update(prev.id, {
+              score: best,
+              total: questions.length,
+              round_label: label,
+            });
+          } else {
+            await base44.entities.QuizResult.create({
+              player_name: name,
+              score,
+              total: questions.length,
+              round_label: label,
+            });
+          }
+          const board = await base44.entities.QuizResult.list('-score', 10);
+          setLeaderboard(board || []);
+        } catch (e) {}
+      })();
     } else {
       setCurrent((c) => c + 1);
       setSelected(null);
