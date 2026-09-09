@@ -1,0 +1,37 @@
+{
+  "name": "Auto-detect duplicate ancestors on create",
+  "description": "Scans existing ancestors for family-name duplicates whenever a new ancestor is created (e.g. a placeholder from a certificate upload) and flags likely matches for merge / add-new review.",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "create"
+      ],
+      "entity_name": "Ancestor"
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "auto_detect_duplicate_ancestors_on_create",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "scanNewAncestorDuplicate",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  },
+  "x-base44-migrated-from-automation": {
+    "legacy_payload_function": "scanNewAncestorDuplicate"
+  }
+}
