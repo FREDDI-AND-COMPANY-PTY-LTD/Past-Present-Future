@@ -184,12 +184,21 @@ export default function FocalPointEditor({ itemId, fileUrl, title, focalX, focal
   // cleared it (updateFromClient / handleCropComplete set liveSubject to null).
   // That way Save after a rotation keeps the re-analysed subject, while Save
   // after a manual override reverts to legacy focal-point framing.
-  const buildPayload = () => ({
-    focal_point_x: posX,
-    focal_point_y: posY,
-    crop_bounds: isFullFrame(crop) ? null : crop,
-    subject_bounds: liveSubject,
-  });
+  // When the image was rotated, liveFileUrl differs from the original prop —
+  // include it so Save persists the rotated file (same as crop/focal), not just
+  // the focal/subject metadata.
+  const buildPayload = () => {
+    const payload = {
+      focal_point_x: posX,
+      focal_point_y: posY,
+      crop_bounds: isFullFrame(crop) ? null : crop,
+      subject_bounds: liveSubject,
+    };
+    if (liveFileUrl && liveFileUrl !== fileUrl) {
+      payload.file_url = liveFileUrl;
+    }
+    return payload;
+  };
 
   const handleApprove = () => onApprove(buildPayload());
 
