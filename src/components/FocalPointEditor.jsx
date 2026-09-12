@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Crop, Check, Loader2, X, Sparkles, Scan, Crosshair } from 'lucide-react';
+import { Crop, Check, Loader2, X, Sparkles, Scan, Crosshair, RotateCw } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import MaskDragCropper from '@/components/MaskDragCropper';
 import CropBoxOverlay from '@/components/CropBoxOverlay';
@@ -18,7 +18,7 @@ const ASPECTS = [
   { label: '9:16', value: 9 / 16 },
 ];
 
-export default function FocalPointEditor({ itemId, fileUrl, title, focalX, focalY, cropBounds, reasoning, onApprove, onClose }) {
+export default function FocalPointEditor({ itemId, fileUrl, title, focalX, focalY, cropBounds, subjectBounds, reasoning, onApprove, onRotated, onClose }) {
   const [posX, setPosX] = useState(focalX);
   const [posY, setPosY] = useState(focalY);
   const [crop, setCrop] = useState(cropBounds && !isFullFrame(cropBounds) ? cropBounds : { ...FULL });
@@ -28,6 +28,13 @@ export default function FocalPointEditor({ itemId, fileUrl, title, focalX, focal
   const [changed, setChanged] = useState(false);
   const containerRef = useRef(null);
 
+  // Live image state — updated in place when the image is rotated, so the
+  // editor reflects the newly baked file without reopening.
+  const [liveFileUrl, setLiveFileUrl] = useState(fileUrl);
+  const [liveSubject, setLiveSubject] = useState(subjectBounds || null);
+  const [rotating, setRotating] = useState(false);
+  const [rotateError, setRotateError] = useState(null);
+
   // Pan/zoom cropper state (Instagram-style — no drag handles)
   const [naturalAspect, setNaturalAspect] = useState(null);
   const [aspect, setAspect] = useState(null);
@@ -35,15 +42,15 @@ export default function FocalPointEditor({ itemId, fileUrl, title, focalX, focal
   const userInteracted = useRef(false);
 
   useEffect(() => {
-    if (!fileUrl) return;
+    if (!liveFileUrl) return;
     const img = new Image();
     img.onload = () => {
       const r = img.naturalWidth / img.naturalHeight;
       setNaturalAspect(r);
       setAspect(prev => prev ?? r);
     };
-    img.src = fileUrl;
-  }, [fileUrl]);
+    img.src = liveFileUrl;
+  }, [liveFileUrl]);
 
   const updateFromClient = useCallback((clientX, clientY) => {
     if (!containerRef.current) return;
@@ -52,6 +59,7 @@ export default function FocalPointEditor({ itemId, fileUrl, title, focalX, focal
     const y = Math.max(crop.y_min, Math.min(crop.y_max, (clientY - rect.top) / rect.height));
     setPosX(x);
     setPosY(y);
+    setLiveSubject(null); // manual focal move opts out of AI subject framing
     setChanged(true);
   }, [crop]);
 
@@ -86,6 +94,7 @@ export default function FocalPointEditor({ itemId, fileUrl, title, focalX, focal
     setCrop(n);
     setPosX(x => Math.max(n.x_min, Math.min(n.x_max, x)));
     setPosY(y => Math.max(n.y_min, Math.min(n.y_max, y)));
+    setLiveSubject(null); // manual crop opts out of AI subject framing
     setChanged(true);
   }, []);
 
@@ -100,6 +109,75 @@ export default function FocalPointEditor({ itemId, fileUrl, title, focalX, focal
     setCrop({ ...FULL });
     setResetKey(k => k + 1);
     setChanged(true);
+  };
+
+  // Rotate the source image 90° clockwise by baking the rotation into the file
+  // (canvas → re-upload → update record → re-run AI subject analysis). This
+  // keeps the image upright on EVERY surface (cards, guest viewer, newsletters,
+  // exports), not just this editor, and recomputes focal/subject/crop for the
+  // new orientation. The original file is left in storage; the record simply
+  // points at the new upright copy.
+  const handleRotate = async () => {
+    if (!itemId || rotating) return;
+    setRotating(true);
+    setRotateError(null);
+    try {
+      const img = await new Promise((resolve, reject) => {
+        const im = new Image();
+        im.crossOrigin = 'anonymous';
+        im.onload = () => resolve(im);
+        im.onerror = () => reject(new Error('Could not load image for rotation.'));
+        im.src = liveFileUrl;
+      });
+
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalHeight;
+      canvas.height = img.naturalWidth;
+      const ctx = canvas.getContext('2d');
+      // 90° clockwise: map old (x,y) → (H - y, x) via setTransform(a,b,c,d,e,f)
+      ctx.setTransform(0, 1, -1, 0, canvas.width, 0);
+      ctx.drawImage(img, 0, 0);
+
+      const isPng = /\.png(\?|$)/i.test(liveFileUrl);
+      const mime = isPng ? 'image/png' : 'image/jpeg';
+      const ext = isPng ? 'png' : 'jpg';
+      const blob = await new Promise((r) => canvas.toBlob(r, mime, 0.92));
+      if (!blob) throw new Error('Rotation failed to produce an image.');
+      const file = new File([blob], `rotated.${ext}`, { type: mime });
+
+      const uploadRes = await base44.integrations.Core.UploadPublicFile({ file });
+      const newFileUrl = uploadRes?.file_url;
+      if (!newFileUrl) throw new Error('Upload failed.');
+
+      await base44.entities.ContentItem.update(itemId, { file_url: newFileUrl });
+
+      // Re-run the AI subject/crop analysis on the now-upright image.
+      const analysis = await base44.functions.invoke('analyzeImageCrop', { content_item_id: itemId });
+
+      setLiveFileUrl(newFileUrl);
+      setPosX(analysis?.focal_point_x ?? 0.5);
+      setPosY(analysis?.focal_point_y ?? 0.4);
+      setCrop(analysis?.crop_bounds && !isFullFrame(analysis.crop_bounds) ? analysis.crop_bounds : { ...FULL });
+      setLiveSubject(analysis?.subject_bounds || null);
+      setNaturalAspect(null);
+      setAspect(null);
+      setResetKey(k => k + 1);
+      setChanged(false); // record is already current — nothing unsaved
+
+      if (onRotated) {
+        onRotated({
+          file_url: newFileUrl,
+          focal_point_x: analysis?.focal_point_x ?? 0.5,
+          focal_point_y: analysis?.focal_point_y ?? 0.4,
+          crop_bounds: analysis?.crop_bounds || null,
+          subject_bounds: analysis?.subject_bounds || null,
+          shot_type: analysis?.shot_type || null,
+        });
+      }
+    } catch (e) {
+      setRotateError(e?.message || 'Rotation failed. The image storage may not allow in-browser editing.');
+    }
+    setRotating(false);
   };
 
   // A manual override clears the AI subject region so the human's focal/crop
@@ -145,21 +223,39 @@ export default function FocalPointEditor({ itemId, fileUrl, title, focalX, focal
             </div>
           )}
 
-          {/* Mode toggle */}
-          <div className="flex items-center gap-2 p-1 rounded-lg bg-[#0D0B0A] border border-[rgba(201,145,58,0.15)] w-fit">
-            <button
-              onClick={() => setMode('focal')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${mode === 'focal' ? 'bg-[rgba(201,145,58,0.15)] text-gold border border-[rgba(201,145,58,0.3)]' : 'text-parchment/50 border border-transparent'}`}
-            >
-              <Crosshair size={14} /> Focal Point
-            </button>
-            <button
-              onClick={() => setMode('crop')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${mode === 'crop' ? 'bg-[rgba(201,145,58,0.15)] text-gold border border-[rgba(201,145,58,0.3)]' : 'text-parchment/50 border border-transparent'}`}
-            >
-              <Scan size={14} /> Crop Box
-            </button>
+          {/* Mode toggle + Rotate */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2 p-1 rounded-lg bg-[#0D0B0A] border border-[rgba(201,145,58,0.15)] w-fit">
+              <button
+                onClick={() => setMode('focal')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${mode === 'focal' ? 'bg-[rgba(201,145,58,0.15)] text-gold border border-[rgba(201,145,58,0.3)]' : 'text-parchment/50 border border-transparent'}`}
+              >
+                <Crosshair size={14} /> Focal Point
+              </button>
+              <button
+                onClick={() => setMode('crop')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${mode === 'crop' ? 'bg-[rgba(201,145,58,0.15)] text-gold border border-[rgba(201,145,58,0.3)]' : 'text-parchment/50 border border-transparent'}`}
+              >
+                <Scan size={14} /> Crop Box
+              </button>
+            </div>
+
+            {itemId && (
+              <button
+                onClick={handleRotate}
+                disabled={rotating}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[rgba(201,145,58,0.25)] text-amber-light text-xs font-medium hover:bg-[rgba(201,145,58,0.08)] transition-colors disabled:opacity-50"
+                title="Rotate 90° clockwise — bakes the rotation into the image and re-analyses it"
+              >
+                {rotating ? <Loader2 size={14} className="animate-spin" /> : <RotateCw size={14} />}
+                Rotate 90°
+              </button>
+            )}
           </div>
+
+          {rotateError && (
+            <p className="text-xs text-red-400/80 bg-red-900/10 border border-red-800/20 rounded-lg px-3 py-2">{rotateError}</p>
+          )}
 
           <div>
             <p className="text-sm text-parchment/60 mb-2">
@@ -176,7 +272,7 @@ export default function FocalPointEditor({ itemId, fileUrl, title, focalX, focal
                   onMouseDown={(e) => { setDragging(true); updateFromClient(e.clientX, e.clientY); e.preventDefault(); }}
                   onTouchStart={(e) => { setDragging(true); updateFromClient(e.touches[0].clientX, e.touches[0].clientY); }}
                 >
-                  <img src={fileUrl} alt={title} className="block max-w-full max-h-[400px] sepia-tint pointer-events-none" draggable={false} />
+                  <img src={liveFileUrl} alt={title} className="block max-w-full max-h-[400px] sepia-tint pointer-events-none" draggable={false} />
                   <CropBoxOverlay bounds={crop} onChange={() => {}} containerRef={containerRef} interactive={false} />
                   <div
                     className="absolute pointer-events-none z-30"
@@ -208,7 +304,7 @@ export default function FocalPointEditor({ itemId, fileUrl, title, focalX, focal
                   </div>
                   <MaskDragCropper
                     key={`${aspect}-${resetKey}`}
-                    image={fileUrl}
+                    image={liveFileUrl}
                     aspect={aspect}
                     initialCropBounds={crop}
                     onCropComplete={handleCropComplete}
@@ -225,19 +321,19 @@ export default function FocalPointEditor({ itemId, fileUrl, title, focalX, focal
               <div>
                 <p className="text-xs text-parchment/40 mb-1.5">Card (3:2)</p>
                 <div className="h-28 rounded-lg overflow-hidden bg-black/40 border border-[rgba(201,145,58,0.15)]">
-                  <CropImage src={fileUrl} alt="preview" focalX={posX} focalY={posY} cropBounds={liveBounds} className="w-full h-full" imgClassName="sepia-tint" />
+                  <CropImage src={liveFileUrl} alt="preview" focalX={posX} focalY={posY} cropBounds={liveBounds} subjectBounds={liveSubject} className="w-full h-full" imgClassName="sepia-tint" />
                 </div>
               </div>
               <div>
                 <p className="text-xs text-parchment/40 mb-1.5">Square</p>
                 <div className="h-28 w-28 mx-auto rounded-lg overflow-hidden bg-black/40 border border-[rgba(201,145,58,0.15)]">
-                  <CropImage src={fileUrl} alt="preview" focalX={posX} focalY={posY} cropBounds={liveBounds} className="w-full h-full" imgClassName="sepia-tint" />
+                  <CropImage src={liveFileUrl} alt="preview" focalX={posX} focalY={posY} cropBounds={liveBounds} subjectBounds={liveSubject} className="w-full h-full" imgClassName="sepia-tint" />
                 </div>
               </div>
               <div>
                 <p className="text-xs text-parchment/40 mb-1.5">Banner (16:9)</p>
                 <div className="h-28 rounded-lg overflow-hidden bg-black/40 border border-[rgba(201,145,58,0.15)]">
-                  <CropImage src={fileUrl} alt="preview" focalX={posX} focalY={posY} cropBounds={liveBounds} className="w-full h-full" imgClassName="sepia-tint" />
+                  <CropImage src={liveFileUrl} alt="preview" focalX={posX} focalY={posY} cropBounds={liveBounds} subjectBounds={liveSubject} className="w-full h-full" imgClassName="sepia-tint" />
                 </div>
               </div>
             </div>

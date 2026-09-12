@@ -46,6 +46,16 @@ export default function CropReedit() {
     setEditing(null);
   };
 
+  // Rotation bakes the turn into the file and re-analyses it server-side, so
+  // the record is already current — just reflect the new file/analysis in the
+  // grid without closing the editor (the admin may rotate again or adjust).
+  const handleRotated = (payload) => {
+    if (!editing) return;
+    setItems(prev => prev.map(i => i.id === editing.id ? { ...i, ...payload } : i));
+    setSavedId(editing.id);
+    setTimeout(() => setSavedId(null), 1500);
+  };
+
   if (checking) {
     return <Layout><div className="px-6 lg:px-12 py-12 max-w-7xl mx-auto"><div className="aged-card rounded-xl h-64 animate-pulse" /></div></Layout>;
   }
@@ -139,7 +149,9 @@ export default function CropReedit() {
           focalX={editing.focal_point_x}
           focalY={editing.focal_point_y}
           cropBounds={editing.crop_bounds}
+          subjectBounds={editing.subject_bounds}
           onApprove={handleApprove}
+          onRotated={handleRotated}
           onClose={() => setEditing(null)}
         />
       )}
