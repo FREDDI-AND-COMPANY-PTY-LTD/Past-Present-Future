@@ -119,6 +119,7 @@ export default function ContentDetail() {
                     focalX={item.focal_point_x}
                     focalY={item.focal_point_y}
                     cropBounds={item.crop_bounds}
+                    subjectBounds={item.subject_bounds}
                     className="w-full h-full"
                     imgClassName="sepia-tint"
                   />

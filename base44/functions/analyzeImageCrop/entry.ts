@@ -1,28 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
-Deno.serve(async (req) => {
-  try {
-    const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
-
-    const body = await req.json();
-    const { content_item_id } = body;
-    if (!content_item_id) return Response.json({ error: 'content_item_id is required' }, { status: 400 });
-
-    const item = await base44.asServiceRole.entities.ContentItem.get(content_item_id);
-    if (!item) return Response.json({ error: 'Content item not found' }, { status: 404 });
-
-    if (!item.file_url) {
-      return Response.json({ skipped: true, reason: 'No file_url' });
-    }
-    const imageTypes = ['photo', 'uncategorized', 'certificate', 'passport', 'identity_document', 'press_clipping', 'narrative', 'correspondence', 'memorial'];
-    if (!imageTypes.includes(item.content_type)) {
-      return Response.json({ skipped: true, reason: `Content type ${item.content_type} is not image-based` });
-    }
-
-    const result = await base44.asServiceRole.integrations.Core.InvokeLLM({
-      prompt: `You are an expert image composition analyst and photo editor. Analyse this image in THREE stages and return your assessment as structured JSON.
+const PROMPT = `You are an expert image composition analyst and photo editor. Analyse this image in FOUR stages and return your assessment as structured JSON.
 
 ═══ STAGE 1: DETECT PHOTO-WITHIN-PHOTO / INNER FRAME ═══
 Determine whether this image is a "photo within a photo" — i.e., the actual photographic content is a sub-region of the full image, surrounded by borders, margins, scanner bed, or a frame.
@@ -47,36 +25,73 @@ Classify the photographic composition:
 - "portrait": A head-and-shoulders or head-and-torso shot. One person is the clear subject, occupying 40-70% of the frame height.
 - "mid_shot": A waist-up or knee-up shot showing one or two people in context. Subjects occupy 25-50% of frame height.
 - "long_shot": A wide shot showing the full scene — full-body, landscape, building, or environment. The subject/people are small relative to the frame.
-- "group_photo": Three or more people posed together. The focal point should be the center of the group.
-- "document": A text-heavy document (certificate, letter, newspaper, passport). The focal point should be on the most important text block (name field, headline, key data).
-- "landscape": A scenic or environmental shot with no people as the primary subject. Use the visual centre of mass.
+- "group_photo": Three or more people posed together.
+- "document": A text-heavy document (certificate, letter, newspaper, passport).
+- "landscape": A scenic or environmental shot with no people as the primary subject.
 
-═══ STAGE 3: DETERMINE FOCAL POINT ═══
-Based on the shot type and inner frame, determine the single (x, y) coordinate that should remain visible when the image is cropped to any aspect ratio (square thumbnails, wide banners, tall cards).
+═══ STAGE 3: DETECT THE SUBJECT REGION (subject_bounds) ═══
+Identify the SINGLE bounding box that encloses ALL of the image's important content — the part that MUST stay fully visible when the image is cropped to ANY aspect ratio (square thumbnail, 16:9 banner, 9:16 mobile, 4:3 card). This is the most important field: it is what stops heads and bodies from being cut off.
 
-Focal point rules by shot type:
-- closeup / portrait: On the subject's EYES or the bridge of the nose. For a single face, this is typically y = 0.15-0.30 (upper third). NEVER set y above 0.5 for portraits — faces are always in the upper portion of the frame.
-- mid_shot: On the subject's face/upper chest area, typically y = 0.25-0.40.
-- long_shot: On the center of the main subject or the visual center of mass.
-- group_photo: On the central person's face. If people are arranged in rows, aim for the middle row's face level.
-- document: On the most important text block (e.g., the name on a certificate, the headline of a newspaper). For certificates with a top-to-bottom layout, bias upward (y < 0.4).
-- landscape: On the visual center of mass — where the eye is naturally drawn.
+Rules:
+- PEOPLE: the subject box MUST enclose EVERY visible person's face AND body — from the top of the highest head down to the lowest visible point of any subject (feet, or where the body meets the image edge). NEVER exclude a head. If multiple people are the subject of the photo, enclose all of them in one box.
+- DOCUMENTS (certificate, letter, passport, newspaper): the subject box is the region containing the key information — name field, photo, headline, and main text block — not the blank margins.
+- LANDSCAPE / no people: the subject box is the salient area (the main building, monument, vehicle, or focal object).
+- Add a small padding margin (about 3-5% of the image dimension) around the content so faces/heads are not flush against the crop edge.
+- The subject box MUST be INSIDE the crop_bounds (inner frame) from Stage 1.
+- If the whole image is the subject (no meaningful empty space), set subject_bounds to the full frame {x_min: 0, y_min: 0, x_max: 1, y_max: 1}.
 
-CRITICAL: The focal point coordinates must be INSIDE the crop_bounds (inner frame). If you detected an inner frame, the focal point should be relative to the FULL image, positioned within the content area.
+═══ STAGE 4: FOCAL POINT (tie-breaker) ═══
+The single (x, y) point that is the MOST important to keep visible — used only as a centre tie-breaker when the crop window is larger than the subject region.
+- People: the primary subject's eyes / bridge of nose.
+- Documents: the most important text (the name on a certificate, the headline of a newspaper).
+- Landscape: the visual centre of mass.
+The focal point MUST be INSIDE the subject_bounds.
 
 Return JSON with this exact structure:
 {
   "focal_point_x": 0.0 to 1.0,
   "focal_point_y": 0.0 to 1.0,
   "shot_type": "closeup" | "portrait" | "mid_shot" | "long_shot" | "group_photo" | "document" | "landscape",
-  "crop_bounds": {
-    "x_min": 0.0 to 1.0,
-    "y_min": 0.0 to 1.0,
-    "x_max": 0.0 to 1.0,
-    "y_max": 0.0 to 1.0
-  },
-  "reasoning": "Brief explanation: what shot type was detected, whether an inner frame was found, and why the focal point was placed where it was."
-}`,
+  "crop_bounds": { "x_min": 0.0-1.0, "y_min": 0.0-1.0, "x_max": 0.0-1.0, "y_max": 0.0-1.0 },
+  "subject_bounds": { "x_min": 0.0-1.0, "y_min": 0.0-1.0, "x_max": 0.0-1.0, "y_max": 0.0-1.0 },
+  "reasoning": "Brief explanation: shot type, inner frame, what the subject region covers, and why the focal point was placed there."
+}`;
+
+const clamp = (v) => Math.max(0, Math.min(1, v));
+const normBox = (b, fallback) => {
+  if (!b) return fallback;
+  const xMin = clamp(Number(b.x_min) ?? 0);
+  const yMin = clamp(Number(b.y_min) ?? 0);
+  const xMax = clamp(Number(b.x_max) ?? 1);
+  const yMax = clamp(Number(b.y_max) ?? 1);
+  if (xMax <= xMin || yMax <= yMin) return fallback;
+  return { x_min: xMin, y_min: yMin, x_max: xMax, y_max: yMax };
+};
+const FULL = { x_min: 0, y_min: 0, x_max: 1, y_max: 1 };
+
+Deno.serve(async (req) => {
+  try {
+    const base44 = createClientFromRequest(req);
+    const user = await base44.auth.me();
+    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const body = await req.json();
+    const { content_item_id } = body;
+    if (!content_item_id) return Response.json({ error: 'content_item_id is required' }, { status: 400 });
+
+    const item = await base44.asServiceRole.entities.ContentItem.get(content_item_id);
+    if (!item) return Response.json({ error: 'Content item not found' }, { status: 404 });
+
+    if (!item.file_url) {
+      return Response.json({ skipped: true, reason: 'No file_url' });
+    }
+    const imageTypes = ['photo', 'uncategorized', 'certificate', 'passport', 'identity_document', 'press_clipping', 'narrative', 'correspondence', 'memorial'];
+    if (!imageTypes.includes(item.content_type)) {
+      return Response.json({ skipped: true, reason: `Content type ${item.content_type} is not image-based` });
+    }
+
+    const result = await base44.asServiceRole.integrations.Core.InvokeLLM({
+      prompt: PROMPT,
       file_urls: [item.file_url],
       response_json_schema: {
         type: 'object',
@@ -86,54 +101,69 @@ Return JSON with this exact structure:
           shot_type: { type: 'string', enum: ['closeup', 'portrait', 'mid_shot', 'long_shot', 'group_photo', 'document', 'landscape'] },
           crop_bounds: {
             type: 'object',
-            properties: {
-              x_min: { type: 'number' },
-              y_min: { type: 'number' },
-              x_max: { type: 'number' },
-              y_max: { type: 'number' }
-            }
+            properties: { x_min: { type: 'number' }, y_min: { type: 'number' }, x_max: { type: 'number' }, y_max: { type: 'number' } }
+          },
+          subject_bounds: {
+            type: 'object',
+            properties: { x_min: { type: 'number' }, y_min: { type: 'number' }, x_max: { type: 'number' }, y_max: { type: 'number' } }
           },
           reasoning: { type: 'string' }
         },
-        required: ['focal_point_x', 'focal_point_y', 'shot_type', 'crop_bounds']
+        required: ['focal_point_x', 'focal_point_y', 'shot_type', 'crop_bounds', 'subject_bounds']
       }
     });
 
-    // Clamp values to 0-1 range
-    const clamp = (v) => Math.max(0, Math.min(1, v));
     const focalX = clamp(Number(result.focal_point_x) || 0.5);
     const focalY = clamp(Number(result.focal_point_y) || 0.4);
     const shotType = result.shot_type || 'mid_shot';
 
-    // Process crop bounds — only store if significant inner frame detected
+    // crop_bounds: only persist if the inner frame is meaningfully smaller than full frame
     let cropBounds = null;
-    if (result.crop_bounds) {
-      const xMin = clamp(Number(result.crop_bounds.x_min) || 0);
-      const yMin = clamp(Number(result.crop_bounds.y_min) || 0);
-      const xMax = clamp(Number(result.crop_bounds.x_max) || 1);
-      const yMax = clamp(Number(result.crop_bounds.y_max) || 1);
-      const w = xMax - xMin;
-      const h = yMax - yMin;
-      // Only store if the content area is meaningfully smaller than the full frame
-      // (at least 5% border on at least one dimension)
-      if (w > 0 && h > 0 && (w < 0.95 || h < 0.95)) {
-        cropBounds = { x_min: xMin, y_min: yMin, x_max: xMax, y_max: yMax };
+    const cb = normBox(result.crop_bounds, FULL);
+    const cw = cb.x_max - cb.x_min;
+    const ch = cb.y_max - cb.y_min;
+    if (cw > 0 && ch > 0 && (cw < 0.95 || ch < 0.95)) {
+      cropBounds = cb;
+    }
+
+    // subject_bounds: the region the renderer frames inside any aspect ratio.
+    // Persist whenever the AI returns a valid box (including full-frame, which
+    // means "the whole image is the subject" — a valid, intentional answer).
+    let subjectBounds = null;
+    const sb = normBox(result.subject_bounds, null);
+    if (sb) {
+      // Clamp the subject inside the crop bounds so it stays within the inner frame
+      const cxMin = cropBounds ? cropBounds.x_min : 0;
+      const cyMin = cropBounds ? cropBounds.y_min : 0;
+      const cxMax = cropBounds ? cropBounds.x_max : 1;
+      const cyMax = cropBounds ? cropBounds.y_max : 1;
+      subjectBounds = {
+        x_min: Math.max(cxMin, sb.x_min),
+        y_min: Math.max(cyMin, sb.y_min),
+        x_max: Math.min(cxMax, sb.x_max),
+        y_max: Math.min(cyMax, sb.y_max),
+      };
+      // Guard against a degenerate (zero-area) box after clamping
+      if (subjectBounds.x_max <= subjectBounds.x_min || subjectBounds.y_max <= subjectBounds.y_min) {
+        subjectBounds = null;
       }
     }
 
-    // Ensure focal point is within crop bounds if they exist
+    // Ensure focal point is inside the subject region (and crop bounds)
     let finalFocalX = focalX;
     let finalFocalY = focalY;
-    if (cropBounds) {
-      finalFocalX = Math.max(cropBounds.x_min, Math.min(cropBounds.x_max, focalX));
-      finalFocalY = Math.max(cropBounds.y_min, Math.min(cropBounds.y_max, focalY));
+    const ref = subjectBounds || cropBounds;
+    if (ref) {
+      finalFocalX = Math.max(ref.x_min, Math.min(ref.x_max, focalX));
+      finalFocalY = Math.max(ref.y_min, Math.min(ref.y_max, focalY));
     }
 
     await base44.asServiceRole.entities.ContentItem.update(content_item_id, {
       focal_point_x: finalFocalX,
       focal_point_y: finalFocalY,
       shot_type: shotType,
-      crop_bounds: cropBounds
+      crop_bounds: cropBounds,
+      subject_bounds: subjectBounds,
     });
 
     return Response.json({
@@ -142,6 +172,7 @@ Return JSON with this exact structure:
       focal_point_y: finalFocalY,
       shot_type: shotType,
       crop_bounds: cropBounds,
+      subject_bounds: subjectBounds,
       reasoning: result.reasoning || null
     });
   } catch (error) {

@@ -102,10 +102,13 @@ export default function FocalPointEditor({ itemId, fileUrl, title, focalX, focal
     setChanged(true);
   };
 
+  // A manual override clears the AI subject region so the human's focal/crop
+  // choice takes effect (reverts to legacy focal-point framing).
   const buildPayload = () => ({
     focal_point_x: posX,
     focal_point_y: posY,
     crop_bounds: isFullFrame(crop) ? null : crop,
+    subject_bounds: null,
   });
 
   const handleApprove = () => onApprove(buildPayload());

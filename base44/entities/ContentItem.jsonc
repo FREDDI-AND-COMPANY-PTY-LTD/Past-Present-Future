@@ -224,12 +224,12 @@
     },
     "focal_point_x": {
       "type": "number",
-      "description": "AI-determined focal point X coordinate (0-1, 0=left, 0.5=center, 1=right). Used by CSS object-position to crop images perfectly on card thumbnails and hero displays.",
+      "description": "AI-determined focal point X coordinate (0-1, 0=left, 0.5=center, 1=right). Used as the centre tie-breaker when the crop window is larger than the subject region.",
       "default": 0.5
     },
     "focal_point_y": {
       "type": "number",
-      "description": "AI-determined focal point Y coordinate (0-1, 0=top, 0.5=center, 1=bottom). Used by CSS object-position to crop images perfectly on card thumbnails and hero displays.",
+      "description": "AI-determined focal point Y coordinate (0-1, 0=top, 0.5=center, 1=bottom). Used as the centre tie-breaker when the crop window is larger than the subject region.",
       "default": 0.4
     },
     "shot_type": {
@@ -264,6 +264,28 @@
         "y_max": {
           "type": "number",
           "description": "Bottom edge of content area (0-1)"
+        }
+      }
+    },
+    "subject_bounds": {
+      "type": "object",
+      "description": "AI-detected subject region \u2014 the single bounding box that encloses ALL of the image's important content (every visible person's face AND body, or the salient object/text block). The renderer frames this entire region inside any crop aspect ratio (square, 16:9, 9:16, 4:3) so heads and bodies are never decapitated. The focal point is used only as a centre tie-breaker when the crop window is larger than the subject. Null for legacy records (pre-smart-crop) or when a human manually overrides the crop \u2014 those fall back to focal-point framing. Coordinates are relative to the FULL image (0-1), inside the crop_bounds.",
+      "properties": {
+        "x_min": {
+          "type": "number",
+          "description": "Left edge of subject region (0-1)"
+        },
+        "y_min": {
+          "type": "number",
+          "description": "Top edge of subject region (0-1)"
+        },
+        "x_max": {
+          "type": "number",
+          "description": "Right edge of subject region (0-1)"
+        },
+        "y_max": {
+          "type": "number",
+          "description": "Bottom edge of subject region (0-1)"
         }
       }
     },
