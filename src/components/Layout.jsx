@@ -12,7 +12,10 @@ import BranchTransferInvitation from '@/components/BranchTransferInvitation';
 import LogoutButton from '@/components/LogoutButton';
 import UploadAssistant from '@/components/UploadAssistant';
 import PageHero from '@/components/PageHero';
+import TaskNotificationBadge from '@/components/TaskNotificationBadge';
+import InstallAppButton from '@/components/InstallAppButton';
 import { useBranchRoot } from '@/hooks/useBranchRoot';
+import { usePendingTasksCount } from '@/hooks/usePendingTasksCount';
 
 const navItems = [
   { label: 'Home', path: '/', icon: Home },
@@ -37,6 +40,7 @@ export default function Layout({ children }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { rootAncestorId, rootAncestor } = useBranchRoot();
+  const pendingTasks = usePendingTasksCount();
   const branchRootPath = rootAncestorId ? `/ancestor/${rootAncestorId}` : '/';
   // Capitalise the surname in the title (birth-certificate format)
   const sidebarTitle = (() => {
@@ -68,7 +72,10 @@ export default function Layout({ children }) {
     <div className="min-h-screen bg-charcoal flex flex-col lg:flex-row">
       {/* Top bar - mobile */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-charcoal/95 backdrop-blur-md border-b border-[rgba(201,145,58,0.15)] px-4 h-16 flex items-center justify-between">
-        <Link to={branchRootPath} className="font-display text-lg text-gold tracking-wide">{sidebarTitle}</Link>
+        <Link to={branchRootPath} className="relative font-display text-lg text-gold tracking-wide">
+          {sidebarTitle}
+          <TaskNotificationBadge count={pendingTasks} />
+        </Link>
         <button onClick={() => setSidebarOpen(!sidebarOpen)} className="text-parchment p-2">
           {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
@@ -81,9 +88,10 @@ export default function Layout({ children }) {
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
         <div className="p-6 border-b border-[rgba(201,145,58,0.15)]">
-          <Link to={branchRootPath} onClick={() => setSidebarOpen(false)} className="block">
+          <Link to={branchRootPath} onClick={() => setSidebarOpen(false)} className="relative block">
             <h1 className="font-display text-xl text-gold tracking-wide leading-tight">{sidebarTitle}</h1>
             <p className="font-display text-xs text-amber-light/70 tracking-widest uppercase mt-1">Present, Past, Future</p>
+            <TaskNotificationBadge count={pendingTasks} />
           </Link>
         </div>
 
@@ -206,6 +214,7 @@ export default function Layout({ children }) {
               <p className="text-xs text-parchment/40 mt-1">A private family history — preserved for generations</p>
             </div>
             <div className="flex items-center gap-3">
+              <InstallAppButton />
               <ReportProblemDialog>
                 <button className="flex items-center gap-2 px-4 py-2 rounded-lg border border-[rgba(201,145,58,0.2)] text-parchment/60 text-sm hover:text-amber-light hover:border-[rgba(201,145,58,0.4)] transition-colors">
                   <AlertCircle size={14} />
