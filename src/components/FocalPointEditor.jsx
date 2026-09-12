@@ -18,7 +18,7 @@ const ASPECTS = [
   { label: '9:16', value: 9 / 16 },
 ];
 
-export default function FocalPointEditor({ itemId, fileUrl, title, focalX, focalY, cropBounds, subjectBounds, reasoning, onApprove, onRotated, onClose, isPdf }) {
+export default function FocalPointEditor({ itemId, fileUrl, title, focalX, focalY, cropBounds, subjectBounds, reasoning, onApprove, onRotated, onClose, hasThumbnail }) {
   const [posX, setPosX] = useState(focalX);
   const [posY, setPosY] = useState(focalY);
   const [crop, setCrop] = useState(cropBounds && !isFullFrame(cropBounds) ? cropBounds : { ...FULL });
@@ -149,10 +149,11 @@ export default function FocalPointEditor({ itemId, fileUrl, title, focalX, focal
       const newFileUrl = uploadRes?.file_url;
       if (!newFileUrl) throw new Error('Upload failed.');
 
-      // For PDFs the editable surface is the preview thumbnail, not the PDF
-      // itself — bake the rotation into thumbnail_url so the PDF document
-      // (file_url) is preserved and the preview re-renders upright.
-      const rotatedField = isPdf ? 'thumbnail_url' : 'file_url';
+      // Bake the rotation into whichever field the editor is actually showing
+      // (thumbnail_url when one exists — e.g. PDFs and pre-thumbed images —
+      // otherwise file_url). This keeps the rotated surface in sync with what
+      // the card/detail views render, so the turn doesn't silently revert.
+      const rotatedField = hasThumbnail ? 'thumbnail_url' : 'file_url';
       await base44.entities.ContentItem.update(itemId, { [rotatedField]: newFileUrl });
 
       // Re-run the AI subject/crop analysis on the now-upright image.
@@ -199,7 +200,7 @@ export default function FocalPointEditor({ itemId, fileUrl, title, focalX, focal
       subject_bounds: liveSubject,
     };
     if (liveFileUrl && liveFileUrl !== fileUrl) {
-      payload[isPdf ? 'thumbnail_url' : 'file_url'] = liveFileUrl;
+      payload[hasThumbnail ? 'thumbnail_url' : 'file_url'] = liveFileUrl;
     }
     return payload;
   };
