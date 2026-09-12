@@ -18,7 +18,7 @@ const ASPECTS = [
   { label: '9:16', value: 9 / 16 },
 ];
 
-export default function FocalPointEditor({ itemId, fileUrl, title, focalX, focalY, cropBounds, subjectBounds, reasoning, onApprove, onRotated, onClose }) {
+export default function FocalPointEditor({ itemId, fileUrl, title, focalX, focalY, cropBounds, subjectBounds, reasoning, onApprove, onRotated, onClose, isPdf }) {
   const [posX, setPosX] = useState(focalX);
   const [posY, setPosY] = useState(focalY);
   const [crop, setCrop] = useState(cropBounds && !isFullFrame(cropBounds) ? cropBounds : { ...FULL });
@@ -149,7 +149,11 @@ export default function FocalPointEditor({ itemId, fileUrl, title, focalX, focal
       const newFileUrl = uploadRes?.file_url;
       if (!newFileUrl) throw new Error('Upload failed.');
 
-      await base44.entities.ContentItem.update(itemId, { file_url: newFileUrl });
+      // For PDFs the editable surface is the preview thumbnail, not the PDF
+      // itself — bake the rotation into thumbnail_url so the PDF document
+      // (file_url) is preserved and the preview re-renders upright.
+      const rotatedField = isPdf ? 'thumbnail_url' : 'file_url';
+      await base44.entities.ContentItem.update(itemId, { [rotatedField]: newFileUrl });
 
       // Re-run the AI subject/crop analysis on the now-upright image.
       const analysis = await base44.functions.invoke('analyzeImageCrop', { content_item_id: itemId });
@@ -166,7 +170,7 @@ export default function FocalPointEditor({ itemId, fileUrl, title, focalX, focal
 
       if (onRotated) {
         onRotated({
-          file_url: newFileUrl,
+          [rotatedField]: newFileUrl,
           focal_point_x: analysis?.focal_point_x ?? 0.5,
           focal_point_y: analysis?.focal_point_y ?? 0.4,
           crop_bounds: analysis?.crop_bounds || null,
@@ -195,7 +199,7 @@ export default function FocalPointEditor({ itemId, fileUrl, title, focalX, focal
       subject_bounds: liveSubject,
     };
     if (liveFileUrl && liveFileUrl !== fileUrl) {
-      payload.file_url = liveFileUrl;
+      payload[isPdf ? 'thumbnail_url' : 'file_url'] = liveFileUrl;
     }
     return payload;
   };

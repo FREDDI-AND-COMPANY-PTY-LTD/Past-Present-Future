@@ -145,6 +145,7 @@ export default function CropReedit() {
         <FocalPointEditor
           itemId={editing.id}
           fileUrl={editing.thumbnail_url || editing.file_url}
+          isPdf={isPdfUrl(editing.file_url)}
           title={editing.title}
           focalX={editing.focal_point_x}
           focalY={editing.focal_point_y}

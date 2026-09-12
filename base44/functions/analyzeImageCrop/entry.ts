@@ -82,7 +82,11 @@ Deno.serve(async (req) => {
     const item = await base44.asServiceRole.entities.ContentItem.get(content_item_id);
     if (!item) return Response.json({ error: 'Content item not found' }, { status: 404 });
 
-    if (!item.file_url) {
+    // PDFs are analysed via their rendered first-page thumbnail (the editable
+    // surface); images are analysed directly. Falls back to file_url when no
+    // thumbnail exists.
+    const analysisUrl = item.thumbnail_url || item.file_url;
+    if (!analysisUrl) {
       return Response.json({ skipped: true, reason: 'No file_url' });
     }
     const imageTypes = ['photo', 'uncategorized', 'certificate', 'passport', 'identity_document', 'press_clipping', 'narrative', 'correspondence', 'memorial'];
@@ -92,7 +96,7 @@ Deno.serve(async (req) => {
 
     const result = await base44.asServiceRole.integrations.Core.InvokeLLM({
       prompt: PROMPT,
-      file_urls: [item.file_url],
+      file_urls: [analysisUrl],
       response_json_schema: {
         type: 'object',
         properties: {
