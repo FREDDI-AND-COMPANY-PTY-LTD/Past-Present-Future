@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Users, Map, Clock, Network, GitBranch, Upload, Shield, Search, Menu, X, Sparkles, Database, AlertCircle, Newspaper, CheckSquare, UserPlus, Share2, Brain } from 'lucide-react';
+import { Home, Users, Map, Clock, Network, GitBranch, Upload, Shield, Search, Menu, X, Sparkles, Database, AlertCircle, Newspaper, CheckSquare, UserPlus, Share2, Brain, Crop } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import ReportProblemDialog from '@/components/ReportProblemDialog';
 import InviteUserDialog from '@/components/InviteUserDialog';
@@ -60,6 +60,7 @@ export default function Layout({ children }) {
   const navItemsWithAdmin = [
     ...navItems,
     ...(isAdmin ? [{ label: 'Global Admin', path: '/admin', icon: Shield }] : []),
+    ...(isAdmin ? [{ label: 'Crop Re-edit', path: '/crop-reedit', icon: Crop }] : []),
     ...(isBranchAdmin ? [{ label: 'Branch Admin', path: '/branch-admin', icon: Shield }] : []),
   ];
 
