@@ -89,6 +89,20 @@
       "format": "date-time",
       "description": "When the connected branch's admin acknowledged (or declined) the connection"
     },
+    "cloud_provider": {
+      "type": "string",
+      "enum": [
+        "google_drive",
+        "one_drive",
+        "dropbox"
+      ],
+      "default": "google_drive",
+      "description": "Cloud storage provider this branch's archive backs up to. Branch-scoped so each branch admin controls their own line's backup destination \u2014 important for RLS, where each admin only governs their own branch's data."
+    },
+    "cloud_folder_address": {
+      "type": "string",
+      "description": "Folder path in the cloud provider where this branch's archive is backed up. Set by the branch admin at confirmation time."
+    },
     "transfer_request": {
       "type": "object",
       "description": "A courtesy offer to transfer branch admin to an elder (senior living male) ancestor in the bloodline. The first member to register is a placeholder steward who may invite a more senior living male to take on the role; this is a courtesy, not an obligation, and the successor may decline \u2014 leaving the current admin in place.",

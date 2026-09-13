@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Shield, Check, X, ArrowRight } from 'lucide-react';
 import { getBranchAdminExplainer } from '@/lib/branchAdminExplainer';
+import BranchCloudBackupSetup from '@/components/BranchCloudBackupSetup';
 
 // One-time in-app overlay shown at branch claim time explaining the branch-admin
 // role and how the branch functions. A matching email is sent alongside it.
@@ -39,6 +40,16 @@ export default function BranchAdminOnboardingIntro({ branch, user, onClose }) {
           </ul>
 
           <p className="text-parchment/60 text-xs leading-relaxed">{e.closing}</p>
+
+          <div className="rounded-lg bg-[rgba(201,145,58,0.04)] border border-[rgba(201,145,58,0.15)] p-4">
+            <BranchCloudBackupSetup
+              branch={branch}
+              compact
+              onSaved={(updated) => {
+                if (onClose) onClose();
+              }}
+            />
+          </div>
 
           <p className="text-xs text-parchment/50">
             Your <span className="text-amber-light">Branch Admin dashboard</span> (sidebar &rarr; Branch Admin) is where you manage nominations, invitations, and branch-scoped review queues.

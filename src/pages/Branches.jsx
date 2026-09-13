@@ -5,6 +5,7 @@ import Layout from '@/components/Layout';
 import AncestorAvatar from '@/components/AncestorAvatar';
 import { useBranchRoot } from '@/hooks/useBranchRoot';
 import BranchAdminOnboardingIntro from '@/components/BranchAdminOnboardingIntro';
+import BranchCloudBackupSetup from '@/components/BranchCloudBackupSetup';
 import { branchRoleEmailHtml, BRANCH_ROLE_EMAIL_SUBJECT } from '@/lib/branchAdminExplainer';
 
 const branchColors = ['#C9913A', '#E8C97A', '#8B6914', '#D4A04C', '#B8860B', '#CD853F'];
@@ -17,6 +18,7 @@ export default function Branches() {
   const [form, setForm] = useState({ name: '', ancestor_id: '', description: '', connected_branch_id: '', acknowledged: false });
   const [user, setUser] = useState(null);
   const [claimedBranch, setClaimedBranch] = useState(null);
+  const [backupPromptBranch, setBackupPromptBranch] = useState(null);
   const { rootAncestorId, setBranchRoot } = useBranchRoot();
 
   useEffect(() => {
@@ -29,6 +31,20 @@ export default function Branches() {
     }).catch(() => {}).finally(() => setLoading(false));
     base44.auth.me().then(setUser).catch(() => {});
   }, []);
+
+  // Case 2: a branch that became active via marriage acknowledgment while the
+  // admin was away. On next visit to Branches, if the admin has an active
+  // branch with no cloud backup configured, prompt for it. Skipped while the
+  // onboarding intro (case 1 — self-claim) is showing.
+  useEffect(() => {
+    if (!user || claimedBranch) { setBackupPromptBranch(null); return; }
+    const needsBackup = (branches || []).find(b =>
+      b.admin_user_id === user.id &&
+      b.activation_status === 'active' &&
+      !b.cloud_folder_address
+    );
+    setBackupPromptBranch(needsBackup || null);
+  }, [user, branches, claimedBranch]);
 
   const handleCreate = async () => {
     if (!form.name.trim() || !form.ancestor_id) return;
@@ -187,6 +203,23 @@ export default function Branches() {
 
       {claimedBranch && (
         <BranchAdminOnboardingIntro branch={claimedBranch} user={user} onClose={() => setClaimedBranch(null)} />
+      )}
+
+      {backupPromptBranch && !claimedBranch && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 animate-fade-in" onClick={() => setBackupPromptBranch(null)}>
+          <div className="aged-card rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[rgba(201,145,58,0.2)] sticky top-0 bg-[#1A1614] z-10">
+              <h3 className="font-display text-lg text-parchment">Branch Cloud Backup</h3>
+              <button onClick={() => setBackupPromptBranch(null)} className="text-parchment/40 hover:text-parchment transition-colors text-sm">Skip for now</button>
+            </div>
+            <div className="p-5">
+              <BranchCloudBackupSetup
+                branch={backupPromptBranch}
+                onSaved={() => setBackupPromptBranch(null)}
+              />
+            </div>
+          </div>
+        </div>
       )}
     </Layout>
   );
