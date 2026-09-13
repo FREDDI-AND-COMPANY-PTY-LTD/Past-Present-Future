@@ -64,8 +64,8 @@ export default function Layout({ children }) {
   const navItemsWithAdmin = [
     ...navItems,
     ...(isAdmin ? [{ label: 'Global Admin', path: '/admin', icon: Shield }] : []),
-    ...(isAdmin ? [{ label: 'Crop Re-edit', path: '/crop-reedit', icon: Crop }] : []),
     ...(isBranchAdmin ? [{ label: 'Branch Admin', path: '/branch-admin', icon: Shield }] : []),
+    ...((isAdmin || isBranchAdmin) ? [{ label: 'Crop Re-edit', path: '/crop-reedit', icon: Crop }] : []),
   ];
 
   return (

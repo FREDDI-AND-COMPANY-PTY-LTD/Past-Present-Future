@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Shield, UserPlus, Loader2, Check, X, GitBranch, Mail, Clock, AlertCircle, Upload, Users, Flag, Newspaper, LifeBuoy, Brain, Network, Heart, Edit3, Copy } from 'lucide-react';
+import { Shield, UserPlus, Loader2, Check, X, GitBranch, Mail, Clock, AlertCircle, Upload, Users, Flag, Newspaper, LifeBuoy, Brain, Network, Heart, Edit3, Copy, Crop } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import BranchAdminInviteDialog from '@/components/BranchAdminInviteDialog';
@@ -245,7 +245,11 @@ export default function BranchAdminDashboard() {
               <p className="text-parchment/50 text-sm">You are the sole authority over: {myBranches.map(b => b.name).join(', ')}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Link to="/crop-reedit"
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg border border-[rgba(201,145,58,0.3)] text-amber-light text-sm font-medium hover:bg-[rgba(201,145,58,0.08)] transition-colors">
+              <Crop size={15} /> Re-edit Crops
+            </Link>
             <button onClick={() => setEscalateOpen(true)}
               className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg border border-[rgba(201,145,58,0.3)] text-amber-light text-sm font-medium hover:bg-[rgba(201,145,58,0.08)] transition-colors">
               <LifeBuoy size={15} /> Escalate to Global Admin

@@ -6,6 +6,7 @@ import Layout from '@/components/Layout';
 import FocalPointEditor from '@/components/FocalPointEditor';
 import CropImage from '@/components/CropImage';
 import { isPdfUrl } from '@/lib/pdfThumbnail';
+import { useAccessRights } from '@/hooks/useAccessRights';
 
 const IMAGE_TYPES = ['photo', 'uncategorized', 'certificate', 'passport', 'identity_document', 'press_clipping', 'narrative', 'correspondence', 'memorial'];
 
@@ -15,25 +16,57 @@ export default function CropReedit() {
   const [editing, setEditing] = useState(null); // item being edited
   const [savedId, setSavedId] = useState(null);
   const [user, setUser] = useState(null);
-  const [checking, setChecking] = useState(true);
+  const access = useAccessRights();
 
   useEffect(() => {
-    base44.auth.me().then(setUser).catch(() => {}).finally(() => setChecking(false));
+    base44.auth.me().then(setUser).catch(() => {});
   }, []);
 
+  // Global admin sees all images (override). Branch admin sees only their own
+  // branch's images. Anyone else is blocked at the gate below.
   useEffect(() => {
+    if (!user || access.status === 'loading') return;
     (async () => {
       try {
-        const all = await base44.entities.ContentItem.list('-created_date', 200);
+        const [all, branches, ancestors] = await Promise.all([
+          base44.entities.ContentItem.list('-created_date', 200),
+          base44.entities.Branch.list(),
+          base44.entities.Ancestor.list(),
+        ]);
         // Only items whose preview can actually be rendered as an image by the
         // cropper: real image files, or PDFs that already have a generated
         // first-page thumbnail. PDFs without a thumbnail are excluded (they'd
         // render as a black box in an <img> tag).
-        setItems((all || []).filter(i => i.file_url && IMAGE_TYPES.includes(i.content_type) && (i.thumbnail_url || !isPdfUrl(i.file_url))));
+        const imageItems = (all || []).filter(i => i.file_url && IMAGE_TYPES.includes(i.content_type) && (i.thumbnail_url || !isPdfUrl(i.file_url)));
+        if (user?.role === 'admin') {
+          setItems(imageItems);
+        } else {
+          const myBranches = (branches || []).filter(b => b.admin_user_id && b.admin_user_id === user.id);
+          const rootIds = myBranches.map(b => b.ancestor_id).filter(Boolean);
+          const descIds = new Set(rootIds);
+          let changed = true;
+          while (changed) {
+            changed = false;
+            for (const a of (ancestors || [])) {
+              if (descIds.has(a.id)) continue;
+              if ((a.mother_id && descIds.has(a.mother_id)) || (a.father_id && descIds.has(a.father_id))) {
+                descIds.add(a.id);
+                changed = true;
+              }
+            }
+          }
+          for (const a of (ancestors || [])) {
+            if (descIds.has(a.id) && a.partner_id) descIds.add(a.partner_id);
+          }
+          const myBranchIds = myBranches.map(b => b.id);
+          setItems(imageItems.filter(i =>
+            myBranchIds.includes(i.branch_id) || (i.ancestor_ids || []).some(aid => descIds.has(aid))
+          ));
+        }
       } catch (e) {}
       setLoading(false);
     })();
-  }, []);
+  }, [user, access.status]);
 
   // The FocalPointEditor writes the adjustment to the record directly (it is
   // rendered with itemId here, so it shows "Save My Adjustment"). The parent
@@ -56,18 +89,18 @@ export default function CropReedit() {
     setTimeout(() => setSavedId(null), 1500);
   };
 
-  if (checking) {
+  if (access.status === 'loading') {
     return <Layout><div className="px-6 lg:px-12 py-12 max-w-7xl mx-auto"><div className="aged-card rounded-xl h-64 animate-pulse" /></div></Layout>;
   }
 
-  if (user?.role !== 'admin') {
+  if (user?.role !== 'admin' && !access.isBranchAdmin) {
     return (
       <Layout>
         <div className="px-6 lg:px-12 py-12 max-w-3xl mx-auto text-center">
           <div className="aged-card rounded-xl p-10">
             <AlertCircle size={32} className="text-gold/40 mx-auto mb-3" />
-            <p className="text-parchment font-medium mb-1">Admins only</p>
-            <p className="text-parchment/50 text-sm mb-5">Re-editing image cropping is restricted to archive administrators.</p>
+            <p className="text-parchment font-medium mb-1">Branch admins only</p>
+            <p className="text-parchment/50 text-sm mb-5">Re-editing image cropping is a branch-admin tool. The global admin can also override across all branches.</p>
             <Link to="/" className="inline-flex items-center gap-1 text-amber-light hover:text-gold text-sm">
               <ChevronLeft size={16} /> Back to Home
             </Link>
