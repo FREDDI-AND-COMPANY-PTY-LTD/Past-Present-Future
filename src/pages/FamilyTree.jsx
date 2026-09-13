@@ -267,6 +267,11 @@ export default function FamilyTree() {
                           {a.birth_date ? new Date(a.birth_date).getFullYear() : ''}
                           {a.death_date ? ` – ${new Date(a.death_date).getFullYear()}` : a.living ? ' – present' : ''}
                         </p>
+                        {((a.mother_id && nodes.has(a.mother_id)) || (a.father_id && nodes.has(a.father_id))) && a.sex && (
+                          <p style={{ color: 'rgba(201,145,58,0.55)', fontSize: '9px', margin: 0, textTransform: 'capitalize', letterSpacing: '0.05em' }}>
+                            {a.sex === 'male' ? 'son' : 'daughter'}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </foreignObject>

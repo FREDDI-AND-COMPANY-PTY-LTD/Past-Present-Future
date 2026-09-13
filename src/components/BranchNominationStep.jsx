@@ -63,6 +63,7 @@ export default function BranchNominationStep({ user, myAncestorId, invite, onCom
   const [error, setError] = useState('');
   const [mother, setMother] = useState({ mode: 'none' });
   const [father, setFather] = useState({ mode: 'none' });
+  const [sex, setSex] = useState(null);
   const [description, setDescription] = useState('');
 
   useEffect(() => {
@@ -92,9 +93,10 @@ export default function BranchNominationStep({ user, myAncestorId, invite, onCom
     })();
   }, [invite.branch_id]);
 
-  const canSubmit = mother.mode !== 'none' || father.mode !== 'none';
+  const canSubmit = (mother.mode !== 'none' || father.mode !== 'none') && sex;
 
   const handleSubmit = async () => {
+    if (!sex) { setError('Select whether you are a son or daughter of this branch.'); return; }
     if (!canSubmit) { setError('Nominate at least one mother or father link to connect you to the branch.'); return; }
     setSubmitting(true); setError('');
     try {
@@ -139,6 +141,7 @@ export default function BranchNominationStep({ user, myAncestorId, invite, onCom
       if (myAncestorId) {
         await base44.entities.Ancestor.update(myAncestorId, {
           branch_id: invite.branch_id,
+          sex,
           ...(links.mother_id ? { mother_id: links.mother_id } : {}),
           ...(links.father_id ? { father_id: links.father_id } : {}),
         });
@@ -185,6 +188,34 @@ export default function BranchNominationStep({ user, myAncestorId, invite, onCom
             <div className="flex items-center gap-2 text-xs text-parchment/50">
               <User size={13} className="text-gold/60" />
               Registered as <span className="text-amber-light">{user?.full_name || user?.email}</span>
+            </div>
+
+            <div>
+              <label className="text-xs text-parchment/50 mb-2 block">You are a…</label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSex('male')}
+                  className={`flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg border text-sm font-medium transition-all ${
+                    sex === 'male'
+                      ? 'bg-[rgba(201,145,58,0.15)] border-[#C9913A] text-gold'
+                      : 'bg-[#0D0B0A] border-[rgba(201,145,58,0.15)] text-parchment/50 hover:border-[rgba(201,145,58,0.3)]'
+                  }`}
+                >
+                  Son
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSex('female')}
+                  className={`flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg border text-sm font-medium transition-all ${
+                    sex === 'female'
+                      ? 'bg-[rgba(201,145,58,0.15)] border-[#C9913A] text-gold'
+                      : 'bg-[#0D0B0A] border-[rgba(201,145,58,0.15)] text-parchment/50 hover:border-[rgba(201,145,58,0.3)]'
+                  }`}
+                >
+                  Daughter
+                </button>
+              </div>
             </div>
 
             <div>
