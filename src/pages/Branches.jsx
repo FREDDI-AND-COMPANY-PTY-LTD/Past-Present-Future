@@ -68,6 +68,8 @@ export default function Branches() {
         } catch (_) {}
       }
       setClaimedBranch(newBranch);
+      // Sync the user's admin_branch_ids so RLS gates writes by branch_id
+      try { await base44.functions.invoke('syncUserAdminBranches', { user_id: user.id }); } catch (_) {}
     } catch (e) {}
   };
 

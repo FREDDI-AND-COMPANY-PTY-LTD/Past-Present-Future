@@ -51,6 +51,14 @@
       "type": "boolean",
       "description": "Whether the user has upgraded to a Branch Member subscription",
       "default": false
+    },
+    "admin_branch_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs of branches this user is the admin of. Denormalised from Branch.admin_user_id so RLS can gate writes by branch_id without a join. Synced by the syncUserAdminBranches backend function whenever a branch is claimed or transferred.",
+      "default": []
     }
   },
   "required": [

@@ -29,6 +29,14 @@ Deno.serve(async (req) => {
         is_claimed: true,
         transfer_request: { ...tr, status: 'accepted', responded_at: respondedAt },
       });
+      // Sync admin_branch_ids for both the new admin and the outgoing admin,
+      // so RLS rules that gate writes by branch_id reflect the transfer.
+      const newAdminBranches = await base44.asServiceRole.entities.Branch.filter({ admin_user_id: user.id });
+      await base44.asServiceRole.entities.User.update(user.id, { admin_branch_ids: newAdminBranches.map(b => b.id) });
+      if (tr.from_user_id && tr.from_user_id !== user.id) {
+        const oldAdminBranches = await base44.asServiceRole.entities.Branch.filter({ admin_user_id: tr.from_user_id });
+        await base44.asServiceRole.entities.User.update(tr.from_user_id, { admin_branch_ids: oldAdminBranches.map(b => b.id) });
+      }
       return Response.json({ ok: true, action: 'accepted', branch_name: branch.name });
     } else {
       await base44.asServiceRole.entities.Branch.update(branch_id, {
