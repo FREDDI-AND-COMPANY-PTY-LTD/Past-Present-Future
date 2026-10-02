@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { MapPin, Calendar, Flag, ChevronLeft, ExternalLink, FileText, Award, Edit3, HelpCircle, FileBadge, RefreshCw, Loader2, Users, MapPinned, BookOpen } from 'lucide-react';
+import { MapPin, Calendar, Flag, ChevronLeft, ExternalLink, FileText, Award, Edit3, HelpCircle, FileBadge, RefreshCw, Loader2, Users, MapPinned, BookOpen, Copy } from 'lucide-react';
 import RaiseQueryDialog from '@/components/RaiseQueryDialog';
 import RaiseDisputeDialog from '@/components/RaiseDisputeDialog';
+import FlagDuplicateDialog from '@/components/FlagDuplicateDialog';
 import ContestedFieldBadge from '@/components/ContestedFieldBadge';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
@@ -23,6 +24,7 @@ export default function ContentDetail() {
   const [ancestors, setAncestors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showDispute, setShowDispute] = useState(false);
+  const [showDuplicate, setShowDuplicate] = useState(false);
   const [showQueryDialog, setShowQueryDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [user, setUser] = useState(null);
@@ -292,6 +294,25 @@ export default function ContentDetail() {
           <HistoricalBackground item={item} onUpdate={setItem} />
         </div>
 
+        {/* Flag for Branch Review — dispute, duplicate, or query */}
+        <div className="aged-card rounded-xl p-6 mb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <Flag size={18} className="text-gold" />
+            <h3 className="font-display text-base text-parchment">Flag for Branch Review</h3>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <button onClick={() => setShowDispute(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[rgba(201,145,58,0.08)] border border-[rgba(201,145,58,0.25)] text-amber-light text-sm font-medium hover:bg-[rgba(201,145,58,0.15)] transition-colors">
+              <Flag size={16} /> Raise a Dispute
+            </button>
+            <button onClick={() => setShowDuplicate(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[rgba(201,145,58,0.08)] border border-[rgba(201,145,58,0.25)] text-amber-light text-sm font-medium hover:bg-[rgba(201,145,58,0.15)] transition-colors">
+              <Copy size={16} /> Flag as Duplicate
+            </button>
+            <button onClick={() => setShowQueryDialog(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[rgba(201,145,58,0.08)] border border-[rgba(201,145,58,0.25)] text-amber-light text-sm font-medium hover:bg-[rgba(201,145,58,0.15)] transition-colors">
+              <HelpCircle size={16} /> Raise a Query
+            </button>
+          </div>
+        </div>
+
         {/* Engage: comment or upload related event */}
         <div className="aged-card rounded-xl p-6">
           <EngageButton item={item} user={user} />
@@ -315,16 +336,6 @@ export default function ContentDetail() {
           />
         )}
 
-        {/* Raise a dispute / Raise a query */}
-        <div className="aged-card rounded-xl p-6 flex flex-wrap gap-4">
-          <button onClick={() => setShowDispute(true)} className="flex items-center gap-2 text-amber-light/70 hover:text-amber-light transition-colors text-sm">
-            <Flag size={16} /> Raise a Dispute
-          </button>
-          <button onClick={() => setShowQueryDialog(true)} className="flex items-center gap-2 text-amber-light/70 hover:text-amber-light transition-colors text-sm">
-            <HelpCircle size={16} /> Raise a Query
-          </button>
-        </div>
-
         {showDispute && (
           <RaiseDisputeDialog
             entityType="ContentItem"
@@ -333,6 +344,17 @@ export default function ContentDetail() {
             bloodline={taggedAncestors[0]?.bloodline || ''}
             onClose={() => setShowDispute(false)}
             onSubmitted={() => setShowDispute(false)}
+          />
+        )}
+
+        {showDuplicate && (
+          <FlagDuplicateDialog
+            contentItemId={id}
+            contentItemTitle={item.title}
+            ancestorId={taggedAncestors[0]?.id || null}
+            bloodline={taggedAncestors[0]?.bloodline || ''}
+            onClose={() => setShowDuplicate(false)}
+            onSubmitted={() => setShowDuplicate(false)}
           />
         )}
       </div>

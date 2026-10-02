@@ -20,9 +20,10 @@ export function useAccessRights() {
           if (!cancelled) setState({ status: 'none', canInteract: false, approvedBranchIds: [], isBranchAdmin: false, adminBranchIds: [] });
           return;
         }
-        const [branches, invites] = await Promise.all([
+        const [branches, invites, myAncestors] = await Promise.all([
           base44.entities.Branch.list().catch(() => []),
           base44.entities.BranchInvite.list('-created_date', 200).catch(() => []),
+          base44.entities.Ancestor.filter({ user_account_id: user.id }).catch(() => []),
         ]);
         if (cancelled) return;
 
@@ -34,11 +35,13 @@ export function useAccessRights() {
         const approvedBranchIds = mine.filter(i => i.status === 'approved').map(i => i.branch_id);
         const hasApproved = approvedBranchIds.length > 0;
         const hasPending = mine.some(i => i.status === 'pending' || i.status === 'nominated');
+        const hasAncestorProfile = (myAncestors || []).length > 0;
 
         let status, canInteract;
         if (isAdmin) { status = 'admin'; canInteract = true; }
         else if (isBranchAdmin) { status = 'branch_admin'; canInteract = true; }
         else if (hasApproved) { status = 'approved'; canInteract = true; }
+        else if (hasAncestorProfile) { status = 'member'; canInteract = true; }
         else if (hasPending) { status = 'pending'; canInteract = false; }
         else { status = 'none'; canInteract = false; }
 
