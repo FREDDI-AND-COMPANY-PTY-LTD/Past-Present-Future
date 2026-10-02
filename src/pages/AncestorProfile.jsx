@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { MapPin, Calendar, Globe, Heart, FileText, Award, Flag, GitMerge, ChevronLeft, BookUser, Pencil, Clock } from 'lucide-react';
+import { MapPin, Calendar, Globe, Heart, FileText, Award, Flag, GitMerge, ChevronLeft, BookUser, Pencil, Clock, Home } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import AncestorAvatar from '@/components/AncestorAvatar';
@@ -125,6 +125,12 @@ export default function AncestorProfile() {
               <div className="flex flex-wrap gap-x-6 gap-y-2 justify-center md:justify-start text-sm text-parchment/60">
                 <SourcedField entityType="Ancestor" entityId={id} fieldName="birth_date" label="Date of Birth" value={ancestor.birth_date ? new Date(ancestor.birth_date).toLocaleDateString('en-AU', { year: 'numeric', month: 'long', day: 'numeric' }) : ''} icon={Calendar} />
                 <SourcedField entityType="Ancestor" entityId={id} fieldName="birth_place" label="Place of Birth" value={ancestor.birth_place} icon={MapPin} />
+                {ancestor.living && ancestor.residence_place && (
+                  <span className="flex items-center gap-1.5 text-sm text-parchment/60">
+                    <Home size={14} className="text-gold/70" />
+                    Lives in <span className="text-parchment">{ancestor.residence_place}</span>
+                  </span>
+                )}
                 <SourcedField entityType="Ancestor" entityId={id} fieldName="nationality" label="Nationality" value={ancestor.nationality} icon={Globe} />
                 <SourcedField entityType="Ancestor" entityId={id} fieldName="bloodline" label="Bloodline" value={ancestor.bloodline} icon={Heart} />
                 {ancestor.sex && (

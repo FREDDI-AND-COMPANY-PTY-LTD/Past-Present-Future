@@ -5,12 +5,26 @@ import GoogleMap from '@/components/GoogleMap';
 import MigrationTimeline from '@/components/MigrationTimeline';
 import { useBranchRoot } from '@/hooks/useBranchRoot';
 import BranchScopeToggle from '@/components/BranchScopeToggle';
+import { Home } from 'lucide-react';
 
 const routeColors = ['#C9913A', '#E8C97A', '#8B6914', '#D4A04C'];
 
 function escapeHtml(str) {
   if (!str) return '';
   return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function buildResidenceMarkerHtml(ancestor) {
+  const name = escapeHtml(ancestor.full_name || '');
+  const place = escapeHtml(ancestor.residence_place || '');
+  return `<div style="min-width:200px;padding:4px">
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+      <span style="font-size:16px">🏠</span>
+      <p style="color:#C9913A;font-weight:600;font-size:14px;margin:0">Currently lives here</p>
+    </div>
+    <a data-spa-link="/ancestor/${escapeHtml(ancestor.id)}" style="color:#F5ECD7;font-size:13px;cursor:pointer;text-decoration:none;font-weight:600">${name}</a>
+    <p style="color:#F5ECD7;font-size:11px;opacity:0.6;margin:2px 0 0">${place}</p>
+  </div>`;
 }
 
 function buildMarkerHtml(item, taggedAncestors) {
@@ -41,6 +55,7 @@ export default function MapPage() {
   const [loading, setLoading] = useState(true);
   const [activeWaypoint, setActiveWaypoint] = useState(null);
   const [scope, setScope] = useState('branch');
+  const [showResidences, setShowResidences] = useState(true);
   const { descendantIds, loading: branchLoading } = useBranchRoot();
 
   useEffect(() => {
@@ -86,7 +101,7 @@ export default function MapPage() {
   }, [branchRoutes]);
 
   const markers = useMemo(() => {
-    return branchItems
+    const itemMarkers = branchItems
       .filter(i => i.latitude && i.longitude)
       .map(item => {
         const tagged = (item.ancestor_ids || [])
@@ -98,7 +113,21 @@ export default function MapPage() {
           htmlContent: buildMarkerHtml(item, tagged),
         };
       });
-  }, [branchItems, branchAncestors]);
+
+    // Current residence pins for living family members — town-level only
+    const residenceMarkers = showResidences
+      ? branchAncestors
+          .filter(a => a.living !== false && a.residence_place && a.residence_latitude && a.residence_longitude)
+          .map(a => ({
+            position: { lat: a.residence_latitude, lng: a.residence_longitude },
+            title: `${a.full_name} — lives in ${a.residence_place}`,
+            icon: 'residence',
+            htmlContent: buildResidenceMarkerHtml(a),
+          }))
+      : [];
+
+    return [...itemMarkers, ...residenceMarkers];
+  }, [branchItems, branchAncestors, showResidences]);
 
   const handleWaypointSelect = useCallback((idx) => {
     setActiveWaypoint(idx);
@@ -112,7 +141,15 @@ export default function MapPage() {
             <h1 className="font-display text-4xl text-parchment mb-2">Migration Map</h1>
             <p className="text-parchment/50 text-sm">Trace the Freddi bloodlines from their international origins to Victoria. Click any numbered pin or use the timeline to follow the migration journey over time.</p>
           </div>
-          <BranchScopeToggle value={scope} onChange={setScope} />
+          <div className="flex items-center gap-3 flex-wrap">
+            <BranchScopeToggle value={scope} onChange={setScope} />
+            <button
+              onClick={() => setShowResidences(r => !r)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm border transition-colors ${showResidences ? 'border-[rgba(201,145,58,0.4)] text-gold bg-[rgba(201,145,58,0.08)]' : 'border-[rgba(201,145,58,0.2)] text-parchment/50 hover:text-amber-light'}`}
+            >
+              <Home size={14} /> Current Residences
+            </button>
+          </div>
         </div>
       </div>
 

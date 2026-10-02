@@ -40,6 +40,18 @@
       "type": "string",
       "description": "Place of death, if applicable"
     },
+    "residence_place": {
+      "type": "string",
+      "description": "Town/city where this ancestor currently lives (living members only). Town-level only \u2014 no street addresses \u2014 for privacy. Captured at registration, propagated to the ancestor profile during onboarding, and editable from the profile. Drives the 'where the family is today' map layer."
+    },
+    "residence_latitude": {
+      "type": "number",
+      "description": "Latitude of the residence town center (town-level precision only \u2014 no street-level coordinates)"
+    },
+    "residence_longitude": {
+      "type": "number",
+      "description": "Longitude of the residence town center (town-level precision only \u2014 no street-level coordinates)"
+    },
     "nationality": {
       "type": "string",
       "description": "Nationality or country of origin"

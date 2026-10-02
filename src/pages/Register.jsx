@@ -4,9 +4,10 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UserPlus, Mail, Lock, Loader2, User, ShieldCheck } from "lucide-react";
+import { UserPlus, Mail, Lock, Loader2, User, ShieldCheck, MapPin } from "lucide-react";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import AuthLayout from "@/components/AuthLayout";
+import LocationAutocompleteInput from "@/components/LocationAutocompleteInput";
 import GoogleIcon from "@/components/GoogleIcon";
 import { welcomeEmailHtml, WELCOME_EMAIL_SUBJECT } from "@/lib/welcomeEmail";
 import { toast } from "@/components/ui/use-toast";
@@ -20,6 +21,7 @@ export default function Register() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showOtp, setShowOtp] = useState(false);
+  const [residence, setResidence] = useState({ place: "", lat: "", lng: "" });
   const [otpCode, setOtpCode] = useState("");
 
   const handleSubmit = async (e) => {
@@ -57,6 +59,9 @@ export default function Register() {
         await base44.auth.updateMe({
           given_names: capitalGiven,
           family_name: capitalFamily,
+          residence_place: residence.place || null,
+          residence_latitude: residence.lat ? parseFloat(residence.lat) : null,
+          residence_longitude: residence.lng ? parseFloat(residence.lng) : null,
         }).catch(() => {});
 
         // Ancestor profile creation is handled by the OnboardingGate's
@@ -223,6 +228,20 @@ export default function Register() {
             />
           </div>
           <p className="text-xs text-muted-foreground">Capitalised as on your birth certificate</p>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="residence">Where do you live? <span className="text-muted-foreground font-normal">(town only — for the family map)</span></Label>
+          <div className="relative">
+            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
+            <LocationAutocompleteInput
+              value={residence.place}
+              onChange={({ location_name, latitude, longitude }) => setResidence({ place: location_name || "", lat: latitude || "", lng: longitude || "" })}
+              placeholder="e.g. Carlton, Victoria"
+              types={["(cities)"]}
+              className="pl-10 h-12"
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">Town only — we never store street addresses. This places you on the family map.</p>
         </div>
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>

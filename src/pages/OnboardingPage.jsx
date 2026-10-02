@@ -12,6 +12,9 @@ export default function OnboardingPage({ user, onCompleted }) {
     birth_date: '',
     birth_place: '',
     living: true,
+    residence_place: user?.residence_place || '',
+    residence_latitude: user?.residence_latitude || '',
+    residence_longitude: user?.residence_longitude || '',
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -41,6 +44,9 @@ export default function OnboardingPage({ user, onCompleted }) {
           birth_date: form.birth_date || existing.birth_date || null,
           birth_place: form.birth_place || existing.birth_place || null,
           living: form.living,
+          residence_place: form.residence_place || null,
+          residence_latitude: form.residence_latitude ? parseFloat(form.residence_latitude) : null,
+          residence_longitude: form.residence_longitude ? parseFloat(form.residence_longitude) : null,
         });
         createdId = existing.id;
         // Carry over the inviting admin's newsletter request onto the new user account
@@ -53,6 +59,9 @@ export default function OnboardingPage({ user, onCompleted }) {
           birth_date: form.birth_date || null,
           birth_place: form.birth_place || null,
           living: form.living,
+          residence_place: form.residence_place || null,
+          residence_latitude: form.residence_latitude ? parseFloat(form.residence_latitude) : null,
+          residence_longitude: form.residence_longitude ? parseFloat(form.residence_longitude) : null,
           review_status: 'auto_approved',
           user_account_id: user.id,
           created_by_id: user.id,
@@ -131,6 +140,17 @@ export default function OnboardingPage({ user, onCompleted }) {
                   </button>
                 </div>
               </div>
+            </div>
+            <div>
+              <label className="text-xs text-parchment/50 mb-1 block">Where do you live? <span className="text-parchment/30">(town only — for the family map)</span></label>
+              <LocationAutocompleteInput
+                value={form.residence_place}
+                onChange={({ location_name, latitude, longitude }) => setForm(f => ({ ...f, residence_place: location_name || '', residence_latitude: latitude || '', residence_longitude: longitude || '' }))}
+                placeholder="e.g. Carlton, Victoria"
+                types={['(cities)']}
+                className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]"
+              />
+              <p className="text-xs text-parchment/30 mt-1">Town only — we never store street addresses. This places you on the family map.</p>
             </div>
             <label className="flex items-center gap-2 text-sm text-parchment/60 cursor-pointer">
               <input type="checkbox" checked={form.living} onChange={(e) => setForm(f => ({ ...f, living: e.target.checked }))} className="accent-[#C9913A]" />

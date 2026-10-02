@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Save, Loader2, Pencil } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import DateSelectInput from '@/components/DateSelectInput';
+import LocationAutocompleteInput from '@/components/LocationAutocompleteInput';
 
 export default function AncestorEditDialog({ open, ancestor, onClose, onSaved }) {
   const [form, setForm] = useState(null);
@@ -23,6 +24,9 @@ export default function AncestorEditDialog({ open, ancestor, onClose, onSaved })
       living: ancestor.living !== false,
       sex: ancestor.sex || '',
       maiden_name: ancestor.maiden_name || '',
+      residence_place: ancestor.residence_place || '',
+      residence_latitude: ancestor.residence_latitude || '',
+      residence_longitude: ancestor.residence_longitude || '',
     });
     setError('');
   }, [open, ancestor]);
@@ -49,6 +53,9 @@ export default function AncestorEditDialog({ open, ancestor, onClose, onSaved })
         living: form.living,
         sex: form.sex || null,
         maiden_name: (form.sex === 'female' && form.maiden_name?.trim()) ? form.maiden_name.trim() : null,
+        residence_place: form.residence_place || null,
+        residence_latitude: form.residence_latitude ? parseFloat(form.residence_latitude) : null,
+        residence_longitude: form.residence_longitude ? parseFloat(form.residence_longitude) : null,
       });
       if (onSaved) onSaved(updated);
       onClose();
@@ -102,6 +109,18 @@ export default function AncestorEditDialog({ open, ancestor, onClose, onSaved })
                 className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]"
                 placeholder="e.g. Geelong, Australia" />
             </div>
+          </div>
+
+          <div>
+            <label className="text-xs text-parchment/50 mb-1 block">Current Residence <span className="text-parchment/30">(town only — for the family map)</span></label>
+            <LocationAutocompleteInput
+              value={form.residence_place}
+              onChange={({ location_name, latitude, longitude }) => setForm(f => ({ ...f, residence_place: location_name || '', residence_latitude: latitude || '', residence_longitude: longitude || '' }))}
+              placeholder="e.g. Carlton, Victoria"
+              types={['(cities)']}
+              className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]"
+            />
+            <p className="text-xs text-parchment/30 mt-1">Town only — we never store street addresses.</p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">

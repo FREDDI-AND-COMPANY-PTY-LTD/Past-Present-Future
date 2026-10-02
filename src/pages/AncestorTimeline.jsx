@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ChevronLeft, Calendar, MapPin, ArrowDownUp, Baby, Heart, Image as ImageIcon, FileText, Newspaper, Video, Award, BookUser, IdCard, Mail, Loader2, Sparkles } from 'lucide-react';
+import { ChevronLeft, Calendar, MapPin, ArrowDownUp, Baby, Heart, Image as ImageIcon, FileText, Newspaper, Video, Award, BookUser, IdCard, Mail, Loader2, Sparkles, Home } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import AncestorAvatar from '@/components/AncestorAvatar';
@@ -94,6 +94,9 @@ export default function AncestorTimeline() {
   if (ancestor.death_date) {
     milestones.push({ id: 'death', date: ancestor.death_date, kind: 'death', title: 'Passed Away', location: ancestor.death_place });
   }
+  if (ancestor.living !== false && ancestor.residence_place) {
+    milestones.push({ id: 'residence', date: new Date().toISOString().slice(0, 10), kind: 'residence', title: `Lives in ${ancestor.residence_place}`, location: ancestor.residence_place });
+  }
 
   const dated = milestones
     .map(m => ({ ...m, _dt: parseDate(m.date) }))
@@ -133,6 +136,7 @@ export default function AncestorTimeline() {
               <p className="text-amber-light/70 text-lg mb-3">{lifeSpan}</p>
               <div className="flex flex-wrap gap-x-5 gap-y-1 justify-center sm:justify-start text-sm text-parchment/60">
                 {ancestor.birth_place && <span className="flex items-center gap-1"><MapPin size={13} /> Born in {ancestor.birth_place}</span>}
+                {ancestor.living !== false && ancestor.residence_place && <span className="flex items-center gap-1"><Home size={13} /> Lives in {ancestor.residence_place}</span>}
                 {ancestor.nationality && <span>{ancestor.nationality}</span>}
                 {partner && <span className="flex items-center gap-1"><Heart size={13} /> {partner.full_name}</span>}
               </div>
@@ -161,8 +165,8 @@ export default function AncestorTimeline() {
             <div className="absolute left-4 top-0 bottom-0 w-px bg-gradient-to-b from-[rgba(201,145,58,0.4)] via-[rgba(201,145,58,0.15)] to-transparent" />
             <div className="space-y-6">
               {dated.map(m => {
-                const isLife = m.kind === 'birth' || m.kind === 'death';
-                const Icon = isLife ? (m.kind === 'birth' ? Baby : Heart) : (typeIcons[m.item.content_type] || FileText);
+                const isLife = m.kind === 'birth' || m.kind === 'death' || m.kind === 'residence';
+                const Icon = isLife ? (m.kind === 'birth' ? Baby : m.kind === 'death' ? Heart : Home) : (typeIcons[m.item.content_type] || FileText);
                 const to = isLife ? `/ancestor/${id}` : `/content/${m.item.id}`;
                 const title = isLife ? m.title : m.item.title;
                 return (

@@ -29,6 +29,18 @@
       "type": "string",
       "description": "Surname / family name as capitalised on the birth certificate (e.g. FREDDI)"
     },
+    "residence_place": {
+      "type": "string",
+      "description": "Town/city where this user currently lives (town-level only for privacy). Captured at registration, propagated to the user's Ancestor profile during onboarding."
+    },
+    "residence_latitude": {
+      "type": "number",
+      "description": "Latitude of the residence town center"
+    },
+    "residence_longitude": {
+      "type": "number",
+      "description": "Longitude of the residence town center"
+    },
     "last_notification_check": {
       "type": "string",
       "format": "date-time",

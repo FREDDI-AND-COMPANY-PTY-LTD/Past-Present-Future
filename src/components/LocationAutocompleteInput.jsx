@@ -15,7 +15,7 @@ import { loadGoogleMaps } from '@/lib/googleMaps';
  *  - placeholder:    input placeholder
  *  - className:      classes applied to the bare <input>
  */
-export default function LocationAutocompleteInput({ value, onChange, placeholder, className }) {
+export default function LocationAutocompleteInput({ value, onChange, placeholder, className, types = ['geocode'] }) {
   const inputRef = useRef(null);
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
@@ -37,7 +37,7 @@ export default function LocationAutocompleteInput({ value, onChange, placeholder
         if (!apiKey) return;
         const gmaps = await loadGoogleMaps(apiKey);
         if (cancelled || !inputRef.current) return;
-        const ac = new gmaps.places.Autocomplete(inputRef.current, { types: ['geocode'] });
+        const ac = new gmaps.places.Autocomplete(inputRef.current, { types });
         ac.addListener('place_changed', () => {
           const place = ac.getPlace();
           if (!place.geometry) return;

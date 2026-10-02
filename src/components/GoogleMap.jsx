@@ -258,10 +258,25 @@ export default function GoogleMap({ markers = [], routes = [], loading = false, 
     });
 
     // Content item markers
+    // Residence pin — warm-amber home-shaped marker, distinct from the gold event pins
+    const residencePinSvg = encodeURIComponent(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 28 36">' +
+      '<path d="M14 0C6.27 0 0 6.27 0 14c0 10.5 14 22 14 22s14-11.5 14-22C28 6.27 21.73 0 14 0z" ' +
+      'fill="#8B6914" stroke="#0D0B0A" stroke-width="2"/>' +
+      '<path d="M7 17 L14 10 L21 17 L21 22 L7 22 Z" fill="#E8C97A" stroke="#0D0B0A" stroke-width="1"/>' +
+      '</svg>'
+    );
+    const residencePinIcon = {
+      url: `data:image/svg+xml;utf-8,${residencePinSvg}`,
+      scaledSize: new gmaps.Size(28, 36),
+      anchor: new gmaps.Point(14, 36),
+    };
+
     markers.forEach(m => {
       if (!m.position) return;
       bounds.extend(m.position);
-      const marker = new gmaps.Marker({ position: m.position, icon: pinIcon, title: m.title });
+      const icon = m.icon === 'residence' ? residencePinIcon : pinIcon;
+      const marker = new gmaps.Marker({ position: m.position, icon, title: m.title });
       marker.addListener('click', () => { infoWindow.setContent(m.htmlContent); infoWindow.open(map, marker); });
       markersRef.current.push(marker);
     });

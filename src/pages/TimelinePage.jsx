@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowDownUp, MapPin, Image, FileText, Newspaper, Video, Award, Calendar, BookUser, IdCard, Mail, Heart, Baby } from 'lucide-react';
+import { ArrowDownUp, MapPin, Image, FileText, Newspaper, Video, Award, Calendar, BookUser, IdCard, Mail, Heart, Baby, Home } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import EngageButton from '@/components/EngageButton';
@@ -20,6 +20,7 @@ const typeIcons = {
   memorial: Heart,
   ancestor_birth: Baby,
   ancestor_death: Heart,
+  ancestor_residence: Home,
 };
 
 export default function TimelinePage() {
@@ -56,7 +57,7 @@ export default function TimelinePage() {
   // Ancestor life events (birth/death) from existing genealogical data —
   // populates the timeline alongside dated content items.
   const lifeEvents = branchAncestors
-    .filter(a => a.birth_date || a.death_date)
+    .filter(a => a.birth_date || a.death_date || (a.living !== false && a.residence_place))
     .flatMap(a => {
       const events = [];
       if (a.birth_date) events.push({
@@ -66,6 +67,10 @@ export default function TimelinePage() {
       if (a.death_date) events.push({
         id: `death-${a.id}`, date: a.death_date, title: `${a.full_name} — Passed Away`,
         location_name: a.death_place, content_type: 'ancestor_death', ancestor_id: a.id,
+      });
+      if (a.living !== false && a.residence_place) events.push({
+        id: `residence-${a.id}`, date: new Date().toISOString().slice(0, 10), title: `${a.full_name} — Lives in ${a.residence_place}`,
+        location_name: a.residence_place, content_type: 'ancestor_residence', ancestor_id: a.id,
       });
       return events;
     });
@@ -104,7 +109,7 @@ export default function TimelinePage() {
 
             <div className="space-y-8">
               {sorted.map((item, idx) => {
-                const isLifeEvent = item.content_type === 'ancestor_birth' || item.content_type === 'ancestor_death';
+                const isLifeEvent = item.content_type === 'ancestor_birth' || item.content_type === 'ancestor_death' || item.content_type === 'ancestor_residence';
                 const Icon = typeIcons[item.content_type] || FileText;
                 const tagged = isLifeEvent ? [] : (item.ancestor_ids || []).map(aid => branchAncestors.find(a => a.id === aid)).filter(Boolean);
                 const isLeft = idx % 2 === 0;
