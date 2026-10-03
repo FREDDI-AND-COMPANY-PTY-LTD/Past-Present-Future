@@ -31,7 +31,7 @@ export default function OnboardingGate({ user, children }) {
   }
 
   if (user && status === 'onboard') {
-    return <OnboardingPage user={user} onCompleted={() => { setStatus('ok'); window.location.href = '/'; }} />;
+    return <OnboardingPage user={user} onCompleted={() => setStatus('ok')} />;
   }
 
   // When used as a layout route element there are no children — render the matched child route.
