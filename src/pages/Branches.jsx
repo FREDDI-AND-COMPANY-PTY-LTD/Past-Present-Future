@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { GitBranch, Plus, Sparkles, Check } from 'lucide-react';
+import { GitBranch, Plus, Sparkles, Check, Shield } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import AncestorAvatar from '@/components/AncestorAvatar';
@@ -119,18 +120,28 @@ export default function Branches() {
                     {ancestor && <p className="text-sm text-amber-light/70">Rooted in: {ancestor.full_name}</p>}
                     {branch.description && <p className="text-xs text-parchment/50 mt-1">{branch.description}</p>}
                   </div>
-                  {branch.ancestor_id && (
-                    <button
-                      onClick={() => setBranchRoot(branch.ancestor_id)}
-                      className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors flex-shrink-0 ${
-                        rootAncestorId === branch.ancestor_id
-                          ? 'bg-[rgba(201,145,58,0.15)] text-gold border border-[rgba(201,145,58,0.4)]'
-                          : 'border border-[rgba(201,145,58,0.2)] text-amber-light/70 hover:text-amber-light hover:border-[rgba(201,145,58,0.4)]'
-                      }`}
-                    >
-                      {rootAncestorId === branch.ancestor_id ? <><Check size={14} /> Active Root</> : 'Set as Root'}
-                    </button>
-                  )}
+                  <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                    {branch.admin_user_id === user?.id && (
+                      <Link
+                        to="/branch-admin"
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-gradient-to-r from-[#C9913A] to-[#E8C97A] text-charcoal hover:opacity-90 transition-opacity"
+                      >
+                        <Shield size={14} /> Admin Dashboard
+                      </Link>
+                    )}
+                    {branch.ancestor_id && (
+                      <button
+                        onClick={() => setBranchRoot(branch.ancestor_id)}
+                        className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${
+                          rootAncestorId === branch.ancestor_id
+                            ? 'bg-[rgba(201,145,58,0.15)] text-gold border border-[rgba(201,145,58,0.4)]'
+                            : 'border border-[rgba(201,145,58,0.2)] text-amber-light/70 hover:text-amber-light hover:border-[rgba(201,145,58,0.4)]'
+                        }`}
+                      >
+                        {rootAncestorId === branch.ancestor_id ? <><Check size={14} /> Active Root</> : 'Set as Root'}
+                      </button>
+                    )}
+                  </div>
                 </div>
               );
             })}
