@@ -94,8 +94,17 @@ export default function Branches() {
     <Layout>
       <div className="px-6 lg:px-12 py-12 max-w-5xl mx-auto">
         <div className="mb-10">
-          <h1 className="font-display text-4xl md:text-5xl text-parchment mb-3">Family Branches</h1>
-          <p className="text-parchment/50 max-w-2xl">Each branch is a connected family line within the Freddi tree. Start your own to preserve your line's unique stories alongside the shared archive.</p>
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <h1 className="font-display text-4xl md:text-5xl text-parchment mb-3">Family Branches</h1>
+              <p className="text-parchment/50 max-w-2xl">Each branch is a connected family line within the Freddi tree. Start your own to preserve your line's unique stories alongside the shared archive.</p>
+            </div>
+            <Link to="/branch-admin"
+              className="flex items-center gap-2 px-5 py-3 rounded-lg bg-gradient-to-r from-[#C9913A] to-[#E8C97A] text-charcoal font-semibold text-sm hover:opacity-90 transition-opacity gold-glow flex-shrink-0"
+            >
+              <Shield size={16} /> Branch Admin Dashboard
+            </Link>
+          </div>
         </div>
 
         {loading ? (

@@ -225,7 +225,13 @@ export default function BranchAdminDashboard() {
         <div className="px-6 lg:px-12 py-12 max-w-3xl mx-auto">
           <div className="aged-card rounded-xl p-12 text-center">
             <Shield size={32} className="text-gold/30 mx-auto mb-3" />
-            <p className="text-parchment/50">You are not the admin of any branch.</p>
+            <h2 className="font-display text-2xl text-parchment mb-2">No Branch to Administer Yet</h2>
+            <p className="text-parchment/50 text-sm mb-6 max-w-md mx-auto">Branch admins review pending uploads, approve or reject content, run duplicate detection, and merge duplicate ancestor profiles. Create a branch to become its admin and unlock these tools.</p>
+            <Link to="/branches"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-gradient-to-r from-[#C9913A] to-[#E8C97A] text-charcoal font-semibold text-sm hover:opacity-90 transition-opacity"
+            >
+              <GitBranch size={16} /> Create a Branch
+            </Link>
           </div>
         </div>
       </Layout>
