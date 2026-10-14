@@ -122,6 +122,7 @@ export default function UploadEvent() {
   const [additionalPagesOpen, setAdditionalPagesOpen] = useState(false);
   const [buildingMultipage, setBuildingMultipage] = useState(false);
   const [addPagesPrompt, setAddPagesPrompt] = useState(false);
+  const [loadingSample, setLoadingSample] = useState(false);
 
   const [captureMode, setCaptureMode] = useState('single'); // 'single' | 'multipage' | 'batch'
   const [batchInitialFiles, setBatchInitialFiles] = useState(null);
@@ -635,6 +636,38 @@ Return JSON with this structure:
     }
   };
 
+  // Fetch a sample family-history photo and run it through the same upload
+  // flow — lets users (and automated tests) try the AI analysis without a
+  // local file ready.
+  const handleSampleImage = async () => {
+    setLoadingSample(true);
+    try {
+      const sampleUrl = 'https://images.unsplash.com/photo-1929650253513-cb1251c95d68?w=800&q=80';
+      const res = await fetch(sampleUrl);
+      const blob = await res.blob();
+      const sampleFile = new File([blob], 'sample-family-photo.jpg', { type: 'image/jpeg' });
+      handleFile(sampleFile);
+    } catch (e) {
+      // If the fetch fails, fall back to a generated placeholder image
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 800;
+        canvas.height = 600;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#2a2218';
+        ctx.fillRect(0, 0, 800, 600);
+        ctx.fillStyle = '#C9913A';
+        ctx.font = '24px serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Sample Family Photo', 400, 300);
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8));
+        const sampleFile = new File([blob], 'sample-family-photo.jpg', { type: 'image/jpeg' });
+        handleFile(sampleFile);
+      } catch (e2) {}
+    }
+    setLoadingSample(false);
+  };
+
   const resetForm = () => {
     setStep(STEPS.CAPTURE);
     setFile(null);
@@ -951,6 +984,22 @@ Return JSON with this structure:
               <input ref={fileInputRef} type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,image/*" className="hidden" onChange={e => handleFile(e.target.files?.[0])} />
               <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={e => handleFile(e.target.files?.[0])} />
               <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={e => handleFile(e.target.files?.[0])} />
+
+              <div className="mt-6 pt-6 border-t border-[rgba(201,145,58,0.1)]">
+                <p className="text-xs text-parchment/40 text-center mb-3">No file ready? Try the flow with a sample image.</p>
+                <div className="flex justify-center">
+                  <button
+                    onClick={handleSampleImage}
+                    disabled={loadingSample}
+                    data-testid="use-sample-image"
+                    aria-label="Use Sample Image"
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[rgba(201,145,58,0.08)] border border-[rgba(201,145,58,0.25)] text-amber-light text-sm font-medium hover:bg-[rgba(201,145,58,0.12)] transition-colors disabled:opacity-50"
+                  >
+                    {loadingSample ? <Loader2 size={15} className="animate-spin" /> : <ImageIcon size={15} />}
+                    Use Sample Image
+                  </button>
+                </div>
+              </div>
 
               <div className="mt-6 pt-6 border-t border-[rgba(201,145,58,0.1)]">
                 <p className="text-xs text-parchment/40 text-center mb-3">Need to upload more than one item?</p>
