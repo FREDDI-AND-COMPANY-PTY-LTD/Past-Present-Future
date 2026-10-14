@@ -1,9 +1,10 @@
 import React, { useRef } from 'react';
 
 /**
- * A textarea that expands to show all its content when focused,
- * then shrinks back to its collapsed `rows` height on blur.
- * Especially helpful on mobile where long text is otherwise hidden.
+ * A textarea that auto-grows to fit its content.
+ * Height is driven by content only — NOT by focus/blur — so clicking
+ * adjacent buttons (Tag, Post, Reply) never causes the textarea to
+ * collapse and shift the layout, which would make clicks miss.
  */
 export default function AutoGrowTextarea({
   value,
@@ -16,25 +17,19 @@ export default function AutoGrowTextarea({
 }) {
   const ref = useRef(null);
 
-  const expand = () => {
+  const resize = () => {
     const el = ref.current;
     if (!el) return;
     el.style.height = 'auto';
     const lineHeight = parseFloat(getComputedStyle(el).lineHeight) || 22;
     const maxHeight = lineHeight * expandedRows;
-    const minHeight = lineHeight * Math.min(expandedRows, 4);
+    const minHeight = lineHeight * rows;
     el.style.height = Math.min(Math.max(el.scrollHeight, minHeight), maxHeight) + 'px';
-  };
-
-  const collapse = () => {
-    const el = ref.current;
-    if (!el) return;
-    el.style.height = '';
   };
 
   const handleChange = (e) => {
     if (onChange) onChange(e);
-    requestAnimationFrame(expand);
+    requestAnimationFrame(resize);
   };
 
   return (
@@ -42,8 +37,6 @@ export default function AutoGrowTextarea({
       ref={ref}
       value={value}
       onChange={handleChange}
-      onFocus={expand}
-      onBlur={collapse}
       rows={rows}
       className={className}
       placeholder={placeholder}

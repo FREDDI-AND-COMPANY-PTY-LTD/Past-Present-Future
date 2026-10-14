@@ -282,11 +282,11 @@ export default function CommentThread({ entityType, entityId, fieldName, user: i
 
       {/* Comments list */}
       {loading ? (
-        <div className="flex items-center gap-2 text-parchment/40 text-sm">
+        <div className="flex items-center gap-2 text-parchment/40 text-sm min-h-[80px]">
           <Loader2 size={14} className="animate-spin" /> Loading comments...
         </div>
       ) : topLevel.length === 0 ? (
-        <div className="text-center py-8">
+        <div className="text-center py-8 min-h-[80px]">
           <MessageCircle size={32} className="text-parchment/20 mx-auto mb-2" />
           <p className="text-parchment/30 text-sm">No comments yet — be the first to start the conversation.</p>
         </div>
