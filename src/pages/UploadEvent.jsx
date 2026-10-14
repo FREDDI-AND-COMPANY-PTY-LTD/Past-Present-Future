@@ -1487,6 +1487,8 @@ Return JSON with this structure:
               <button
                 onClick={handleSave}
                 disabled={saving}
+                data-testid="save-to-archive"
+                aria-label="Save to Archive"
                 className="flex-1 py-3 rounded-lg bg-gradient-to-r from-[#C9913A] to-[#E8C97A] text-charcoal font-semibold disabled:opacity-50 hover:opacity-90 transition-opacity gold-glow"
               >
                 {saving ? <Loader2 size={20} className="animate-spin mx-auto" /> : missingRequired.length > 0 ? 'Save to Archive (flagged for review)' : 'Save to Archive'}
@@ -1530,7 +1532,7 @@ Return JSON with this structure:
         )}
       </div>
 
-      {matchDialog && (
+      {matchDialog && !cropReview && (
         <AncestorMatchDialog
           mode={matchDialog.mode}
           matches={matchDialog.matches}
@@ -1561,7 +1563,7 @@ Return JSON with this structure:
         user={user}
       />
 
-      {cropReview && (
+      {cropReview && step === STEPS.FORM && (
         <CropEditor
           fileUrl={cropReview.fileUrl}
           title={cropReview.title}
@@ -1572,8 +1574,17 @@ Return JSON with this structure:
           onApprove={(coords) => {
             setCropData(prev => ({ ...prev, ...coords }));
             setCropReview(null);
+            // Scroll to the Save button so it's visible after the crop modal closes
+            setTimeout(() => {
+              document.querySelector('[data-testid="save-to-archive"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
           }}
-          onClose={() => setCropReview(null)}
+          onClose={() => {
+            setCropReview(null);
+            setTimeout(() => {
+              document.querySelector('[data-testid="save-to-archive"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
+          }}
         />
       )}
 
