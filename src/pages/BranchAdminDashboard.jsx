@@ -49,7 +49,7 @@ export default function BranchAdminDashboard() {
   const [newAncestors, setNewAncestors] = useState([]);
   const [disputes, setDisputes] = useState([]);
   const [escalateOpen, setEscalateOpen] = useState(false);
-  const [reviewTab, setReviewTab] = useState('uploads');
+  const [reviewTab, setReviewTab] = useState(null);
   const [scope, setScope] = useState(null);
   const [branchItems, setBranchItems] = useState([]);
   const [editCount, setEditCount] = useState(0);
@@ -112,6 +112,25 @@ export default function BranchAdminDashboard() {
         (f.flag_type === 'duplicate_upload' || f.flag_type === 'duplicate_ancestor') &&
         ((f.ancestor_id && descIds.has(f.ancestor_id)) || branchContent.some(i => i.id === f.content_item_id))
       ).length);
+
+      // Auto-select the first tab that has pending items so the admin lands on
+      // something actionable instead of an empty default tab
+      const pendingUploadCount = branchContent.filter(i => !i.review_status || i.review_status === 'pending').length;
+      const flaggedCount = branchContent.filter(i => i.review_status === 'flagged').length;
+      const uncategorizedNum = branchContent.filter(i => i.content_type === 'uncategorized').length;
+      const stagedCount = (anc || []).filter(a => myBranchIds.includes(a.branch_id) && a.review_status === 'staged').length;
+      const editReqCount = (editReqs || []).filter(r => new Set(branchContent.map(i => i.id)).has(r.content_item_id)).length;
+      const famLinkCount = (famLinks || []).filter(l =>
+        new Set(branchContent.map(i => i.id)).has(l.content_item_id) ||
+        [l.subject_ancestor_id, l.mother_ancestor_id, l.father_ancestor_id, l.partner_ancestor_id].some(aid => aid && descIds.has(aid))
+      ).length;
+      const dupFlagCount = (flags || []).filter(f =>
+        (f.flag_type === 'duplicate_upload' || f.flag_type === 'duplicate_ancestor') &&
+        ((f.ancestor_id && descIds.has(f.ancestor_id)) || branchContent.some(i => i.id === f.content_item_id))
+      ).length;
+      const tabCounts = { uploads: pendingUploadCount, incomplete: flaggedCount, uncategorized: uncategorizedNum, ancestors: stagedCount, connect: 0, edits: editReqCount, familyLinks: famLinkCount, duplicates: dupFlagCount };
+      const firstWithItems = REVIEW_TABS.find(t => (tabCounts[t.key] || 0) > 0);
+      setReviewTab(prev => prev || (firstWithItems ? firstWithItems.key : 'uploads'));
     } catch (e) {}
     setLoading(false);
   };
@@ -299,9 +318,25 @@ export default function BranchAdminDashboard() {
 
         {/* Branch Review — day-to-day curation tools, scoped to your branch(es) */}
         <div className="mt-8">
-          <h2 className="font-display text-xl text-parchment mb-4 flex items-center gap-2">
+          <h2 className="font-display text-xl text-parchment mb-2 flex items-center gap-2">
             <AlertCircle size={18} className="text-gold" /> Branch Review
           </h2>
+          <p className="text-sm text-parchment/50 mb-4">
+            {pendingUploads.length === 0 && editCount === 0 && familyLinkCount === 0 && duplicateFlagCount === 0 && newAncestors.length === 0 && flaggedContent.length === 0 && uncategorizedCount === 0
+              ? 'All caught up — no pending items in your branch. Click any tab below to review its category.'
+              : <>
+                  Pending items: {[
+                    pendingUploads.length > 0 && `${pendingUploads.length} upload${pendingUploads.length > 1 ? 's' : ''}`,
+                    flaggedContent.length > 0 && `${flaggedContent.length} incomplete`,
+                    uncategorizedCount > 0 && `${uncategorizedCount} uncategorized`,
+                    newAncestors.length > 0 && `${newAncestors.length} new ancestor${newAncestors.length > 1 ? 's' : ''}`,
+                    editCount > 0 && `${editCount} edit request${editCount > 1 ? 's' : ''}`,
+                    familyLinkCount > 0 && `${familyLinkCount} family link${familyLinkCount > 1 ? 's' : ''}`,
+                    duplicateFlagCount > 0 && `${duplicateFlagCount} duplicate flag${duplicateFlagCount > 1 ? 's' : ''}`,
+                  ].filter(Boolean).join(' · ')}. Click a tab below to review and take action.
+                </>
+              }
+          </p>
           <div className="flex flex-wrap gap-1.5 mb-4">
             {REVIEW_TABS.map(f => {
               const Icon = f.icon;
