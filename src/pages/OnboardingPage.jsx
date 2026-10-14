@@ -119,6 +119,7 @@ export default function OnboardingPage({ user, onCompleted }) {
                 className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]"
                 placeholder="e.g. Giuseppe Freddi"
                 autoFocus
+                data-testid="onboarding-full-name"
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -158,8 +159,8 @@ export default function OnboardingPage({ user, onCompleted }) {
               <p className="text-xs text-parchment/30 mt-1">Town only — we never store street addresses. This places you on the family map.</p>
             </div>
             <label className="flex items-center gap-2 text-sm text-parchment/60 cursor-pointer">
-              <input type="checkbox" checked={form.living} onChange={(e) => setForm(f => ({ ...f, living: e.target.checked }))} className="accent-[#C9913A]" />
-              Currently living
+            <input type="checkbox" checked={form.living} onChange={(e) => setForm(f => ({ ...f, living: e.target.checked }))} className="accent-[#C9913A]" data-testid="onboarding-living" />
+            Currently living
             </label>
 
             {error && <p className="text-xs text-red-400">{error}</p>}
