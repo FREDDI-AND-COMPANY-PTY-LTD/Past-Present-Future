@@ -209,7 +209,7 @@ export default function CommentThread({ entityType, entityId, fieldName, user: i
       {canInteract ? (
       <div className="mb-5 flex gap-3">
         <Avatar name={myName} size="md" />
-        <div className="flex-1">
+        <div className="flex-1 relative">
           <AutoGrowTextarea
             value={newComment}
             onChange={e => setNewComment(e.target.value)}
@@ -251,7 +251,7 @@ export default function CommentThread({ entityType, entityId, fieldName, user: i
           </div>
 
           {showTagPicker && (
-            <div className="mt-2 max-h-40 overflow-y-auto rounded-lg border border-[rgba(201,145,58,0.15)] bg-[#0D0B0A]">
+            <div className="absolute z-30 mt-1 w-full max-h-40 overflow-y-auto rounded-lg border border-[rgba(201,145,58,0.15)] bg-[#0D0B0A] shadow-2xl">
               {users.filter(u => u.id !== user?.id).length === 0 ? (
                 <p className="px-4 py-3 text-xs text-parchment/40">No other family members to tag.</p>
               ) : (
@@ -534,7 +534,7 @@ function CommentNode({
         {replyTo === comment.id && (
           <div className="mt-2 flex gap-2">
             <Avatar name={currentUser?.full_name || currentUser?.email || 'You'} size="sm" />
-            <div className="flex-1">
+            <div className="flex-1 relative">
               <AutoGrowTextarea
                 value={replyText}
                 onChange={e => setReplyText(e.target.value)}
@@ -564,7 +564,7 @@ function CommentNode({
                 <button onClick={() => { setReplyTo(null); setReplyText(''); setReplyShowTagPicker({}); }} className="text-parchment/40 text-xs px-1">Cancel</button>
               </div>
               {replyShowTagPicker[comment.id] && (
-                <div className="mt-1 max-h-32 overflow-y-auto rounded-lg border border-[rgba(201,145,58,0.15)] bg-[#0D0B0A]">
+                <div className="absolute z-30 mt-1 w-full max-h-32 overflow-y-auto rounded-lg border border-[rgba(201,145,58,0.15)] bg-[#0D0B0A] shadow-2xl">
                   {users.filter(u => u.id !== currentUser?.id).map(u => (
                     <button
                       key={u.id}
