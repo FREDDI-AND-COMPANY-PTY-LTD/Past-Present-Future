@@ -34,10 +34,6 @@ export default function DateSelectInput({ value, onChange, className = '' }) {
     }
   }, [value]);
 
-  const currentYear = new Date().getFullYear();
-  const years = [];
-  for (let y = currentYear + 1; y >= 1850; y--) years.push(y);
-
   const emit = (next) => {
     setParts(next);
     const full = toISO(next.year, next.month, next.day);
@@ -47,6 +43,14 @@ export default function DateSelectInput({ value, onChange, className = '' }) {
 
   const selectClass =
     'flex-1 min-w-0 bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-2 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A] cursor-pointer';
+
+  const inputClass =
+    'flex-1 min-w-0 bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-2 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]';
+
+  const handleYearChange = (e) => {
+    const raw = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
+    emit({ ...parts, year: raw });
+  };
 
   return (
     <div className={`flex gap-2 ${className}`}>
@@ -76,19 +80,17 @@ export default function DateSelectInput({ value, onChange, className = '' }) {
           <option key={mo.value} value={mo.value}>{mo.label}</option>
         ))}
       </select>
-      <select
+      <input
+        type="text"
+        inputMode="numeric"
         value={parts.year}
-        onChange={(e) => emit({ ...parts, year: e.target.value })}
-        className={selectClass}
-        style={{ colorScheme: 'dark' }}
+        onChange={handleYearChange}
+        className={inputClass}
+        placeholder="Year"
         aria-label="Year"
         data-testid="birth-year"
-      >
-        <option value="">Year</option>
-        {years.map((y) => (
-          <option key={y} value={y}>{y}</option>
-        ))}
-      </select>
+        maxLength={4}
+      />
     </div>
   );
 }
