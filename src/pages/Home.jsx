@@ -84,8 +84,42 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Recent events — moved up so new users see events to comment on immediately after onboarding */}
+      <section className="px-6 lg:px-12 py-12 max-w-7xl mx-auto">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="font-display text-3xl text-parchment">Recent Events</h2>
+            <p className="text-parchment/50 text-sm mt-1">Click any event to view details and join the discussion</p>
+          </div>
+          <Link to="/timeline" className="text-amber-light text-sm hover:text-gold transition-colors flex items-center gap-1">
+            View all <ChevronRight size={16} />
+          </Link>
+        </div>
+
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1,2,3].map(i => (
+              <div key={i} className="aged-card rounded-xl h-72 animate-pulse" />
+            ))}
+          </div>
+        ) : recentItems.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {recentItems.map(item => (
+              <ContentCard key={item.id} item={item} ancestors={ancestors} />
+            ))}
+          </div>
+        ) : (
+          <div className="aged-card rounded-xl p-12 text-center">
+            <p className="text-parchment/50 mb-4">The archive awaits its first piece of history.</p>
+            <Link to="/upload" className="inline-flex items-center gap-2 text-gold hover:text-amber-light transition-colors">
+              <Sparkles size={18} /> Upload the first event
+            </Link>
+          </div>
+        )}
+      </section>
+
       {/* Quick navigation cards */}
-      <section className="px-6 lg:px-12 py-16 max-w-7xl mx-auto">
+      <section className="px-6 lg:px-12 py-12 max-w-7xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
             { label: 'Ancestors', desc: 'Browse family profiles', path: '/ancestors', icon: Users },
@@ -130,39 +164,6 @@ export default function Home() {
         </section>
       )}
 
-      {/* Recent items */}
-      <section className="px-6 lg:px-12 py-16 max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h2 className="font-display text-3xl text-parchment">From the Archive</h2>
-            <p className="text-parchment/50 text-sm mt-1">Recently added pieces of family history</p>
-          </div>
-          <Link to="/timeline" className="text-amber-light text-sm hover:text-gold transition-colors flex items-center gap-1">
-            View all <ChevronRight size={16} />
-          </Link>
-        </div>
-
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1,2,3].map(i => (
-              <div key={i} className="aged-card rounded-xl h-72 animate-pulse" />
-            ))}
-          </div>
-        ) : recentItems.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {recentItems.map(item => (
-              <ContentCard key={item.id} item={item} ancestors={ancestors} />
-            ))}
-          </div>
-        ) : (
-          <div className="aged-card rounded-xl p-12 text-center">
-            <p className="text-parchment/50 mb-4">The archive awaits its first piece of history.</p>
-            <Link to="/upload" className="inline-flex items-center gap-2 text-gold hover:text-amber-light transition-colors">
-              <Sparkles size={18} /> Upload the first event
-            </Link>
-          </div>
-        )}
-      </section>
     </Layout>
   );
 }
