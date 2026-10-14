@@ -205,8 +205,17 @@ export default function CommentThread({ entityType, entityId, fieldName, user: i
         </span>
       </div>
 
-      {/* New comment input — gated by branch access */}
-      {canInteract ? (
+      {/* New comment input — gated by branch access.
+          Reserve space while access rights are loading so the taller input
+          form doesn't push content down when it appears (layout shift fix). */}
+      {access.status === 'loading' ? (
+        <div className="mb-5 flex gap-3 min-h-[88px]">
+          <div className="w-8 h-8 rounded-full bg-[rgba(201,145,58,0.1)] flex-shrink-0 animate-pulse" />
+          <div className="flex-1 flex flex-col gap-2">
+            <div className="w-full h-20 rounded-lg bg-[rgba(201,145,58,0.05)] border border-[rgba(201,145,58,0.1)] animate-pulse" />
+          </div>
+        </div>
+      ) : canInteract ? (
       <div className="mb-5 flex gap-3">
         <Avatar name={myName} size="md" />
         <div className="flex-1 relative">
@@ -272,7 +281,7 @@ export default function CommentThread({ entityType, entityId, fieldName, user: i
         </div>
       </div>
       ) : (
-        <div className="mb-5 aged-card rounded-xl p-4 flex items-center gap-2 text-sm text-parchment/50">
+        <div className="mb-5 aged-card rounded-xl p-4 flex items-center gap-2 text-sm text-parchment/50 min-h-[88px]">
           <Lock size={14} className="text-gold/50" />
           {access.status === 'pending'
             ? "Your branch membership is awaiting approval — you can read the discussion and will be able to comment once approved."
