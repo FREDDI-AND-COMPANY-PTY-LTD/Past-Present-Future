@@ -46,7 +46,7 @@ export default function DateSelectInput({ value, onChange, className = '' }) {
   };
 
   const selectClass =
-    'flex-1 min-w-0 bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-2 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A] cursor-pointer appearance-none';
+    'flex-1 min-w-0 bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-2 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A] cursor-pointer';
 
   return (
     <div className={`flex gap-2 ${className}`}>
@@ -56,6 +56,7 @@ export default function DateSelectInput({ value, onChange, className = '' }) {
         className={selectClass}
         style={{ colorScheme: 'dark' }}
         aria-label="Day"
+        data-testid="birth-day"
       >
         <option value="">Day</option>
         {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
@@ -68,6 +69,7 @@ export default function DateSelectInput({ value, onChange, className = '' }) {
         className={selectClass}
         style={{ colorScheme: 'dark' }}
         aria-label="Month"
+        data-testid="birth-month"
       >
         <option value="">Month</option>
         {MONTHS.map((mo) => (
@@ -80,6 +82,7 @@ export default function DateSelectInput({ value, onChange, className = '' }) {
         className={selectClass}
         style={{ colorScheme: 'dark' }}
         aria-label="Year"
+        data-testid="birth-year"
       >
         <option value="">Year</option>
         {years.map((y) => (
