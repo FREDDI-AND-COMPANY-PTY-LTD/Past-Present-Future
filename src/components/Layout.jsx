@@ -16,6 +16,7 @@ import TaskNotificationBadge from '@/components/TaskNotificationBadge';
 import InstallAppButton from '@/components/InstallAppButton';
 import { useBranchRoot } from '@/hooks/useBranchRoot';
 import { usePendingTasksCount } from '@/hooks/usePendingTasksCount';
+import { useBranchAdminPendingCount } from '@/hooks/useBranchAdminPendingCount';
 
 const navItems = [
   { label: 'Home', path: '/', icon: Home },
@@ -41,6 +42,7 @@ export default function Layout({ children }) {
   const navigate = useNavigate();
   const { rootAncestorId, rootAncestor } = useBranchRoot();
   const pendingTasks = usePendingTasksCount();
+  const adminPending = useBranchAdminPendingCount();
   const branchRootPath = rootAncestorId ? `/ancestor/${rootAncestorId}` : '/';
   // Capitalise the surname in the title (birth-certificate format)
   const sidebarTitle = (() => {
@@ -117,6 +119,8 @@ export default function Layout({ children }) {
                 </Link>
               );
             }
+            const isAdminLink = item.path === '/branch-admin';
+            const adminBadge = isAdminLink && adminPending.count > 0 ? adminPending.count : null;
             return (
               <Link
                 key={item.path}
@@ -126,12 +130,19 @@ export default function Layout({ children }) {
                   flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200
                   ${isActive
                     ? 'bg-[rgba(201,145,58,0.12)] text-gold border border-[rgba(201,145,58,0.25)]'
-                    : 'text-parchment/60 hover:text-parchment hover:bg-[rgba(201,145,58,0.06)] border border-transparent'
+                    : isAdminLink && adminBadge
+                      ? 'bg-[rgba(201,145,58,0.08)] text-amber-light border border-[rgba(201,145,58,0.25)] hover:bg-[rgba(201,145,58,0.12)]'
+                      : 'text-parchment/60 hover:text-parchment hover:bg-[rgba(201,145,58,0.06)] border border-transparent'
                   }
                 `}
               >
                 <Icon size={18} />
                 <span className="text-sm font-medium">{item.label}</span>
+                {adminBadge && (
+                  <span className="ml-auto flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-[#8B6914] text-amber-light text-[10px] font-bold leading-none">
+                    {adminBadge}
+                  </span>
+                )}
               </Link>
             );
           })}

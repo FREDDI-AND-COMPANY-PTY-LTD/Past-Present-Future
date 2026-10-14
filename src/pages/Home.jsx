@@ -9,6 +9,7 @@ import UploadHelperBanner from '@/components/UploadHelperBanner';
 import { useBranchRoot } from '@/hooks/useBranchRoot';
 import { useArchivePhotos } from '@/hooks/useArchivePhotos';
 import CropImage from '@/components/CropImage';
+import BranchAdminReviewCard from '@/components/BranchAdminReviewCard';
 
 export default function Home() {
   const [recentItems, setRecentItems] = useState([]);
@@ -83,6 +84,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Branch admin review card — prominent for branch admins so admin tools are discoverable */}
+      <BranchAdminReviewCard />
 
       {/* Recent events — moved up so new users see events to comment on immediately after onboarding */}
       <section className="px-6 lg:px-12 py-12 max-w-7xl mx-auto">
