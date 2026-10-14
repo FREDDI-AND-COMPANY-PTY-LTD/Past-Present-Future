@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { MapPin, Calendar, Flag, ChevronLeft, ExternalLink, FileText, Award, Edit3, HelpCircle, FileBadge, RefreshCw, Loader2, Users, MapPinned, BookOpen, Copy } from 'lucide-react';
+import { MapPin, Calendar, Flag, ChevronLeft, ExternalLink, FileText, Award, Edit3, HelpCircle, FileBadge, RefreshCw, Loader2, Users, MapPinned, BookOpen, Copy, MessageCircle } from 'lucide-react';
 import RaiseQueryDialog from '@/components/RaiseQueryDialog';
 import RaiseDisputeDialog from '@/components/RaiseDisputeDialog';
 import FlagDuplicateDialog from '@/components/FlagDuplicateDialog';
@@ -295,7 +295,7 @@ export default function ContentDetail() {
         </div>
 
         {/* Flag for Branch Review — dispute, duplicate, or query */}
-        <div className="aged-card rounded-xl p-6 mb-6">
+        <div id="flag-review" className="aged-card rounded-xl p-6 mb-6 scroll-mt-20">
           <div className="flex items-center gap-2 mb-3">
             <Flag size={18} className="text-gold" />
             <h3 className="font-display text-base text-parchment">Flag for Branch Review</h3>
@@ -314,7 +314,7 @@ export default function ContentDetail() {
         </div>
 
         {/* Engage: comment or upload related event */}
-        <div className="aged-card rounded-xl p-6">
+        <div id="discussion" className="aged-card rounded-xl p-6 scroll-mt-20">
           <EngageButton item={item} user={user} />
         </div>
 
@@ -357,6 +357,30 @@ export default function ContentDetail() {
             onSubmitted={() => setShowDuplicate(false)}
           />
         )}
+      </div>
+
+      {/* Sticky bottom action bar — keeps Comment and Flag always visible so they're discoverable without scrolling to the bottom */}
+      <div className="sticky bottom-0 z-30 bg-charcoal/95 backdrop-blur-md border-t border-[rgba(201,145,58,0.2)] px-6 py-3 -mx-6 lg:-mx-12">
+        <div className="max-w-4xl mx-auto flex items-center gap-3">
+          <button
+            onClick={() => document.getElementById('discussion')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-gradient-to-r from-[#C9913A] to-[#E8C97A] text-charcoal text-sm font-semibold hover:opacity-90 transition-opacity"
+          >
+            <MessageCircle size={16} /> Comment
+          </button>
+          <button
+            onClick={() => document.getElementById('flag-review')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[rgba(201,145,58,0.1)] border border-[rgba(201,145,58,0.25)] text-amber-light text-sm font-medium hover:bg-[rgba(201,145,58,0.15)] transition-colors"
+          >
+            <Flag size={16} /> Flag for Review
+          </button>
+          <button
+            onClick={() => setShowEditDialog(true)}
+            className="hidden sm:flex items-center gap-2 px-4 py-2.5 rounded-lg border border-[rgba(201,145,58,0.15)] text-parchment/60 text-sm font-medium hover:text-amber-light hover:border-[rgba(201,145,58,0.3)] transition-colors"
+          >
+            <Edit3 size={16} /> Edit
+          </button>
+        </div>
       </div>
     </Layout>
   );
