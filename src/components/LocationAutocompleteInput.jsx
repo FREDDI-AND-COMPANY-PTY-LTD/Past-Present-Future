@@ -15,7 +15,7 @@ import { loadGoogleMaps } from '@/lib/googleMaps';
  *  - placeholder:    input placeholder
  *  - className:      classes applied to the bare <input>
  */
-export default function LocationAutocompleteInput({ value, onChange, placeholder, className, types = ['geocode'] }) {
+export default function LocationAutocompleteInput({ value, onChange, placeholder, className, types = ['geocode'], ariaLabel, id }) {
   const inputRef = useRef(null);
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
@@ -61,12 +61,14 @@ export default function LocationAutocompleteInput({ value, onChange, placeholder
   return (
     <input
       ref={inputRef}
+      id={id}
       type="text"
       autoComplete="off"
       defaultValue={value || ''}
       onChange={handleChange}
       className={className}
       placeholder={placeholder}
+      aria-label={ariaLabel || placeholder}
     />
   );
 }

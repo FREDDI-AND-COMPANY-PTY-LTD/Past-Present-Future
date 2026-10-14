@@ -102,17 +102,18 @@ export default function OnboardingPage({ user, onCompleted }) {
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-[rgba(201,145,58,0.12)] border border-[#C9913A] mb-3">
             <Sparkles size={26} className="text-gold" />
           </div>
-          <h1 className="font-display text-3xl text-parchment">Become Your Own Ancestor</h1>
+          <h1 className="font-display text-3xl text-parchment">Complete Your Profile</h1>
           <p className="text-parchment/50 text-sm mt-2 max-w-md mx-auto leading-relaxed">
-            Welcome{user?.full_name ? `, ${user.full_name.split(' ')[0]}` : ''}. Enter your details to register your ancestor profile — this links you to the bloodline so you appear on the family tree, map, and timeline.
+            Welcome{user?.full_name ? `, ${user.full_name.split(' ')[0]}` : ''}. Enter your details to create your ancestor profile — this links you to the bloodline so you appear on the family tree, map, and timeline.
           </p>
         </div>
 
         <div className="aged-card rounded-2xl overflow-hidden">
           <div className="p-6 space-y-4">
             <div>
-              <label className="text-xs text-parchment/50 mb-1 block">Full Name <span className="text-[#C9913A]">*</span></label>
+              <label htmlFor="onboarding-full-name" className="text-xs text-parchment/50 mb-1 block">Full Name <span className="text-[#C9913A]">*</span></label>
               <input
+                id="onboarding-full-name"
                 value={form.full_name}
                 onChange={(e) => setForm(f => ({ ...f, full_name: e.target.value }))}
                 className="w-full bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] rounded-lg px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-[#C9913A]"
@@ -129,6 +130,8 @@ export default function OnboardingPage({ user, onCompleted }) {
                 <label className="text-xs text-parchment/50 mb-1 block">Birth Place</label>
                 <div className="flex gap-2">
                   <LocationAutocompleteInput
+                    id="onboarding-birth-place"
+                    ariaLabel="Birth Place"
                     value={form.birth_place}
                     onChange={({ location_name }) => setForm(f => ({ ...f, birth_place: location_name }))}
                     placeholder="e.g. Venice, Italy"
@@ -144,6 +147,8 @@ export default function OnboardingPage({ user, onCompleted }) {
             <div>
               <label className="text-xs text-parchment/50 mb-1 block">Where do you live? <span className="text-parchment/30">(town only — for the family map)</span></label>
               <LocationAutocompleteInput
+                id="onboarding-residence"
+                ariaLabel="Where do you live"
                 value={form.residence_place}
                 onChange={({ location_name, latitude, longitude }) => setForm(f => ({ ...f, residence_place: location_name || '', residence_latitude: latitude || '', residence_longitude: longitude || '' }))}
                 placeholder="e.g. Carlton, Victoria"
@@ -164,10 +169,12 @@ export default function OnboardingPage({ user, onCompleted }) {
             <button
               onClick={handleRegister}
               disabled={saving || !form.full_name.trim()}
+              data-testid="complete-profile-btn"
+              aria-label="Complete Profile"
               className="flex items-center gap-1.5 px-5 py-2.5 rounded-lg bg-gradient-to-r from-[#C9913A] to-[#E8C97A] text-charcoal text-sm font-semibold disabled:opacity-50 hover:opacity-90 transition-opacity"
             >
               {saving ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
-              Register
+              Complete Profile
             </button>
           </div>
         </div>
