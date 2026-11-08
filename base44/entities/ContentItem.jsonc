@@ -2,6 +2,10 @@
   "name": "ContentItem",
   "type": "object",
   "properties": {
+    "ref_code": {
+      "type": "string",
+      "description": "Permanent reference code for this item (e.g. I-000345), assigned once and never reused \u2014 used to cite the item in stories, exports and assertions"
+    },
     "title": {
       "type": "string",
       "description": "Title or caption for this content item"

@@ -1,0 +1,159 @@
+{
+  "name": "Event",
+  "type": "object",
+  "properties": {
+    "ref_code": {
+      "type": "string",
+      "description": "Permanent reference code for this event (e.g. EV-000123), stable across renames and edits"
+    },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "birth",
+        "baptism",
+        "marriage",
+        "death",
+        "burial",
+        "migration",
+        "arrival",
+        "departure",
+        "military",
+        "occupation",
+        "residence",
+        "naturalisation",
+        "travel",
+        "family_gathering",
+        "milestone",
+        "other"
+      ],
+      "default": "other",
+      "description": "Canonical event type from a closed list, so many documents describing one happening resolve to one event"
+    },
+    "event_date": {
+      "type": "string",
+      "format": "date",
+      "description": "The date the event happened, when it is known to the day"
+    },
+    "date_display": {
+      "type": "string",
+      "description": "The date as stated by the source, including uncertainty (e.g. 'circa 1874', 'December 1874', '1874/1875')"
+    },
+    "date_certainty": {
+      "type": "string",
+      "enum": [
+        "day",
+        "month",
+        "year",
+        "circa",
+        "unknown"
+      ],
+      "default": "unknown",
+      "description": "How precisely the event is dated \u2014 a year-only statement is never completed to a day"
+    },
+    "place_name": {
+      "type": "string",
+      "description": "Where the event took place"
+    },
+    "latitude": {
+      "type": "number",
+      "description": "Latitude of the event place"
+    },
+    "longitude": {
+      "type": "number",
+      "description": "Longitude of the event place"
+    },
+    "description": {
+      "type": "string",
+      "description": "One or two sentences describing the event as the archive accepts it"
+    },
+    "participants": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "ancestor_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Everyone taking part in the event, with their role (subject, mother, father, spouse, witness, informant, officiant)"
+    },
+    "certainty": {
+      "type": "string",
+      "enum": [
+        "documented",
+        "testimony",
+        "hypothesis"
+      ],
+      "default": "testimony",
+      "description": "Strength of the evidence for the event as a whole"
+    },
+    "evidence_item_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Archive items that evidence this event \u2014 several documents can support one event"
+    },
+    "derived_from_content_item_id": {
+      "type": "string",
+      "description": "The archive item this event was first derived from, used to avoid creating the same event twice"
+    },
+    "source_count": {
+      "type": "number",
+      "default": 1,
+      "description": "How many archive items evidence this event"
+    },
+    "branch_id": {
+      "type": "string",
+      "description": "Branch this event belongs to"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "superseded",
+        "rejected"
+      ],
+      "default": "active",
+      "description": "Whether the event is currently part of the accepted record"
+    }
+  },
+  "required": [
+    "event_type"
+  ],
+  "rls": {
+    "read": {},
+    "create": {},
+    "update": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,149 @@
+{
+  "name": "Assertion",
+  "type": "object",
+  "properties": {
+    "subject_type": {
+      "type": "string",
+      "enum": [
+        "ancestor",
+        "event",
+        "content_item"
+      ],
+      "default": "ancestor",
+      "description": "What kind of record this claim is about"
+    },
+    "subject_id": {
+      "type": "string",
+      "description": "ID of the record this claim is about"
+    },
+    "subject_label": {
+      "type": "string",
+      "description": "Display name of the subject at the time the claim was recorded (so the claim stays readable if the record is renamed)"
+    },
+    "field_name": {
+      "type": "string",
+      "description": "The record field this claim feeds, e.g. birth_date, birth_place, death_date, full_name, maiden_name, occupation, residence_place"
+    },
+    "value": {
+      "type": "string",
+      "description": "The value exactly as the source states it \u2014 never normalised, completed or corrected"
+    },
+    "value_display": {
+      "type": "string",
+      "description": "Optional human-readable form of the value (e.g. 'circa 1874' where value is '1874')"
+    },
+    "grade": {
+      "type": "string",
+      "enum": [
+        "documented",
+        "testimony",
+        "hypothesis"
+      ],
+      "default": "testimony",
+      "description": "Strength of the evidence behind this claim. 'documented' = an official record states it; 'testimony' = a family member's account; 'hypothesis' = an inference or reconstruction. A grade only ever moves down, never up."
+    },
+    "source_type": {
+      "type": "string",
+      "enum": [
+        "document",
+        "testimony",
+        "inference"
+      ],
+      "default": "testimony",
+      "description": "Physical form of the source the claim comes from"
+    },
+    "source_content_item_id": {
+      "type": "string",
+      "description": "ID of the archive item (letter, certificate, photo) that states the claim \u2014 the citation"
+    },
+    "source_label": {
+      "type": "string",
+      "description": "Title of the citing item at the time the claim was recorded"
+    },
+    "source_excerpt": {
+      "type": "string",
+      "description": "The sentence or phrase in the source that states the claim"
+    },
+    "asserted_by_id": {
+      "type": "string",
+      "description": "User ID of the family member who entered or collated the claim"
+    },
+    "asserted_by_name": {
+      "type": "string",
+      "description": "Display name of the person who entered or collated the claim"
+    },
+    "asserted_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the claim entered the archive"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "superseded",
+        "rejected"
+      ],
+      "default": "active",
+      "description": "active = current claim; superseded = replaced by a later claim (kept, never deleted); rejected = reviewed and set aside"
+    },
+    "supersedes_id": {
+      "type": "string",
+      "description": "ID of the earlier assertion this one replaces, when a correction is made"
+    },
+    "accepted": {
+      "type": "boolean",
+      "default": false,
+      "description": "True when this claim's value is the one currently shown on the record ('as accepted'). Every other active claim remains 'as recorded' only."
+    },
+    "conflict": {
+      "type": "boolean",
+      "default": false,
+      "description": "True when another active claim for the same subject and field holds a different value"
+    },
+    "branch_id": {
+      "type": "string",
+      "description": "Branch this claim belongs to, for branch-admin scoping"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Optional note explaining the claim, its uncertainty, or why it was accepted"
+    }
+  },
+  "required": [
+    "subject_type",
+    "subject_id",
+    "field_name",
+    "value",
+    "grade",
+    "status"
+  ],
+  "rls": {
+    "read": {},
+    "create": {},
+    "update": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

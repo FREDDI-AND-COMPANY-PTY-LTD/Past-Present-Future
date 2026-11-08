@@ -2,6 +2,10 @@
   "name": "Ancestor",
   "type": "object",
   "properties": {
+    "ref_code": {
+      "type": "string",
+      "description": "Permanent reference code for this ancestor (e.g. F-0007), assigned once and never reused or renumbered \u2014 citations in stories and exports point at it so they survive renaming"
+    },
     "full_name": {
       "type": "string",
       "description": "Full name of the ancestor"

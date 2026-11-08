@@ -13,6 +13,7 @@ import { formatAncestorName } from '@/lib/ancestorName';
 import BirthBranchLink from '@/components/BirthBranchLink';
 import CommentThread from '@/components/CommentThread';
 import AncestorBiography from '@/components/AncestorBiography';
+import AssertionRegister from '@/components/AssertionRegister';
 
 export default function AncestorProfile() {
   const { id } = useParams();
@@ -122,6 +123,9 @@ export default function AncestorProfile() {
                 )}
               </div>
               <p className="text-amber-light/70 text-lg mb-4">{lifeSpan}</p>
+              {ancestor.ref_code && (
+                <p className="font-mono text-xs text-parchment/35 mb-3 tracking-wide">Ref {ancestor.ref_code}</p>
+              )}
               <div className="flex flex-wrap gap-x-6 gap-y-2 justify-center md:justify-start text-sm text-parchment/60">
                 <SourcedField entityType="Ancestor" entityId={id} fieldName="birth_date" label="Date of Birth" value={ancestor.birth_date ? new Date(ancestor.birth_date).toLocaleDateString('en-AU', { year: 'numeric', month: 'long', day: 'numeric' }) : ''} icon={Calendar} />
                 <SourcedField entityType="Ancestor" entityId={id} fieldName="birth_place" label="Place of Birth" value={ancestor.birth_place} icon={MapPin} />
@@ -163,6 +167,9 @@ export default function AncestorProfile() {
           generatedAt={ancestor.ai_biography_generated_at}
           onGenerated={(bio, at) => setAncestor(prev => ({ ...prev, ai_biography: bio, ai_biography_generated_at: at }))}
         />
+
+        {/* Evidence register — every claim held, beside the accepted value */}
+        <AssertionRegister ancestor={ancestor} />
 
         {/* Family connections */}
         {(parents.mother || parents.father || partner) && (
