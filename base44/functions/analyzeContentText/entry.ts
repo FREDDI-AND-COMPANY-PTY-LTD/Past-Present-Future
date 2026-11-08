@@ -67,6 +67,19 @@ Analyse the text body and extract:
 Also extract, when present in the text:
 8. publication_date \u2014 the date the document/record was issued or published (e.g. a newspaper masthead date, a registry date of issue, an interview recording date). ISO date when determinable, otherwise empty string. Only if clearly distinct from the event date.
 9. publication_location \u2014 the place where the document was issued or published (e.g. the newspaper's city, the registry office city). Only if clearly distinct from the event location.
+10. statements \u2014 every factual claim the text makes about a person, one entry each: the claim in one plain sentence, the person it is about, the record field it feeds (birth_date, birth_place, death_date, death_place, full_name, maiden_name, residence_place, occupation, other), the value exactly as the text states it, and its evidence grade.
+11. coverage \u2014 an honest audit of how much of the text you actually used.
+
+EVIDENCE GRADING \u2014 grade every statement, and never upgrade a grade:
+- "documented": the text quotes or reproduces an official record, register, certificate or published notice, and the claim comes from that document.
+- "testimony": a family member's account, memory, letter, or a hand-drawn chart.
+- "hypothesis": the text itself is guessing or reconstructing ("perhaps", "likely", "we think", "must have").
+
+HARD RULES:
+- Extract only what the text states. If it gives only a year, the value is that year ("1874"), never a day or month you supplied.
+- Never complete a field from historical knowledge, a name that looks similar, or another item in the archive.
+- A person mentioned with no fact stated about them belongs in named_people only, not in statements.
+- Leave a field empty rather than guessing. An empty field is a correct answer; an invented one corrupts the archive.
 
 Return JSON with this structure:
 {
@@ -78,7 +91,13 @@ Return JSON with this structure:
   "named_places": [{ "place": "", "context": "" }],
   "chronicle_snippet": "",
   "publication_date": "",
-  "publication_location": ""
+  "publication_location": "",
+  "statements": [{ "claim": "", "person": "", "field": "", "value": "", "grade": "documented|testimony|hypothesis" }],
+  "coverage": {
+    "read_fully": true,
+    "sections_skipped": [{ "what": "", "why": "" }],
+    "not_extracted": [{ "what": "", "why": "" }]
+  }
 }`,
       response_json_schema: {
         type: 'object',
@@ -111,6 +130,27 @@ Return JSON with this structure:
           chronicle_snippet: { type: 'string' },
           publication_date: { type: 'string' },
           publication_location: { type: 'string' },
+          statements: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                claim: { type: 'string' },
+                person: { type: 'string' },
+                field: { type: 'string' },
+                value: { type: 'string' },
+                grade: { type: 'string', enum: ['documented', 'testimony', 'hypothesis'] },
+              },
+            },
+          },
+          coverage: {
+            type: 'object',
+            properties: {
+              read_fully: { type: 'boolean' },
+              sections_skipped: { type: 'array' },
+              not_extracted: { type: 'array' },
+            },
+          },
         },
       },
     });
@@ -123,11 +163,25 @@ Return JSON with this structure:
       named_people: result.named_people || [],
       named_places: result.named_places || [],
       chronicle_snippet: result.chronicle_snippet || '',
+      statements: result.statements || [],
+      coverage: result.coverage || null,
       generated_at: new Date().toISOString(),
     };
 
     // Build the update payload. Always persist narrative_extraction.
     const update = { narrative_extraction: narrativeExtraction };
+
+    // The graded claims and the coverage audit are also kept in the free-form
+    // raw analysis, so an admin can see what the text asserted and what was
+    // deliberately left out instead of only the final field values.
+    update.raw_ai_analysis = {
+      ...(item.raw_ai_analysis || {}),
+      text_analysis: {
+        statements: result.statements || [],
+        coverage: result.coverage || null,
+        generated_at: narrativeExtraction.generated_at,
+      },
+    };
 
     // Only fill publication_* from the text analysis when the user hasn't
     // already set them on the item (don't overwrite user-provided values).

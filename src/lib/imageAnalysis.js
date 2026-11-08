@@ -39,6 +39,19 @@ For certificates and formal documents, extract all genealogically relevant field
 - Ship name, port of departure/arrival (for passenger manifests)
 - Military unit, rank, service number (for military records)
 
+EVIDENCE GRADING — for every fact you read off this image, say how strong the evidence is, and never upgrade it:
+- "documented": written on the item itself — a date printed on a birth certificate, a stamp on a passport, a masthead on a clipping.
+- "testimony": a handwritten personal account, letter, diary or annotation by a family member.
+- "hypothesis": your own inference — an age estimated from appearance, an era guessed from clothing.
+Never present an inference as though it were written on the document.
+
+HARD RULES:
+- Copy dates, names and places exactly as they appear. If only a year is written, that year is the whole value — never complete a day or month.
+- Never fill a blank field from historical knowledge, a name that looks similar, or another item in the archive.
+- Leave a field empty rather than guessing.
+
+COVERAGE: report honestly what you did not read or did not extract — a cropped edge, illegible handwriting, a page you could not see.
+
 Return JSON with this structure:
 {
   "type": "photo" | "narrative" | "correspondence" | "press_clipping" | "passport" | "identity_document" | "certificate" | "memorial" | "uncategorized",
@@ -70,7 +83,9 @@ Return JSON with this structure:
   },
   "suggested_title": "a short descriptive title for this item",
   "suggested_description": "one short sentence describing what this item is and its significance to family history",
-  "suggested_tags": ["array", "of", "relevant", "tags"]
+  "suggested_tags": ["array", "of", "relevant", "tags"],
+  "claims": [{ "claim": "", "person": "", "field": "", "value": "", "grade": "documented|testimony|hypothesis" }],
+  "coverage": { "read_fully": true, "sections_skipped": [{ "what": "", "why": "" }], "not_extracted": [{ "what": "", "why": "" }] }
 }`;
 
 export async function analyzeImage(fileUrl) {
@@ -111,6 +126,27 @@ export async function analyzeImage(fileUrl) {
         suggested_title: { type: 'string' },
         suggested_description: { type: 'string' },
         suggested_tags: { type: 'array', items: { type: 'string' } },
+        claims: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              claim: { type: 'string' },
+              person: { type: 'string' },
+              field: { type: 'string' },
+              value: { type: 'string' },
+              grade: { type: 'string', enum: ['documented', 'testimony', 'hypothesis'] },
+            },
+          },
+        },
+        coverage: {
+          type: 'object',
+          properties: {
+            read_fully: { type: 'boolean' },
+            sections_skipped: { type: 'array' },
+            not_extracted: { type: 'array' },
+          },
+        },
       },
     },
   });
