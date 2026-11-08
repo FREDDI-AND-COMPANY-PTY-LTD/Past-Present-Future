@@ -1,0 +1,42 @@
+{
+  "name": "Reconcile New Records Against Accepted",
+  "description": "Every time a new suggestion is added to the archive, compare it with the facts already accepted: adopt what the evidence supports, raise a conflict when the two disagree, and remove a suggestion that is clearly wrong.",
+  "trigger": {
+    "condition": "${ (.trigger.data.review_status == \"pending\") }",
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "create"
+      ],
+      "entity_name": "ContentItem"
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "reconcile_new_records_against_accepted",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "reconcile_suggestion": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "reconcileNewRecords",
+            "args": {
+              "content_item_ids": [
+                "${ .trigger.entity_id }"
+              ]
+            }
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Reconcile against accepted records",
+            "description": "Adopt, flag or remove the new suggestion"
+          }
+        }
+      }
+    ]
+  }
+}
