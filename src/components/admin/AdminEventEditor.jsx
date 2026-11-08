@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, Check, MapPin, Award, FileText, Eye, Calendar, Image as ImageIcon, Newspaper, BookUser, IdCard, Mail, Heart, HelpCircle, X, Network, User, Users, Video, Music, Link2, MessageSquare, UserPlus, Trash2, AlertTriangle } from 'lucide-react';
+import { Loader2, Check, MapPin, Award, FileText, Eye, Calendar, Image as ImageIcon, Newspaper, BookUser, IdCard, Mail, Heart, HelpCircle, X, Network, User, Users, Video, Music, Link2, MessageSquare, UserPlus, Trash2, AlertTriangle, ExternalLink } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import TagInput from '@/components/TagInput';
 import LocationPicker from '@/components/LocationPicker';
@@ -159,6 +159,7 @@ export default function AdminEventEditor({ item, onApproved, onDeleted }) {
   const getAncestor = (id) => ancestors.find(a => a.id === id);
 
   const CurrentTypeIcon = typeOptions.find(t => t.value === formData.content_type)?.icon || HelpCircle;
+  const isPdf = /\.pdf(?:$|\?)/i.test(item.file_url || '');
 
   return (
     <div className="space-y-5">
