@@ -55,20 +55,33 @@ export default function BranchAdminDashboard() {
   const [editCount, setEditCount] = useState(0);
   const [familyLinkCount, setFamilyLinkCount] = useState(0);
   const [duplicateFlagCount, setDuplicateFlagCount] = useState(0);
+  const [loadError, setLoadError] = useState(null);
 
   const load = async () => {
+    setLoadError(null);
     try {
-      const [u, brs, anc, allInvites, items, flags, editReqs, famLinks] = await Promise.all([
-        base44.auth.me().catch(() => null),
-        base44.entities.Branch.list(),
-        base44.entities.Ancestor.list(),
-        base44.entities.BranchInvite.list('-created_date', 200),
-        base44.entities.ContentItem.list('-created_date', 200),
-        base44.entities.ConflictFlag.filter({ status: 'open' }),
-        base44.entities.EditRequest.filter({ status: 'pending' }),
-        base44.entities.FamilyLink.list('-created_date', 100),
-      ]);
+      const u = await base44.auth.me().catch(() => null);
+      if (!u) {
+        setLoadError('You are not signed in, so your branch could not be loaded.');
+        setLoading(false);
+        return;
+      }
       setUser(u);
+      // Each queue is fetched independently: one unreadable list must not blank the page.
+      const [brs, anc, allInvites, items, flags, editReqs, famLinks] = await Promise.all([
+        base44.entities.Branch.list().catch(() => null),
+        base44.entities.Ancestor.list().catch(() => []),
+        base44.entities.BranchInvite.list('-created_date', 200).catch(() => []),
+        base44.entities.ContentItem.list('-created_date', 200).catch(() => []),
+        base44.entities.ConflictFlag.filter({ status: 'open' }).catch(() => []),
+        base44.entities.EditRequest.filter({ status: 'pending' }).catch(() => []),
+        base44.entities.FamilyLink.list('-created_date', 100).catch(() => []),
+      ]);
+      if (brs === null) {
+        setLoadError('Your branch records could not be loaded just now.');
+        setLoading(false);
+        return;
+      }
       setBranches(brs || []);
       setAllAncestors(anc || []);
       const myBr = (brs || []).filter(b => b.admin_user_id && u && b.admin_user_id === u.id);
