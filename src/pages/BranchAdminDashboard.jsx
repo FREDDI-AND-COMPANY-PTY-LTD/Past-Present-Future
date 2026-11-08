@@ -144,7 +144,9 @@ export default function BranchAdminDashboard() {
       const tabCounts = { uploads: pendingUploadCount, incomplete: flaggedCount, uncategorized: uncategorizedNum, ancestors: stagedCount, connect: 0, edits: editReqCount, familyLinks: famLinkCount, duplicates: dupFlagCount };
       const firstWithItems = REVIEW_TABS.find(t => (tabCounts[t.key] || 0) > 0);
       setReviewTab(prev => prev || (firstWithItems ? firstWithItems.key : 'uploads'));
-    } catch (e) {}
+    } catch (e) {
+      setLoadError(e?.message || 'The dashboard could not be loaded just now.');
+    }
     setLoading(false);
   };
 
@@ -251,6 +253,24 @@ export default function BranchAdminDashboard() {
     return <Layout><div className="flex justify-center py-12"><Loader2 size={24} className="text-gold animate-spin" /></div></Layout>;
   }
 
+  if (loadError) {
+    return (
+      <Layout>
+        <div className="px-6 lg:px-12 py-12 max-w-3xl mx-auto">
+          <div className="aged-card rounded-xl p-12 text-center">
+            <AlertCircle size={32} className="text-gold/40 mx-auto mb-3" />
+            <h2 className="font-display text-2xl text-parchment mb-2">Your Branch Did Not Load</h2>
+            <p className="text-parchment/50 text-sm mb-6 max-w-md mx-auto">{loadError}</p>
+            <button onClick={() => { setLoading(true); load(); }}
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-gradient-to-r from-[#C9913A] to-[#E8C97A] text-charcoal font-semibold text-sm hover:opacity-90 transition-opacity">
+              Try again
+            </button>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
   if (myBranches.length === 0) {
     return (
       <Layout>
@@ -259,6 +279,10 @@ export default function BranchAdminDashboard() {
             <Shield size={32} className="text-gold/30 mx-auto mb-3" />
             <h2 className="font-display text-2xl text-parchment mb-2">No Branch to Administer Yet</h2>
             <p className="text-parchment/50 text-sm mb-6 max-w-md mx-auto">Branch admins review pending uploads, approve or reject content, run duplicate detection, and merge duplicate ancestor profiles. Create a branch to become its admin and unlock these tools.</p>
+            <p className="text-xs text-parchment/40 mb-4">
+              Signed in as {user?.full_name || user?.email || 'an unknown account'}.
+              {(branches || []).length > 0 && ` The archive holds ${branches.length} branch${branches.length > 1 ? 'es' : ''} (${branches.map(b => b.name).join(', ')}), administered by another family member.`}
+            </p>
             <Link to="/branches"
               className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-gradient-to-r from-[#C9913A] to-[#E8C97A] text-charcoal font-semibold text-sm hover:opacity-90 transition-opacity"
             >
