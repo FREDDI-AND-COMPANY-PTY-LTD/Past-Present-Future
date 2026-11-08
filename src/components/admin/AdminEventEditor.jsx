@@ -162,14 +162,34 @@ export default function AdminEventEditor({ item, onApproved, onDeleted }) {
 
   return (
     <div className="space-y-5">
-      {/* Media preview */}
-      {item.file_url && (
+      {/* Media preview — the document this record was created from */}
+      {item.file_url ? (
         <div className="rounded-lg overflow-hidden bg-[#0D0B0A] border border-[rgba(201,145,58,0.12)]">
           {item.content_type === 'video' ? (
             <video controls src={item.file_url} className="w-full max-h-80" />
+          ) : isPdf ? (
+            item.thumbnail_url ? (
+              <img src={item.thumbnail_url} alt={formData.title} className="w-full max-h-80 object-contain" />
+            ) : (
+              <div className="flex flex-col items-center justify-center py-10 text-parchment/40">
+                <FileText size={28} className="text-gold/60 mb-2" />
+                <p className="text-xs">PDF document — open it to read the source</p>
+              </div>
+            )
           ) : (
             <img src={item.file_url} alt={formData.title} className="w-full max-h-80 object-contain" />
           )}
+          <div className="flex items-center justify-between gap-2 px-3 py-2 border-t border-[rgba(201,145,58,0.12)]">
+            <span className="text-[11px] text-parchment/40 truncate">Original document</span>
+            <a href={item.file_url} target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(201,145,58,0.1)] border border-[rgba(201,145,58,0.2)] text-amber-light text-xs font-medium hover:bg-[rgba(201,145,58,0.15)] transition-colors flex-shrink-0">
+              <ExternalLink size={12} /> Open full size
+            </a>
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-lg bg-[#0D0B0A] border border-[rgba(201,145,58,0.12)] px-4 py-3">
+          <p className="text-xs text-parchment/40">No document attached to this entry — it was recorded from text, so there is nothing to open.</p>
         </div>
       )}
 
