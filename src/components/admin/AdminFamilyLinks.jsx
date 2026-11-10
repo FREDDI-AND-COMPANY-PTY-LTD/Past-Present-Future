@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Network, Loader2, Check, X, User, Users, Heart, FileText, AlertCircle } from 'lucide-react';
+import { Network, Loader2, Check, X, User, Users, Heart, FileText, AlertCircle, FileSearch } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import SourceDocumentDialog from '@/components/SourceDocumentDialog';
 
 export default function AdminFamilyLinks({ refreshKey, scope }) {
+  const [sourceItem, setSourceItem] = useState(null);
   const [links, setLinks] = useState([]);
   const [ancestors, setAncestors] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -161,6 +163,17 @@ export default function AdminFamilyLinks({ refreshKey, scope }) {
               </div>
             )}
 
+            {/* The certificate these relationships were read from */}
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              <button onClick={() => setSourceItem(link)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(201,145,58,0.08)] border border-[rgba(201,145,58,0.2)] text-amber-light text-xs font-medium hover:bg-[rgba(201,145,58,0.15)] transition-colors">
+                <FileSearch size={13} /> View certificate
+              </button>
+              <span className="text-xs text-parchment/40 truncate">
+                {link.content_item_title || 'Originating document'}
+              </span>
+            </div>
+
             {/* Actions */}
             {isPending && (
               <div className="flex gap-2">
@@ -190,6 +203,10 @@ export default function AdminFamilyLinks({ refreshKey, scope }) {
           </div>
         );
       })}
+
+      {sourceItem && (
+        <SourceDocumentDialog itemId={sourceItem.content_item_id} onClose={() => setSourceItem(null)} />
+      )}
     </div>
   );
 }

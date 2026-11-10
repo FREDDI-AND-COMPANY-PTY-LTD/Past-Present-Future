@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Edit3, CheckCircle, XCircle, ExternalLink, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Edit3, CheckCircle, XCircle, ExternalLink, Loader2, ChevronDown, ChevronUp, FileSearch } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import SourceDocumentDialog from '@/components/SourceDocumentDialog';
 
 export default function AdminEditRequests({ scope }) {
+  const [sourceId, setSourceId] = useState(null);
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState(null);
@@ -114,6 +116,10 @@ export default function AdminEditRequests({ scope }) {
                   </div>
                 </div>
               </div>
+              <button onClick={() => setSourceId(req.content_item_id)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(201,145,58,0.08)] border border-[rgba(201,145,58,0.2)] text-amber-light text-xs hover:border-[rgba(201,145,58,0.4)] transition-colors flex-shrink-0">
+                <FileSearch size={14} /> Source document
+              </button>
               <Link to={`/content/${req.content_item_id}`} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(201,145,58,0.06)] border border-[rgba(201,145,58,0.15)] text-amber-light/80 text-xs hover:border-[rgba(201,145,58,0.35)] transition-colors flex-shrink-0">
                 <ExternalLink size={14} /> View
               </Link>
@@ -178,6 +184,8 @@ export default function AdminEditRequests({ scope }) {
           </div>
         );
       })}
+
+      {sourceId && <SourceDocumentDialog itemId={sourceId} onClose={() => setSourceId(null)} />}
     </div>
   );
 }

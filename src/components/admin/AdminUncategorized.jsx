@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, Search, Brain, HelpCircle, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
+import { Loader2, Search, Brain, HelpCircle, ChevronDown, ChevronUp, ExternalLink, FileSearch } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import AdminEventEditor from '@/components/admin/AdminEventEditor';
+import SourceDocumentDialog from '@/components/SourceDocumentDialog';
 
 const typeOptions = [
   { value: 'photo', label: 'Photograph' },
@@ -23,6 +24,7 @@ export default function AdminUncategorized({ refreshKey, scope }) {
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [recategorizing, setRecategorizing] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
+  const [sourceItem, setSourceItem] = useState(null);
 
   const fetchItems = async () => {
     setLoading(true);
@@ -225,6 +227,10 @@ export default function AdminUncategorized({ refreshKey, scope }) {
                         {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                         {isExpanded ? 'Collapse' : 'Review & Edit'}
                       </button>
+                      <button onClick={() => setSourceItem(item)}
+                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[rgba(201,145,58,0.06)] text-amber-light border border-[rgba(201,145,58,0.12)] hover:bg-[rgba(201,145,58,0.12)] transition-colors text-xs font-medium" title="View the originating document">
+                        <FileSearch size={14} /> Source
+                      </button>
                       <a href={`/content/${item.id}`} target="_blank" rel="noreferrer"
                         className="p-1.5 rounded-lg bg-[rgba(201,145,58,0.06)] text-parchment/40 border border-[rgba(201,145,58,0.1)] hover:text-amber-light transition-colors" title="Open detail page">
                         <ExternalLink size={14} />
@@ -253,6 +259,8 @@ export default function AdminUncategorized({ refreshKey, scope }) {
           })}
         </div>
       )}
+
+      {sourceItem && <SourceDocumentDialog item={sourceItem} onClose={() => setSourceItem(null)} />}
     </div>
   );
 }

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Loader2, Check, Clock, Image, FileText, Newspaper, Award, BookUser, IdCard, Mail, Heart, HelpCircle, ExternalLink } from 'lucide-react';
+import { Loader2, Check, Clock, Image, FileText, Newspaper, Award, BookUser, IdCard, Mail, Heart, HelpCircle, ExternalLink, FileSearch } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import AdminReviewModal from '@/components/admin/AdminReviewModal';
+import SourceDocumentDialog from '@/components/SourceDocumentDialog';
 import UndoToast from '@/components/UndoToast';
 
 const typeIcons = {
@@ -22,6 +23,7 @@ export default function AdminUploads({ refreshKey, scope }) {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(null);
   const [reviewingItem, setReviewingItem] = useState(null);
+  const [sourceItem, setSourceItem] = useState(null);
   const [undoToasts, setUndoToasts] = useState([]);
 
   const fetchItems = async () => {
@@ -153,6 +155,10 @@ export default function AdminUploads({ refreshKey, scope }) {
                   className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-gradient-to-r from-[#C9913A] to-[#E8C97A] text-charcoal text-xs font-semibold hover:opacity-90 transition-opacity">
                   <Check size={14} /> Review & Approve
                 </button>
+                <button onClick={() => setSourceItem(item)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[rgba(201,145,58,0.06)] text-amber-light border border-[rgba(201,145,58,0.15)] hover:bg-[rgba(201,145,58,0.12)] transition-colors text-xs font-medium">
+                  <FileSearch size={14} /> Source document
+                </button>
                 <Link to={`/content/${item.id}`}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[rgba(201,145,58,0.06)] text-parchment/60 border border-[rgba(201,145,58,0.1)] hover:text-amber-light transition-colors text-xs" title="Open detail page">
                   <ExternalLink size={14} /> View
@@ -179,6 +185,8 @@ export default function AdminUploads({ refreshKey, scope }) {
           onDeleted={handleDeleted}
         />
       )}
+
+      {sourceItem && <SourceDocumentDialog item={sourceItem} onClose={() => setSourceItem(null)} />}
 
       {undoToasts.length > 0 && (
         <div className="fixed bottom-6 right-6 z-[60] space-y-3 flex flex-col items-end">

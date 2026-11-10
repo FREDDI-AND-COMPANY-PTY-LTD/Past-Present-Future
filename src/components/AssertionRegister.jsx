@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
-import { ScrollText, AlertTriangle, FileText, Quote, Users, HelpCircle } from 'lucide-react';
+import { ScrollText, AlertTriangle, FileText, Quote, Users, HelpCircle, FileSearch } from 'lucide-react';
+import SourceDocumentDialog from '@/components/SourceDocumentDialog';
 
 const GRADE_STYLE = {
   documented: 'bg-[rgba(120,180,120,0.12)] text-[#a8d5a2] border-[rgba(120,180,120,0.3)]',
@@ -30,6 +31,7 @@ function GradeBadge({ grade }) {
 export default function AssertionRegister({ ancestor }) {
   const [assertions, setAssertions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [sourceId, setSourceId] = useState(null);
 
   useEffect(() => {
     if (!ancestor?.id) return;
@@ -122,9 +124,15 @@ export default function AssertionRegister({ ancestor }) {
                       )}
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-[11px] text-parchment/40">
                         {a.source_content_item_id ? (
-                          <Link to={`/content/${a.source_content_item_id}`} className="text-amber-light/80 hover:text-amber-light hover:underline">
-                            {a.source_label || 'View source item'}
-                          </Link>
+                          <>
+                            <Link to={`/content/${a.source_content_item_id}`} className="text-amber-light/80 hover:text-amber-light hover:underline">
+                              {a.source_label || 'View source item'}
+                            </Link>
+                            <button onClick={() => setSourceId(a.source_content_item_id)}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-[rgba(201,145,58,0.25)] text-amber-light/80 hover:text-amber-light hover:border-[rgba(201,145,58,0.5)] transition-colors">
+                              <FileSearch size={10} /> View document
+                            </button>
+                          </>
                         ) : (
                           <span>{a.source_label || 'No source document attached'}</span>
                         )}
@@ -138,6 +146,8 @@ export default function AssertionRegister({ ancestor }) {
           );
         })}
       </div>
+
+      {sourceId && <SourceDocumentDialog itemId={sourceId} onClose={() => setSourceId(null)} />}
     </div>
   );
 }

@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertCircle, CheckCircle, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
+import { AlertCircle, CheckCircle, ChevronDown, ChevronUp, ExternalLink, FileSearch } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import AdminEventEditor from '@/components/admin/AdminEventEditor';
+import SourceDocumentDialog from '@/components/SourceDocumentDialog';
 
 export default function AdminIncompleteUploads({ items, onResolved }) {
   const [expandedId, setExpandedId] = useState(null);
+  const [sourceItem, setSourceItem] = useState(null);
   const [localItems, setLocalItems] = useState(items);
 
   useEffect(() => { setLocalItems(items); }, [items]);
@@ -57,7 +59,11 @@ export default function AdminIncompleteUploads({ items, onResolved }) {
                   {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                   {isExpanded ? 'Collapse' : 'Review & Edit'}
                 </button>
-                <Link to={`/content/${item.id}`} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(201,145,58,0.1)] border border-[rgba(201,145,58,0.2)] text-amber-light text-xs font-medium hover:bg-[rgba(201,145,58,0.15)] transition-colors">
+                <button onClick={() => setSourceItem(item)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(201,145,58,0.1)] border border-[rgba(201,145,58,0.2)] text-amber-light text-xs font-medium hover:bg-[rgba(201,145,58,0.15)] transition-colors">
+                  <FileSearch size={14} /> Source document
+                </button>
+                <Link to={`/content/${item.id}`} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(201,145,58,0.06)] border border-[rgba(201,145,58,0.12)] text-parchment/60 text-xs font-medium hover:text-amber-light transition-colors">
                   <ExternalLink size={14} /> View & Edit
                 </Link>
                 <button onClick={() => resolve(item.id)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-900/20 text-green-400 text-xs border border-green-800/30 hover:bg-green-900/30 transition-colors">
@@ -74,6 +80,8 @@ export default function AdminIncompleteUploads({ items, onResolved }) {
           </div>
         );
       })}
+
+      {sourceItem && <SourceDocumentDialog item={sourceItem} onClose={() => setSourceItem(null)} />}
     </div>
   );
 }
