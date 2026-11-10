@@ -2,10 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { X, Loader2, ExternalLink, FileText, Quote, ScrollText, BookOpen } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
-import { resolveSourceRecord } from '@/lib/sourceDocument';
+import { resolveSourceRecord, VOLUME_PAGE_COUNT } from '@/lib/sourceDocument';
 
 const isPdfUrl = (url) => /\.pdf(?:$|\?)/i.test(url || '');
 const isImageUrl = (url) => /\.(png|jpe?g|gif|webp|bmp|svg)(?:$|\?)/i.test(url || '');
+const withPage = (url, page) => (url && page ? `${url.split('#')[0]}#page=${page}` : url || '');
 
 /**
  * Opens the originating document for a record so an approver can see exactly
@@ -17,6 +18,7 @@ export default function SourceDocumentDialog({ item, itemId, onClose }) {
   const [loading, setLoading] = useState(!item && !!itemId);
   const [source, setSource] = useState(null);
   const [resolving, setResolving] = useState(false);
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     if (item) { setRecord(item); setLoading(false); return; }
@@ -35,7 +37,11 @@ export default function SourceDocumentDialog({ item, itemId, onClose }) {
     let alive = true;
     setResolving(true);
     resolveSourceRecord(record)
-      .then((s) => { if (alive) setSource(s); })
+      .then((s) => {
+        if (!alive) return;
+        setSource(s);
+        setPage(s?.location?.volumePage || 1);
+      })
       .catch(() => { if (alive) setSource(null); })
       .finally(() => { if (alive) setResolving(false); });
     return () => { alive = false; };
@@ -44,6 +50,7 @@ export default function SourceDocumentDialog({ item, itemId, onClose }) {
   const fileUrl = record?.file_url || record?.external_url || '';
   const transcript = record?.transcribed_text || record?.description || '';
   const scannedVolume = source?.scans;
+  const location = source?.location || null;
 
   return (
     <div className="fixed inset-0 z-[70] bg-black/85 animate-fade-in overflow-y-auto" onClick={onClose}>
@@ -97,7 +104,20 @@ export default function SourceDocumentDialog({ item, itemId, onClose }) {
                         </p>
                       )}
                     </div>
-                    <iframe src={scannedVolume.file_url} title={scannedVolume.title || 'Scanned originals'} className="w-full rounded-lg border border-[rgba(201,145,58,0.15)] bg-[#0D0B0A]" style={{ height: '55vh' }} />
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs text-parchment/50">
+                        {location
+                          ? <>Bundle {location.bundle} page {String(location.page).padStart(2, '0')}{location.page2 ? `–${String(location.page2).padStart(2, '0')}` : ''} — opened at volume page <span className="text-amber-light font-medium">{page}</span> of {VOLUME_PAGE_COUNT}</>
+                          : <>Opened at volume page <span className="text-amber-light font-medium">{page}</span> of {VOLUME_PAGE_COUNT}</>}
+                      </span>
+                      <div className="flex items-center gap-1 ml-auto">
+                        <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}
+                          className="px-2.5 py-1 rounded-md border border-[rgba(201,145,58,0.2)] text-amber-light/80 text-xs disabled:opacity-30 hover:bg-[rgba(201,145,58,0.1)] transition-colors">‹</button>
+                        <button onClick={() => setPage((p) => Math.min(VOLUME_PAGE_COUNT, p + 1))} disabled={page >= VOLUME_PAGE_COUNT}
+                          className="px-2.5 py-1 rounded-md border border-[rgba(201,145,58,0.2)] text-amber-light/80 text-xs disabled:opacity-30 hover:bg-[rgba(201,145,58,0.1)] transition-colors">›</button>
+                      </div>
+                    </div>
+                    <iframe key={page} src={withPage(scannedVolume.file_url, page)} title={scannedVolume.title || 'Scanned originals'} className="w-full rounded-lg border border-[rgba(201,145,58,0.15)] bg-[#0D0B0A]" style={{ height: '55vh' }} />
                   </div>
                 ) : (
                   <div className="rounded-lg bg-[#0D0B0A] border border-[rgba(201,145,58,0.15)] px-4 py-3">
@@ -118,7 +138,7 @@ export default function SourceDocumentDialog({ item, itemId, onClose }) {
 
                 <div className="flex flex-wrap items-center gap-2">
                   {(fileUrl || scannedVolume?.file_url) && (
-                    <a href={fileUrl || scannedVolume.file_url} target="_blank" rel="noopener noreferrer"
+                    <a href={fileUrl || withPage(scannedVolume.file_url, page)} target="_blank" rel="noopener noreferrer"
                       className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[rgba(201,145,58,0.1)] border border-[rgba(201,145,58,0.2)] text-amber-light text-xs font-medium hover:bg-[rgba(201,145,58,0.15)] transition-colors">
                       <ExternalLink size={13} /> Open in new tab
                     </a>
