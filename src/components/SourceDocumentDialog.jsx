@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { X, Loader2, ExternalLink, FileText, Quote, ScrollText } from 'lucide-react';
+import { X, Loader2, ExternalLink, FileText, Quote, ScrollText, BookOpen } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import { resolveSourceRecord } from '@/lib/sourceDocument';
 
 const isPdfUrl = (url) => /\.pdf(?:$|\?)/i.test(url || '');
 const isImageUrl = (url) => /\.(png|jpe?g|gif|webp|bmp|svg)(?:$|\?)/i.test(url || '');
@@ -9,10 +10,13 @@ const isImageUrl = (url) => /\.(png|jpe?g|gif|webp|bmp|svg)(?:$|\?)/i.test(url |
 /**
  * Opens the originating document for a record so an approver can see exactly
  * what is being approved. Accepts either a loaded `item` or an `itemId` to fetch.
+ * Text-only records resolve back to the scanned volume their text was read from.
  */
 export default function SourceDocumentDialog({ item, itemId, onClose }) {
   const [record, setRecord] = useState(item || null);
   const [loading, setLoading] = useState(!item && !!itemId);
+  const [source, setSource] = useState(null);
+  const [resolving, setResolving] = useState(false);
 
   useEffect(() => {
     if (item) { setRecord(item); setLoading(false); return; }
@@ -26,8 +30,20 @@ export default function SourceDocumentDialog({ item, itemId, onClose }) {
     return () => { alive = false; };
   }, [item, itemId]);
 
+  useEffect(() => {
+    if (!record || record.file_url) { setSource(null); return; }
+    let alive = true;
+    setResolving(true);
+    resolveSourceRecord(record)
+      .then((s) => { if (alive) setSource(s); })
+      .catch(() => { if (alive) setSource(null); })
+      .finally(() => { if (alive) setResolving(false); });
+    return () => { alive = false; };
+  }, [record]);
+
   const fileUrl = record?.file_url || record?.external_url || '';
   const transcript = record?.transcribed_text || record?.description || '';
+  const scannedVolume = source?.scans;
 
   return (
     <div className="fixed inset-0 z-[70] bg-black/85 animate-fade-in overflow-y-auto" onClick={onClose}>
@@ -65,6 +81,24 @@ export default function SourceDocumentDialog({ item, itemId, onClose }) {
                       <p className="text-sm text-parchment/50">This evidence is not an image or PDF. Open it to view the original.</p>
                     </div>
                   )
+                ) : resolving ? (
+                  <div className="flex justify-center py-10"><Loader2 size={20} className="text-gold animate-spin" /></div>
+                ) : scannedVolume ? (
+                  <div className="space-y-3">
+                    <div className="rounded-lg bg-[#0D0B0A] border border-[rgba(201,145,58,0.2)] px-4 py-3">
+                      <p className="text-xs text-parchment/60">
+                        This entry carries no scan of its own — its text was read from the correspondence scans
+                        {source?.reference ? <> and is filed at <span className="text-amber-light font-medium">{source.reference}</span></> : ''}.
+                        The scanned originals are open below so you can check it.
+                      </p>
+                      {source?.letters?.length > 0 && (
+                        <p className="text-xs text-parchment/40 mt-1.5">
+                          Read from: {source.letters.map((l) => `${l.fv}${l.ref ? ` (scan ${l.ref})` : ''}`).join(' · ')}
+                        </p>
+                      )}
+                    </div>
+                    <iframe src={scannedVolume.file_url} title={scannedVolume.title || 'Scanned originals'} className="w-full rounded-lg border border-[rgba(201,145,58,0.15)] bg-[#0D0B0A]" style={{ height: '55vh' }} />
+                  </div>
                 ) : (
                   <div className="rounded-lg bg-[#0D0B0A] border border-[rgba(201,145,58,0.15)] px-4 py-3">
                     <p className="text-xs text-parchment/50">
@@ -83,10 +117,16 @@ export default function SourceDocumentDialog({ item, itemId, onClose }) {
                 )}
 
                 <div className="flex flex-wrap items-center gap-2">
-                  {fileUrl && (
-                    <a href={fileUrl} target="_blank" rel="noopener noreferrer"
+                  {(fileUrl || scannedVolume?.file_url) && (
+                    <a href={fileUrl || scannedVolume.file_url} target="_blank" rel="noopener noreferrer"
                       className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[rgba(201,145,58,0.1)] border border-[rgba(201,145,58,0.2)] text-amber-light text-xs font-medium hover:bg-[rgba(201,145,58,0.15)] transition-colors">
                       <ExternalLink size={13} /> Open in new tab
+                    </a>
+                  )}
+                  {!fileUrl && source?.transcript?.file_url && (
+                    <a href={source.transcript.file_url} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[rgba(201,145,58,0.06)] border border-[rgba(201,145,58,0.15)] text-amber-light/80 text-xs hover:text-amber-light transition-colors">
+                      <BookOpen size={13} /> Open transcript
                     </a>
                   )}
                   {record.id && (

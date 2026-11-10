@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, Check, MapPin, Award, FileText, Eye, Calendar, Image as ImageIcon, Newspaper, BookUser, IdCard, Mail, Heart, HelpCircle, X, Network, User, Users, Video, Music, Link2, MessageSquare, UserPlus, Trash2, AlertTriangle, ExternalLink } from 'lucide-react';
+import { Loader2, Check, MapPin, Award, FileText, Eye, Calendar, Image as ImageIcon, Newspaper, BookUser, IdCard, Mail, Heart, HelpCircle, X, Network, User, Users, Video, Music, Link2, MessageSquare, UserPlus, Trash2, AlertTriangle, ExternalLink, FileSearch } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import SourceDocumentDialog from '@/components/SourceDocumentDialog';
 import TagInput from '@/components/TagInput';
 import LocationPicker from '@/components/LocationPicker';
 import MentionTextarea from '@/components/MentionTextarea';
@@ -34,6 +35,7 @@ export default function AdminEventEditor({ item, onApproved, onDeleted }) {
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [locationPickerOpen, setLocationPickerOpen] = useState(false);
+  const [sourceOpen, setSourceOpen] = useState(false);
   const [familyLink, setFamilyLink] = useState(null);
   const [externalUrl, setExternalUrl] = useState('');
   const [comment, setComment] = useState('');
@@ -189,10 +191,18 @@ export default function AdminEventEditor({ item, onApproved, onDeleted }) {
           </div>
         </div>
       ) : (
-        <div className="rounded-lg bg-[#0D0B0A] border border-[rgba(201,145,58,0.12)] px-4 py-3">
-          <p className="text-xs text-parchment/40">No document attached to this entry — it was recorded from text, so there is nothing to open.</p>
+        <div className="rounded-lg bg-[#0D0B0A] border border-[rgba(201,145,58,0.15)] px-4 py-3 flex flex-wrap items-center gap-3">
+          <p className="text-xs text-parchment/40 flex-1">
+            No scan is filed against this entry. Its text was read from the correspondence scans — open the source to check it.
+          </p>
+          <button onClick={() => setSourceOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(201,145,58,0.1)] border border-[rgba(201,145,58,0.2)] text-amber-light text-xs font-medium hover:bg-[rgba(201,145,58,0.15)] transition-colors flex-shrink-0">
+            <FileSearch size={12} /> Find the source
+          </button>
         </div>
       )}
+
+      {sourceOpen && <SourceDocumentDialog item={item} onClose={() => setSourceOpen(false)} />}
 
       {/* Content type selector */}
       <div className="aged-card rounded-xl p-4">
