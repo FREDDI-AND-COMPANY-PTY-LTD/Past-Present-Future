@@ -69,6 +69,7 @@ Also extract, when present in the text:
 9. publication_location \u2014 the place where the document was issued or published (e.g. the newspaper's city, the registry office city). Only if clearly distinct from the event location.
 10. statements \u2014 every factual claim the text makes about a person, one entry each: the claim in one plain sentence, the person it is about, the record field it feeds (birth_date, birth_place, death_date, death_place, full_name, maiden_name, residence_place, occupation, other), the value exactly as the text states it, and its evidence grade.
 11. coverage \u2014 an honest audit of how much of the text you actually used.
+12. scan_reference \u2014 the page locator that identifies which page of the scanned source volume this text sits on. Look for a printed bundle-and-page stamp (e.g. "003233 p.04", "003219 p.07-08"), a print footer such as "Page 2 of 5", a handwritten page number, or an explicit "Scan source:" line. Copy it EXACTLY as printed, including any page range. Empty string if the text carries no locator \u2014 never invent one.
 
 EVIDENCE GRADING \u2014 grade every statement, and never upgrade a grade:
 - "documented": the text quotes or reproduces an official record, register, certificate or published notice, and the claim comes from that document.
@@ -92,6 +93,7 @@ Return JSON with this structure:
   "chronicle_snippet": "",
   "publication_date": "",
   "publication_location": "",
+  "scan_reference": "",
   "statements": [{ "claim": "", "person": "", "field": "", "value": "", "grade": "documented|testimony|hypothesis" }],
   "coverage": {
     "read_fully": true,
@@ -130,6 +132,7 @@ Return JSON with this structure:
           chronicle_snippet: { type: 'string' },
           publication_date: { type: 'string' },
           publication_location: { type: 'string' },
+          scan_reference: { type: 'string' },
           statements: {
             type: 'array',
             items: {
@@ -191,6 +194,12 @@ Return JSON with this structure:
     }
     if (!item.publication_location_name && result.publication_location) {
       update.publication_location_name = result.publication_location;
+    }
+
+    // The page locator lets the source viewer open the exact page of the scans.
+    // Keep whatever the record already carries; only fill a blank one.
+    if (!item.scan_reference && result.scan_reference) {
+      update.scan_reference = result.scan_reference.trim();
     }
 
     await base44.asServiceRole.entities.ContentItem.update(contentItemId, update);

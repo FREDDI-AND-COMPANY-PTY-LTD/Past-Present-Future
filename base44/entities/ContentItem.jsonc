@@ -27,6 +27,20 @@
         "uncategorized"
       ],
       "default": "photo",
+      "enumColors": [
+        "blue",
+        "purple",
+        "yellow",
+        "pink",
+        "yellow",
+        "green",
+        "purple",
+        "blue",
+        "blue",
+        "yellow",
+        "gray",
+        "gray"
+      ],
       "description": "Type of content \u2014 'uncategorized' is used when the AI cannot confidently classify the image"
     },
     "ancestor_ids": {
@@ -247,6 +261,15 @@
         "document",
         "landscape"
       ],
+      "enumColors": [
+        "blue",
+        "purple",
+        "yellow",
+        "green",
+        "pink",
+        "gray",
+        "blue"
+      ],
       "description": "AI-detected shot type \u2014 determines how the image is cropped when thumbnailed. closeup/portrait = face is focal; mid_shot = upper body; long_shot = full scene; group_photo = center of group; document = text/heading area; landscape = center of scene."
     },
     "crop_bounds": {
@@ -329,6 +352,12 @@
         "resolved",
         "dismissed"
       ],
+      "enumColors": [
+        "gray",
+        "yellow",
+        "green",
+        "gray"
+      ],
       "default": "none",
       "description": "Conflict flag status"
     },
@@ -339,6 +368,11 @@
         "reviewed",
         "flagged"
       ],
+      "enumColors": [
+        "yellow",
+        "green",
+        "red"
+      ],
       "default": "pending",
       "description": "Admin review status for this uploaded content"
     },
@@ -348,6 +382,14 @@
         "type": "string"
       },
       "description": "Additional tags"
+    },
+    "scan_reference": {
+      "type": "string",
+      "description": "Page locator read off the source itself during classification \u2014 the printed bundle and page stamp (e.g. '003233 p.04'), a 'Page 2 of 5' print footer, or a volume page number. Used to open the exact page of the scanned volume this record was taken from."
+    },
+    "scan_page": {
+      "type": "number",
+      "description": "The volume page this record actually sits on, resolved from scan_reference or the letter's verified page in the scanned volume. Drives the page the source viewer opens at."
     }
   },
   "required": [

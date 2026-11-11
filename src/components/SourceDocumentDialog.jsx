@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { X, Loader2, ExternalLink, FileText, Quote, ScrollText, BookOpen } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
-import { resolveSourceRecord, VOLUME_PAGE_COUNT } from '@/lib/sourceDocument';
+import { resolveSourceRecord } from '@/lib/sourceDocument';
+import { VOLUME_PAGE_COUNT } from '@/lib/correspondencePageIndex';
 
 const isPdfUrl = (url) => /\.pdf(?:$|\?)/i.test(url || '');
 const isImageUrl = (url) => /\.(png|jpe?g|gif|webp|bmp|svg)(?:$|\?)/i.test(url || '');
@@ -106,9 +107,13 @@ export default function SourceDocumentDialog({ item, itemId, onClose }) {
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-xs text-parchment/50">
-                        {location
-                          ? <>Bundle {location.bundle} page {String(location.page).padStart(2, '0')}{location.page2 ? `–${String(location.page2).padStart(2, '0')}` : ''} — opened at volume page <span className="text-amber-light font-medium">{page}</span> of {VOLUME_PAGE_COUNT}</>
-                          : <>Opened at volume page <span className="text-amber-light font-medium">{page}</span> of {VOLUME_PAGE_COUNT}</>}
+                        {location?.bundle ? (
+                          <>Bundle {location.bundle} page {String(location.page).padStart(2, '0')}{location.page2 ? `–${String(location.page2).padStart(2, '0')}` : ''} — opened at volume page <span className="text-amber-light font-medium">{page}</span> of {VOLUME_PAGE_COUNT}</>
+                        ) : location?.volumePage ? (
+                          <>{location.letter ? <>{location.letter} — </> : null}volume page <span className="text-amber-light font-medium">{page}</span>{location.volumePage2 ? `–${location.volumePage2}` : ''} of {VOLUME_PAGE_COUNT}</>
+                        ) : (
+                          <>Page <span className="text-amber-light font-medium">{page}</span> of {VOLUME_PAGE_COUNT}</>
+                        )}
                       </span>
                       <div className="flex items-center gap-1 ml-auto">
                         <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}

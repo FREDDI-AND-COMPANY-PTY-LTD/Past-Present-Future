@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, Upload, FileText, Image as ImageIcon, Award, Loader2, Check, Sparkles, Newspaper, Tag, Link2, Search, UserPlus, BookUser, IdCard, Mail, Heart, HelpCircle, Eye, MessageSquare, AlertCircle, MapPin, Calendar, RefreshCw, X, Video, Music, Lock, Plus } from 'lucide-react';
+import { Camera, Upload, FileText, Image as ImageIcon, Award, Loader2, Check, Sparkles, Newspaper, Tag, Link2, Search, UserPlus, BookUser, IdCard, Mail, Heart, HelpCircle, Eye, MessageSquare, AlertCircle, MapPin, Calendar, RefreshCw, X, Video, Music, Lock, Plus, BookOpen } from 'lucide-react';
 import PublicationFields from '@/components/PublicationFields';
 import MissingFieldPrompts from '@/components/MissingFieldPrompts';
 import { base44 } from '@/api/base44Client';
@@ -99,6 +99,10 @@ export default function UploadEvent() {
   const [transcribedText, setTranscribedText] = useState('');
   const [suggestedTags, setSuggestedTags] = useState([]);
   const [rawAiAnalysis, setRawAiAnalysis] = useState(null);
+  // Page locator read off the source by the classifier (e.g. "003233 p.04"),
+  // so the archive can open the exact page of the scanned volume.
+  const [scanReference, setScanReference] = useState('');
+  const [scanPage, setScanPage] = useState(null);
   const [aiConfidence, setAiConfidence] = useState(null);
   const [categorizationNotes, setCategorizationNotes] = useState('');
   const [visualElements, setVisualElements] = useState(null);
@@ -261,6 +265,8 @@ HARD RULES:
 
 COVERAGE: report honestly what you did not read or did not extract — a cropped edge, illegible handwriting, a page you could not see.
 
+PAGE LOCATOR: every record is linked back to the exact page of the scanned source it came from, so read any page marking printed or written on the page itself — a bundle-and-page stamp (e.g. "003233 p.04"), a print footer such as "Page 2 of 5", a typed or handwritten page number, or a volume/page reference. Copy it exactly as printed, with any page range. Leave it empty when the page carries no such marking; never invent one.
+
 Return JSON with this structure:
 {
   "type": "photo" | "narrative" | "correspondence" | "press_clipping" | "passport" | "identity_document" | "certificate" | "memorial" | "uncategorized",
@@ -290,6 +296,8 @@ Return JSON with this structure:
     "era_indicators": ["visual clues about the time period — e.g. '1950s clothing style', 'sepia tone suggesting early 1900s', 'modern printed text'"],
     "notable_features": ["any other notable visual features — e.g. 'official stamp in corner', 'watermark visible', 'torn edges', 'photograph within a photograph'"]
   },
+  "scan_reference": "the page locator printed on this page, verbatim (e.g. '003233 p.04', 'Page 2 of 5'), or empty string if there is none",
+  "scan_page": 0 (the page number printed on this page as a number, or 0 when no page number is printed),
   "suggested_title": "a short descriptive title for this item, including the type and primary person/place if known (e.g. 'Birth Certificate — Giuseppe Freddi (1898)', 'Group Photo at Beach — circa 1950', 'Concert Ticket — Melbourne Town Hall')",
   "suggested_description": "a brief description of what this item is and its potential significance to family history",
   "claims": [{ "claim": "", "person": "", "field": "", "value": "", "grade": "documented|testimony|hypothesis" }],
@@ -325,6 +333,8 @@ Return JSON with this structure:
             },
           },
           event_date: { type: 'string' },
+          scan_reference: { type: 'string' },
+          scan_page: { type: 'number' },
           visual_elements: { type: 'object' },
           suggested_title: { type: 'string' },
           suggested_description: { type: 'string' },
@@ -363,6 +373,8 @@ Return JSON with this structure:
     if (result.ai_confidence !== undefined) setAiConfidence(result.ai_confidence);
     if (result.categorization_notes) setCategorizationNotes(result.categorization_notes);
     setRawAiAnalysis(result);
+    setScanReference(result.scan_reference || '');
+    setScanPage(result.scan_page ? Number(result.scan_page) : null);
 
     // ── Ancestor name matching ──
     const allTextSources = [
@@ -717,6 +729,8 @@ Return JSON with this structure:
     setAttachToProfile(false);
     setAncestorSearch('');
     setRawAiAnalysis(null);
+    setScanReference('');
+    setScanPage(null);
     setAiConfidence(null);
     setCategorizationNotes('');
     setVisualElements(null);
@@ -799,6 +813,8 @@ Return JSON with this structure:
         transcribed_text: transcribedText || null,
         extracted_fields: { ...extractedData, document_subtype: documentSubtype } || null,
         raw_ai_analysis: rawAiAnalysis || null,
+        scan_reference: scanReference || null,
+        scan_page: scanPage || null,
         ai_confidence: aiConfidence,
         categorization_notes: needsReview
           ? `${categorizationNotes || ''}\n\n⚠ FLAGGED FOR ADMIN REVIEW — Missing data:\n${missingNotes.join('\n')}`.trim()
@@ -1300,6 +1316,11 @@ Return JSON with this structure:
                 </div>
                 {categorizationNotes && (
                   <p className="text-xs text-parchment/50 leading-relaxed">{categorizationNotes}</p>
+                )}
+                {(scanReference || scanPage) && (
+                  <p className="text-xs text-amber-light/70 mt-2 flex items-center gap-1.5">
+                    <BookOpen size={12} /> Source page: {scanReference || `page ${scanPage}`}
+                  </p>
                 )}
               </div>
             )}
