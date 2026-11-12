@@ -6,7 +6,35 @@
 //   { item_a, item_b, confidence, reason }
 // and `scanned` is the number of candidate pairs compared.
 
-export async function detectDuplicateContentPairs(base44, items) {
+const normalise = (s) =>
+  (s || '').toLowerCase().replace(/fv-?\d+[a-z]?/g, ' ').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+const titleTokens = (s) => new Set(normalise(s).split(' ').filter((w) => w.length > 2));
+const titleSimilarity = (a, b) => {
+  const A = titleTokens(a), B = titleTokens(b);
+  if (!A.size || !B.size) return 0;
+  let shared = 0;
+  for (const w of A) if (B.has(w)) shared++;
+  return shared / (A.size + B.size - shared);
+};
+
+// Cheap, non-AI signal that two items could be the same document. Without it the
+// scan sends every sharing-ancestor pair to the model (over a thousand), which
+// makes the run time out. A shared date, a similar title, or two untitled images
+// are the realistic ways the same file gets logged twice.
+const hasDuplicateSignal = (a, b) => {
+  if (a.file_url && b.file_url && a.file_url === b.file_url) return true;
+  if (a.date && b.date && a.date === b.date) return true;
+  if (titleSimilarity(a.title, b.title) >= 0.5) return true;
+  if (a.file_url && b.file_url) {
+    const generic = !normalise(a.title) || !normalise(b.title)
+      || titleTokens(a.title).size < 3 || titleTokens(b.title).size < 3;
+    if (generic) return true;
+  }
+  return false;
+};
+
+export async function detectDuplicateContentPairs(base44, items, options = {}) {
+  const skipPairKeys = options.skipPairKeys || new Set();
   // Group items by shared ancestor_ids so we only compare items that have at least one ancestor in common
   const groups = new Map(); // ancestorId -> [items]
   for (const item of items) {
@@ -30,6 +58,9 @@ export async function detectDuplicateContentPairs(base44, items) {
         if (!a.file_url && !b.file_url) continue;
         const pairKey = `${a.id}|${b.id}`;
         if (comparedPairs.has(pairKey)) continue;
+        // Already flagged in a previous run — no need to ask the model again.
+        if (skipPairKeys.has(pairKey) || skipPairKeys.has(`${b.id}|${a.id}`)) continue;
+        if (!hasDuplicateSignal(a, b)) continue;
         comparedPairs.add(pairKey);
         candidatePairs.push({ itemA: a, itemB: b });
       }

@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      const { pairs } = await detectDuplicateContentPairs(base44, branchItems);
+      const { pairs } = await detectDuplicateContentPairs(base44, branchItems, { skipPairKeys: knownPairKeys });
 
       const newPairs = [];
       const runSeen = new Set();

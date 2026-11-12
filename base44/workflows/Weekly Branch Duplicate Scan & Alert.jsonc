@@ -1,15 +1,13 @@
 {
-  "name": "Nightly Branch Duplicate Scan & Alert",
-  "description": "Each night, scans every administered branch's bloodline for duplicate content and emails the branch admin when new duplicate pairs are found (persisted as open conflict flags so they aren't re-reported).",
   "trigger": {
     "condition": null,
     "config": {
       "trigger_type": "scheduled",
       "events": [],
       "schedule_mode": "recurring",
-      "cron_expression": "0 17 * * *",
+      "cron_expression": "0 4 * * 1",
       "one_time_date": null,
-      "timezone": "UTC",
+      "timezone": "Australia/Sydney",
       "interval_value": null,
       "interval_unit": null,
       "interval_anchor": null,
@@ -21,7 +19,7 @@
   "definition": {
     "document": {
       "dsl": "1.0.0",
-      "name": "nightly_branch_duplicate_scan_alert",
+      "name": "weekly_branch_duplicate_scan_alert",
       "version": "1.0",
       "namespace": "base44"
     },
@@ -33,12 +31,15 @@
             "function_name": "scheduledBranchDuplicateAlerts",
             "args": {}
           },
-          "then": "end"
+          "then": "end",
+          "x-base44": {
+            "title": "Scan bloodlines for duplicates",
+            "description": "Runs the duplicate scan and flags new pairs"
+          }
         }
       }
     ]
   },
-  "x-base44-migrated-from-automation": {
-    "legacy_payload_function": "scheduledBranchDuplicateAlerts"
-  }
+  "description": "Every Monday morning, scans each administered branch's bloodline for duplicate content and raises a task for the branch admin when new duplicate pairs are found (persisted as open conflict flags so they aren't re-reported).",
+  "name": "Weekly Branch Duplicate Scan & Alert"
 }
