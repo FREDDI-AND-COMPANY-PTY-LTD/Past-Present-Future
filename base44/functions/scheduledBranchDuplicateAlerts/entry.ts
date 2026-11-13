@@ -112,7 +112,7 @@ Deno.serve(async (req) => {
         author_id: null,
         author_name: 'Automated Duplicate Scan',
         content:
-          `${newPairs.length} new potential duplicate ${newPairs.length > 1 ? 'entries were' : 'entry was'} detected in the ${branch.name} bloodline during the nightly archive scan:\n\n` +
+          `${newPairs.length} new potential duplicate ${newPairs.length > 1 ? 'entries were' : 'entry was'} detected in the ${branch.name} bloodline during the weekly archive scan:\n\n` +
           `${list}\n\n` +
           `Review and resolve them under Branch Admin \u2192 Branch Review \u2192 Duplicates (click "Scan for Duplicates").`,
         tagged_user_ids: [branch.admin_user_id],
