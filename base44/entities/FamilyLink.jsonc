@@ -100,6 +100,32 @@
     "created_by_name": {
       "type": "string",
       "description": "Display name of the uploader"
+    },
+    "review_state": {
+      "type": "string",
+      "enum": [
+        "open",
+        "later",
+        "resolved",
+        "dismissed"
+      ],
+      "enumColors": [
+        "yellow",
+        "blue",
+        "green",
+        "gray"
+      ],
+      "default": "open",
+      "description": "Shared review lifecycle used by the Review page \u2014 independent of 'status', which keeps its existing meaning"
+    },
+    "review_note": {
+      "type": "string",
+      "description": "Review note recorded against the shared review lifecycle"
+    },
+    "reviewed_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this record was last moved through the review lifecycle"
     }
   },
   "required": [
