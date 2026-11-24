@@ -25,7 +25,12 @@ export async function requireReviewer(base44) {
     base44.asServiceRole.entities.ContentItem.list('-created_date', 500).catch(() => []),
   ]);
 
-  const rootIds = myBranches.map((b) => b.ancestor_id).filter(Boolean);
+  // Roots of every branch the caller administers — whether by Branch.admin_user_id
+  // or by User.data.admin_branch_ids — so both routes scope the descendants.
+  const rootIds = (branches || [])
+    .filter((b) => adminBranchIds.has(b.id))
+    .map((b) => b.ancestor_id)
+    .filter(Boolean);
   const ancestorIds = new Set(rootIds);
   let changed = true;
   while (changed) {
