@@ -16,6 +16,7 @@ import FamilyTree from '@/pages/FamilyTree';
 import UploadEvent from '@/pages/UploadEvent';
 import AdminDashboard from '@/pages/AdminDashboard';
 import BranchAdminDashboard from '@/pages/BranchAdminDashboard';
+import Review from '@/pages/Review';
 
 import ContentDetail from '@/pages/ContentDetail';
 import Branches from '@/pages/Branches';
@@ -74,6 +75,7 @@ const AuthenticatedApp = () => {
         <Route path="/upload" element={<UploadEvent />} />
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/branch-admin" element={<BranchAdminDashboard />} />
+        <Route path="/app/review" element={<Review />} />
 
         <Route path="/content/:id" element={<ContentDetail />} />
         <Route path="/branches" element={<Branches />} />

@@ -90,6 +90,8 @@ export default async function (req) {
       const isDuplicate = f.flag_type === 'duplicate_upload' || f.flag_type === 'duplicate_ancestor';
       let title = `Disputed: ${f.field_name || 'record'}`;
       let compare = [row('Field', f.field_name, '')];
+      let where = 'Archive record';
+      let survivor_options = null;
 
       if (f.flag_type === 'duplicate_upload') {
         const a = itemsById.get(f.content_item_id);
@@ -101,6 +103,11 @@ export default async function (req) {
           row('Location', a?.location_name, b?.location_name),
           row('Scan filed', a?.file_url ? 'yes' : 'no', b?.file_url ? 'yes' : 'no'),
         ];
+        where = a?.location_name || b?.location_name || 'Archive item';
+        survivor_options = [
+          { id: f.content_item_id, label: itemTitle(f.content_item_id) },
+          { id: f.duplicate_of_content_item_id, label: f.duplicate_of_content_item_title || itemTitle(f.duplicate_of_content_item_id) },
+        ].filter((o, i, arr) => o.id && arr.findIndex((x) => x.id === o.id) === i);
       } else if (f.flag_type === 'duplicate_ancestor') {
         const a = ancestorsById.get(f.ancestor_id);
         const b = ancestorsById.get(f.duplicate_of_ancestor_id);
@@ -111,8 +118,14 @@ export default async function (req) {
           row('Birth place', a?.birth_place, b?.birth_place),
           row('Died', a?.death_date, b?.death_date),
         ];
+        where = a?.bloodline || b?.bloodline || 'Ancestor profiles';
+        survivor_options = [
+          { id: f.ancestor_id, label: ancestorName(f.ancestor_id) },
+          { id: f.duplicate_of_ancestor_id, label: f.duplicate_of_ancestor_name || ancestorName(f.duplicate_of_ancestor_id) },
+        ].filter((o, i, arr) => o.id && arr.findIndex((x) => x.id === o.id) === i);
       } else {
         if (f.content_item_id) title = `Disputed: ${itemTitle(f.content_item_id)}`;
+        where = f.content_item_id ? itemTitle(f.content_item_id) : (f.bloodline || 'Archive record');
         const competing = f.competing_values || {};
         const keys = Object.keys(competing);
         if (keys.length) {
@@ -127,6 +140,8 @@ export default async function (req) {
         scope: flagInBranch(f) ? 'branch' : 'global',
         title,
         subtitle: short(f.dispute_description, 220),
+        where,
+        survivor_options,
         confidence: f.duplicate_confidence ?? null,
         priority: isDuplicate && (f.duplicate_confidence || 0) >= 0.85 ? 'high' : 'medium',
         created_date: f.created_date,
@@ -142,6 +157,7 @@ export default async function (req) {
       scope: linkInBranch(l) ? 'branch' : 'global',
       title: `${l.subject_name || ancestorName(l.subject_ancestor_id)} — family link`,
       subtitle: short(l.content_item_title || 'Relationships extracted from a certificate', 220),
+      where: l.content_item_title || 'Certificate upload',
       confidence: null,
       priority: 'medium',
       created_date: l.created_date,
@@ -164,6 +180,7 @@ export default async function (req) {
         scope: editInBranch(r) ? 'branch' : 'global',
         title: r.content_item_title || 'Edit request',
         subtitle: short(r.reason || 'Proposed changes to this record', 220),
+        where: r.content_item_title || 'Archive record',
         confidence: null,
         priority: 'medium',
         created_date: r.created_date,
@@ -179,6 +196,7 @@ export default async function (req) {
       scope: problemInBranch(p) ? 'branch' : 'global',
       title: p.title || 'Problem report',
       subtitle: short(p.description, 220),
+      where: p.branch_name || 'Archive-wide',
       confidence: null,
       priority: p.priority || 'medium',
       created_date: p.created_date,
@@ -201,6 +219,7 @@ export default async function (req) {
         scope: assertionInBranch(a) ? 'branch' : 'global',
         title: `${a.subject_label || ancestorName(a.subject_id)} — ${a.field_name || 'claim'}`,
         subtitle: short(a.value_display || a.value, 220),
+        where: a.source_label || ancestorName(a.subject_id),
         confidence: null,
         priority: a.conflict ? 'high' : 'medium',
         created_date: a.created_date,
@@ -219,6 +238,7 @@ export default async function (req) {
       scope: commentInBranch(c) ? 'branch' : 'global',
       title: `Tagged by ${c.author_name || 'a family member'}`,
       subtitle: short(c.content, 220),
+      where: c.entity_type === 'Ancestor' ? ancestorName(c.entity_id) : itemTitle(c.entity_id),
       confidence: null,
       priority: c.is_query ? 'high' : 'medium',
       created_date: c.created_date,

@@ -100,6 +100,9 @@ export default async function (req) {
         if (!pair.a || !pair.b) {
           return Response.json({ error: 'This duplicate pair is incomplete and cannot be merged' }, { status: 400 });
         }
+        if (pair.a === pair.b) {
+          return Response.json({ error: 'This duplicate flag points at a single record — dismiss it instead of merging' }, { status: 400 });
+        }
         const keep = survivor_id && (survivor_id === pair.a || survivor_id === pair.b) ? survivor_id : pair.b;
         const remove = keep === pair.a ? pair.b : pair.a;
 
