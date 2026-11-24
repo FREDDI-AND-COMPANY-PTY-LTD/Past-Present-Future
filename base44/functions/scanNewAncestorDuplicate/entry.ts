@@ -73,8 +73,9 @@ Deno.serve(async (req) => {
       return Response.json({ message: 'No family-name duplicates found', ancestor_id: entityId, candidates: 0 });
     }
 
-    // Avoid re-flagging a pair that already has an open duplicate_ancestor flag.
-    const existingFlags = await asRole.entities.ConflictFlag.filter({ flag_type: 'duplicate_ancestor', status: 'open' });
+    // Avoid re-flagging a pair that already has a flag — dismissed pairs were
+    // reviewed and recorded as "not a match", so they are never raised again.
+    const existingFlags = await asRole.entities.ConflictFlag.filter({ flag_type: 'duplicate_ancestor', status: { $in: ['open', 'dismissed'] } });
     const pairAlreadyFlagged = (xId, yId) => (existingFlags || []).some((f) =>
       (f.ancestor_id === xId && f.duplicate_of_ancestor_id === yId) ||
       (f.ancestor_id === yId && f.duplicate_of_ancestor_id === xId)
