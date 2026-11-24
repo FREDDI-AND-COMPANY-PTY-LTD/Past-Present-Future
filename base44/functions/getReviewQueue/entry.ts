@@ -76,6 +76,26 @@ export default async function (req) {
 
     const isEscalated = (p) => p.source === 'branch_admin_request' || ESCALATED_CATEGORIES.includes(p.category);
 
+    // A claim only belongs in "contested facts" when it is genuinely in dispute:
+    // flagged as conflicting, carrying a disputed status, or backed by a related
+    // ConflictFlag / EditRequest on the same subject or citing item. Every other
+    // open assertion is simply the accepted record and stays out of the queue.
+    const DISPUTED_STATUSES = ['contested', 'disputed', 'challenged'];
+    const assertionInDispute = (a) => {
+      if (a.conflict === true) return true;
+      if (DISPUTED_STATUSES.includes(String(a.status || '').toLowerCase())) return true;
+      // Only a data dispute counts — a duplicate-profile flag is about the
+      // profile, not about this claim — and it must name the same field.
+      const relatedFlag = (flags || []).some((f) => {
+        if (f.flag_type !== 'dispute' && f.flag_type !== 'contested') return false;
+        if (a.source_content_item_id && f.content_item_id === a.source_content_item_id) return true;
+        if (!a.subject_id || f.ancestor_id !== a.subject_id) return false;
+        return !f.field_name || f.field_name === a.field_name;
+      });
+      if (relatedFlag) return true;
+      return (edits || []).some((r) => a.source_content_item_id && r.content_item_id === a.source_content_item_id);
+    };
+
     // Global scope for a branch admin = cross-branch items plus escalations;
     // a global admin sees everything.
     const select = (records, inBranch, escalated = null) => {
@@ -255,7 +275,7 @@ export default async function (req) {
       ...select(links || [], linkInBranch).map(normaliseLink),
       ...select(edits || [], editInBranch).map(normaliseEdit),
       ...select(problems || [], problemInBranch, isEscalated).map(normaliseProblem),
-      ...select(assertions || [], assertionInBranch).map(normaliseAssertion),
+      ...select((assertions || []).filter(assertionInDispute), assertionInBranch).map(normaliseAssertion),
       ...select((comments || []).filter((c) => (c.tagged_user_ids || []).includes(access.user.id)), commentInBranch).map(normaliseComment),
     ];
 
