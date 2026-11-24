@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Shield, UserPlus, Loader2, Check, X, GitBranch, Mail, Clock, AlertCircle, Upload, Users, Flag, Newspaper, LifeBuoy, Brain, Network, Heart, Edit3, Copy, Crop } from 'lucide-react';
+import { Shield, UserPlus, Loader2, Check, X, GitBranch, Mail, Clock, AlertCircle, Upload, Users, Newspaper, LifeBuoy, Brain, Network, Heart, Crop, ClipboardCheck, ArrowRight } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import BranchAdminInviteDialog from '@/components/BranchAdminInviteDialog';
@@ -12,10 +12,6 @@ import AdminUncategorized from '@/components/admin/AdminUncategorized';
 import AdminIncompleteUploads from '@/components/admin/AdminIncompleteUploads';
 import AdminNewAncestors from '@/components/admin/AdminNewAncestors';
 import AdminConnectAncestors from '@/components/admin/AdminConnectAncestors';
-import AdminEditRequests from '@/components/admin/AdminEditRequests';
-import AdminFamilyLinks from '@/components/admin/AdminFamilyLinks';
-import AdminDuplicateReview from '@/components/admin/AdminDuplicateReview';
-import AdminAncestorMergeReview from '@/components/admin/AdminAncestorMergeReview';
 
 const statusBadge = {
   pending: 'bg-[rgba(201,145,58,0.1)] text-amber-light border-[rgba(201,145,58,0.25)]',
@@ -31,9 +27,6 @@ const REVIEW_TABS = [
   { key: 'uncategorized', label: 'Uncategorized', icon: Brain },
   { key: 'ancestors', label: 'New Ancestors', icon: Users },
   { key: 'connect', label: 'Connect Tree', icon: Network },
-  { key: 'edits', label: 'Edits', icon: Edit3 },
-  { key: 'familyLinks', label: 'Family Links', icon: Heart },
-  { key: 'duplicates', label: 'Duplicates', icon: Copy },
 ];
 
 export default function BranchAdminDashboard() {
@@ -141,7 +134,7 @@ export default function BranchAdminDashboard() {
         (f.flag_type === 'duplicate_upload' || f.flag_type === 'duplicate_ancestor') &&
         ((f.ancestor_id && descIds.has(f.ancestor_id)) || branchContent.some(i => i.id === f.content_item_id))
       ).length;
-      const tabCounts = { uploads: pendingUploadCount, incomplete: flaggedCount, uncategorized: uncategorizedNum, ancestors: stagedCount, connect: 0, edits: editReqCount, familyLinks: famLinkCount, duplicates: dupFlagCount };
+      const tabCounts = { uploads: pendingUploadCount, incomplete: flaggedCount, uncategorized: uncategorizedNum, ancestors: stagedCount, connect: 0 };
       const firstWithItems = REVIEW_TABS.find(t => (tabCounts[t.key] || 0) > 0);
       setReviewTab(prev => prev || (firstWithItems ? firstWithItems.key : 'uploads'));
     } catch (e) {
@@ -164,6 +157,8 @@ export default function BranchAdminDashboard() {
   const uncategorizedCount = (branchItems || []).filter(i => i.content_type === 'uncategorized').length;
   const rootIdsSet = new Set((branches || []).filter(b => myBranches.some(mb => mb.id === b.id)).map(b => b.ancestor_id).filter(Boolean));
   const connectCount = (allAncestors || []).filter(a => !a.father_id && !a.mother_id && !a.partner_id && !rootIdsSet.has(a.id) && myBranches.some(b => b.id === a.branch_id)).length;
+  // Items that moved into the unified Review queue
+  const reviewQueueCount = editCount + familyLinkCount + duplicateFlagCount;
 
   const ancestorName = (id) => {
     if (!id) return '—';
@@ -370,7 +365,7 @@ export default function BranchAdminDashboard() {
                     editCount > 0 && `${editCount} edit request${editCount > 1 ? 's' : ''}`,
                     familyLinkCount > 0 && `${familyLinkCount} family link${familyLinkCount > 1 ? 's' : ''}`,
                     duplicateFlagCount > 0 && `${duplicateFlagCount} duplicate flag${duplicateFlagCount > 1 ? 's' : ''}`,
-                  ].filter(Boolean).join(' · ')}. Click a tab below to review and take action.
+                  ].filter(Boolean).join(' · ')}. Uploads and tree items are reviewed below — duplicates, family links and edit requests now live in the Review queue.
                 </>
               }
           </p>
@@ -383,9 +378,6 @@ export default function BranchAdminDashboard() {
                 : f.key === 'uncategorized' ? uncategorizedCount
                 : f.key === 'ancestors' ? newAncestors.length
                 : f.key === 'connect' ? connectCount
-                : f.key === 'edits' ? editCount
-                : f.key === 'familyLinks' ? familyLinkCount
-                : f.key === 'duplicates' ? duplicateFlagCount
                 : 0;
               return (
                 <button key={f.key} onClick={() => setReviewTab(f.key)}
@@ -402,14 +394,18 @@ export default function BranchAdminDashboard() {
             {reviewTab === 'uncategorized' && <AdminUncategorized scope={scope} />}
             {reviewTab === 'ancestors' && <AdminNewAncestors ancestors={newAncestors} onVerified={load} />}
             {reviewTab === 'connect' && <AdminConnectAncestors scope={scope} onResolved={load} />}
-            {reviewTab === 'edits' && <AdminEditRequests scope={scope} />}
-            {reviewTab === 'familyLinks' && <AdminFamilyLinks scope={scope} onResolved={load} />}
-            {reviewTab === 'duplicates' && (
-              <div className="space-y-6">
-                <AdminDuplicateReview duplicates={[]} onResolved={load} scope={scope} />
-                <AdminAncestorMergeReview scope={scope} />
+            <Link to="/app/review"
+              className="flex items-center gap-3 aged-card rounded-xl p-4 mt-2 hover:border-[rgba(201,145,58,0.4)] transition-colors">
+              <ClipboardCheck size={18} className="text-gold flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm text-parchment font-medium">Open the Review queue</p>
+                <p className="text-xs text-parchment/50">
+                  Duplicate pairs, family links, edit requests, disputes and escalations are resolved there
+                  {reviewQueueCount > 0 ? ` — ${reviewQueueCount} waiting` : ''}.
+                </p>
               </div>
-            )}
+              <ArrowRight size={16} className="text-amber-light flex-shrink-0" />
+            </Link>
           </div>
           {disputes.length > 0 && (
             <p className="text-xs text-parchment/40 mt-3">Open disputes in your branch: {disputes.length}. Cross-branch and contested disputes are resolved by the Global Admin — use "Escalate to Global Admin" if a dispute is stuck.</p>

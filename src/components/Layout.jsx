@@ -26,7 +26,6 @@ const navItems = [
   { label: 'Family Tree', path: '/family-tree', icon: Network },
   { label: 'Branches', path: '/branches', icon: GitBranch },
   { label: 'Upload Event', path: '/upload', icon: Upload },
-  { label: 'Tasks', path: '/tasks', icon: CheckSquare },
   { label: 'Dataset', path: '/archive-dataset', icon: Database },
   { label: 'Chronicle', path: '/newsletters', icon: Newspaper },
   { label: 'Trivia', path: '/quiz', icon: Brain },
@@ -63,12 +62,17 @@ export default function Layout({ children }) {
 
   const isAdmin = user?.role === 'admin';
 
+  // One review surface: reviewers land in the unified queue, everyone else keeps
+  // the lightweight task feed that escalates into that queue.
+  const isReviewer = isAdmin || isBranchAdmin;
   const navItemsWithAdmin = [
     ...navItems,
+    isReviewer
+      ? { label: 'Review', path: '/app/review', icon: ClipboardCheck }
+      : { label: 'My Tasks', path: '/tasks', icon: CheckSquare },
     { label: 'Branch Admin', path: '/branch-admin', icon: Shield },
     ...(isAdmin ? [{ label: 'Global Admin', path: '/admin', icon: Shield }] : []),
-    ...((isAdmin || isBranchAdmin) ? [{ label: 'Crop Re-edit', path: '/crop-reedit', icon: Crop }] : []),
-    ...((isAdmin || isBranchAdmin) ? [{ label: 'Review', path: '/app/review', icon: ClipboardCheck }] : []),
+    ...(isReviewer ? [{ label: 'Crop Re-edit', path: '/crop-reedit', icon: Crop }] : []),
   ];
 
   return (
@@ -77,7 +81,7 @@ export default function Layout({ children }) {
       <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-charcoal/95 backdrop-blur-md border-b border-[rgba(201,145,58,0.15)] px-4 h-16 flex items-center justify-between">
         <Link to={branchRootPath} className="relative font-display text-lg text-gold tracking-wide">
           {sidebarTitle}
-          <TaskNotificationBadge count={pendingTasks} />
+          <TaskNotificationBadge count={pendingTasks} to={isReviewer ? '/app/review' : '/tasks'} />
         </Link>
         <button onClick={() => setSidebarOpen(!sidebarOpen)} className="text-parchment p-2">
           {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
@@ -94,7 +98,7 @@ export default function Layout({ children }) {
           <Link to={branchRootPath} onClick={() => setSidebarOpen(false)} className="relative block">
             <h1 className="font-display text-xl text-gold tracking-wide leading-tight">{sidebarTitle}</h1>
             <p className="font-display text-xs text-amber-light/70 tracking-widest uppercase mt-1">Present, Past, Future</p>
-            <TaskNotificationBadge count={pendingTasks} />
+            <TaskNotificationBadge count={pendingTasks} to={isReviewer ? '/app/review' : '/tasks'} />
           </Link>
         </div>
 

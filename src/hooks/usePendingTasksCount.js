@@ -19,9 +19,12 @@ export function usePendingTasksCount() {
         if (!me || cancelled) return;
         const comments = await base44.entities.Comment.list('-created_date', 200);
         if (cancelled) return;
+        // Only a resolve or dismiss clears a tagged comment from the feed — a
+        // bare acknowledgement no longer removes it.
         const myTasks = (comments || []).filter(c =>
           c.tagged_user_ids?.includes(me.id) &&
-          !(c.acknowledged_by || []).includes(me.id)
+          c.review_state !== 'resolved' &&
+          c.review_state !== 'dismissed'
         );
         setCount(myTasks.length);
       } catch (e) {}

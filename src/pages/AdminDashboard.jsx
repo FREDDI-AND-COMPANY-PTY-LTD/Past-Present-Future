@@ -1,16 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Activity, Flag, AlertCircle, Inbox, Lightbulb, Shield, Loader2 } from 'lucide-react';
+import { Activity, ArrowRight, ClipboardCheck, Lightbulb, Shield, Loader2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
-import AdminProblems from '@/components/admin/AdminProblems';
 import AdminProposals from '@/components/admin/AdminProposals';
-import AdminDisputesList from '@/components/admin/AdminDisputesList';
 import AdminActivityFeed from '@/components/admin/AdminActivityFeed';
 
+// Disputes, escalations, duplicates, family links and edit requests all live in
+// the unified Review queue now — this dashboard keeps the override-only controls.
 const TOP_TABS = [
-  { key: 'disputes', label: 'Disputes & Flags', icon: Flag },
-  { key: 'problems', label: 'Escalations', icon: Inbox },
   { key: 'proposals', label: 'AI Proposals', icon: Lightbulb },
   { key: 'activity', label: 'Activity', icon: Activity },
 ];
@@ -22,28 +20,20 @@ export default function AdminDashboard() {
   const [user, setUser] = useState(null);
 
   const [logs, setLogs] = useState([]);
-  const [flags, setFlags] = useState([]);
-  const [problemCount, setProblemCount] = useState(0);
   const [proposalCount, setProposalCount] = useState(0);
 
   useEffect(() => {
     base44.auth.me().then(setUser).catch(() => {});
     Promise.all([
       base44.entities.ActivityLog.list('-created_date', 50),
-      base44.entities.ConflictFlag.filter({ status: 'open' }),
-      base44.entities.ProblemReport.filter({ status: 'open' }),
       base44.entities.Proposal.filter({ status: 'pending' }),
-    ]).then(([lg, fl, probs, props]) => {
+    ]).then(([lg, props]) => {
       setLogs(lg || []);
-      setFlags(fl || []);
-      setProblemCount((probs || []).length);
       setProposalCount((props || []).length);
     }).catch(() => {}).finally(() => setLoading(false));
   }, [refreshKey]);
 
   const topCounts = {
-    disputes: flags.length,
-    problems: problemCount,
     proposals: proposalCount,
     activity: logs.length,
   };
@@ -78,7 +68,7 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-8 mb-8">
+        <div className="grid grid-cols-2 gap-3 mt-8 mb-4">
           {TOP_TABS.map(t => {
             const Icon = t.icon;
             const isActive = tab === t.key;
@@ -95,12 +85,20 @@ export default function AdminDashboard() {
           })}
         </div>
 
+        <Link to="/app/review"
+          className="flex items-center gap-3 aged-card rounded-xl p-4 mb-8 hover:border-[rgba(201,145,58,0.4)] transition-colors">
+          <ClipboardCheck size={18} className="text-gold flex-shrink-0" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm text-parchment font-medium">Open the Review queue</p>
+            <p className="text-xs text-parchment/50">Disputes, escalations, duplicates, family links, edit requests and tagged comments are all reviewed there.</p>
+          </div>
+          <ArrowRight size={16} className="text-amber-light flex-shrink-0" />
+        </Link>
+
         {loading ? (
           <div className="space-y-3">{[1, 2, 3, 4].map(i => <div key={i} className="aged-card rounded-lg h-16 animate-pulse" />)}</div>
         ) : (
           <>
-            {tab === 'disputes' && <AdminDisputesList flags={flags} onResolved={() => setRefreshKey(k => k + 1)} />}
-            {tab === 'problems' && <AdminProblems refreshKey={refreshKey} />}
             {tab === 'proposals' && <AdminProposals refreshKey={refreshKey} />}
             {tab === 'activity' && <AdminActivityFeed logs={logs} />}
           </>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { CheckCircle2, MessageCircle, HelpCircle, Loader2, Bell, Bot, Tag, Shield } from 'lucide-react';
+import { MessageCircle, HelpCircle, Loader2, Bell, Bot, Tag, Send, ClipboardCheck, Check } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 
@@ -19,13 +19,18 @@ const SOURCE_LABELS = {
 
 const SOURCE_ICONS = { automation: Bot, message: HelpCircle, tag: Tag };
 
+const STATE_LABELS = {
+  open: 'Waiting on review',
+  later: 'Put aside for later',
+};
+
 export default function Tasks() {
   const [comments, setComments] = useState([]);
   const [contentItems, setContentItems] = useState({});
   const [user, setUser] = useState(null);
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [acknowledging, setAcknowledging] = useState(null);
+  const [sending, setSending] = useState(null);
 
   useEffect(() => {
     loadData();
@@ -46,10 +51,12 @@ export default function Tasks() {
       const itemMap = {};
       (allItems || []).forEach(i => { itemMap[i.id] = i; });
 
-      // Comments where this user is tagged and hasn't acknowledged
+      // Comments where this user is tagged and no admin has resolved or dismissed
+      // them yet — a bare acknowledgement no longer clears a task.
       const myTasks = (allComments || []).filter(c =>
         c.tagged_user_ids?.includes(currentUser.id) &&
-        !(c.acknowledged_by || []).includes(currentUser.id)
+        c.review_state !== 'resolved' &&
+        c.review_state !== 'dismissed'
       );
 
       setComments(myTasks);
@@ -61,16 +68,30 @@ export default function Tasks() {
 
   const isBranchAdmin = (branches || []).some(b => b.admin_user_id && user && b.admin_user_id === user.id);
 
-  const handleAcknowledge = async (commentId) => {
-    setAcknowledging(commentId);
+  // Who should pick this up: the admin of the record's branch, else the archive's admins.
+  const adminIdsFor = (comment) => {
+    const item = contentItems[comment.entity_id];
+    const admins = (branches || []).filter(b => b.admin_user_id);
+    const forBranch = item?.branch_id ? admins.filter(b => b.id === item.branch_id) : [];
+    const pool = forBranch.length ? forBranch : admins;
+    return [...new Set(pool.map(b => b.admin_user_id))].filter(id => id && id !== user?.id);
+  };
+
+  const isSent = (comment) => {
+    const ids = adminIdsFor(comment);
+    return ids.length > 0 && ids.every(id => (comment.tagged_user_ids || []).includes(id));
+  };
+
+  const handleSendToReview = async (comment) => {
+    const adminIds = adminIdsFor(comment);
+    if (!adminIds.length) return;
+    setSending(comment.id);
     try {
-      const comment = comments.find(c => c.id === commentId);
-      if (!comment) return;
-      const updatedAck = [...(comment.acknowledged_by || []), user.id];
-      await base44.entities.Comment.update(commentId, { acknowledged_by: updatedAck });
-      setComments(prev => prev.filter(c => c.id !== commentId));
+      const merged = [...new Set([...(comment.tagged_user_ids || []), ...adminIds])];
+      await base44.entities.Comment.update(comment.id, { tagged_user_ids: merged });
+      setComments(prev => prev.map(c => (c.id === comment.id ? { ...c, tagged_user_ids: merged } : c)));
     } catch (e) {}
-    setAcknowledging(null);
+    setSending(null);
   };
 
   const formatTime = (date) => {
@@ -81,17 +102,16 @@ export default function Tasks() {
     <Layout>
       <div className="px-6 lg:px-12 py-8 max-w-4xl mx-auto">
         <div className="mb-6">
-          <div className="flex items-center gap-2 mb-2">
-            {isBranchAdmin && <Shield size={20} className="text-gold" />}
-            <h1 className="font-display text-4xl text-parchment">
-              {isBranchAdmin ? 'Administrative Requests' : 'My Tasks'}
-            </h1>
-          </div>
+          <h1 className="font-display text-4xl text-parchment mb-2">My Tasks</h1>
           <p className="text-parchment/50 text-sm">
-            {isBranchAdmin
-              ? 'Requests landing on you as branch admin — automated prompts, tags, and messages requiring your attention. Acknowledge to clear each.'
-              : 'Comments and queries where you\'ve been tagged. Acknowledge them to clear your list.'}
+            Comments and queries where you've been tagged. Nothing clears from here until a branch admin resolves or dismisses it in the Review queue.
           </p>
+          {isBranchAdmin && (
+            <Link to="/app/review"
+              className="inline-flex items-center gap-1.5 mt-3 px-3 py-1.5 rounded-lg border border-[rgba(201,145,58,0.25)] text-amber-light text-xs hover:bg-[rgba(201,145,58,0.08)] transition-colors">
+              <ClipboardCheck size={13} /> Open the Review queue
+            </Link>
+          )}
         </div>
 
         {loading ? (
@@ -101,7 +121,7 @@ export default function Tasks() {
         ) : comments.length === 0 ? (
           <div className="aged-card rounded-2xl p-12 text-center">
             <Bell size={32} className="text-gold/40 mx-auto mb-3" />
-            <p className="text-parchment/50 text-sm">{isBranchAdmin ? 'No pending administrative requests — you\'re all caught up.' : 'You\'re all caught up — no pending tasks.'}</p>
+            <p className="text-parchment/50 text-sm">You're all caught up — no pending tasks.</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -109,6 +129,7 @@ export default function Tasks() {
               const item = contentItems[comment.entity_id];
               const source = sourceOf(comment);
               const SourceIcon = SOURCE_ICONS[source];
+              const sent = isSent(comment);
               return (
                 <div key={comment.id} className="aged-card rounded-xl p-5">
                   <div className="flex items-start gap-3 mb-3">
@@ -121,6 +142,9 @@ export default function Tasks() {
                         <span className="text-xs text-parchment/30">{formatTime(comment.created_date)}</span>
                         <span className={`px-2 py-0.5 rounded-full text-[10px] border ${source === 'automation' ? 'bg-[rgba(201,145,58,0.15)] text-amber-light border-[#C9913A]' : source === 'message' ? 'bg-[rgba(201,145,58,0.12)] text-amber-light border-[rgba(201,145,58,0.2)]' : 'bg-[rgba(201,145,58,0.06)] text-amber-light/80 border-[rgba(201,145,58,0.15)]'}`}>
                           {SOURCE_LABELS[source]}
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] border bg-[rgba(245,236,215,0.05)] text-parchment/50 border-[rgba(245,236,215,0.1)]">
+                          {STATE_LABELS[comment.review_state] || 'Waiting on review'}
                         </span>
                       </div>
                       <p className="text-sm text-parchment/70 leading-relaxed mb-3">{comment.content}</p>
@@ -137,14 +161,20 @@ export default function Tasks() {
                     </div>
                   </div>
                   <div className="flex justify-end">
-                    <button
-                      onClick={() => handleAcknowledge(comment.id)}
-                      disabled={acknowledging === comment.id}
-                      className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[rgba(201,145,58,0.1)] border border-[rgba(201,145,58,0.2)] text-amber-light text-xs font-medium hover:bg-[rgba(201,145,58,0.15)] transition-colors disabled:opacity-50"
-                    >
-                      {acknowledging === comment.id ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                      Acknowledge
-                    </button>
+                    {sent ? (
+                      <span className="flex items-center gap-1.5 px-3 py-2 text-xs text-parchment/40">
+                        <Check size={14} className="text-green-400" /> In your branch admin's Review queue
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => handleSendToReview(comment)}
+                        disabled={sending === comment.id}
+                        className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[rgba(201,145,58,0.1)] border border-[rgba(201,145,58,0.2)] text-amber-light text-xs font-medium hover:bg-[rgba(201,145,58,0.15)] transition-colors disabled:opacity-50"
+                      >
+                        {sending === comment.id ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                        Send to branch admin
+                      </button>
+                    )}
                   </div>
                 </div>
               );
