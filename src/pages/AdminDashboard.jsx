@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Activity, ArrowRight, ClipboardCheck, Lightbulb, Shield, Loader2 } from 'lucide-react';
+import { Activity, ArrowRight, ClipboardCheck, Lightbulb, Shield, Loader2, Wrench } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import Layout from '@/components/Layout';
 import AdminProposals from '@/components/admin/AdminProposals';
@@ -21,6 +21,20 @@ export default function AdminDashboard() {
 
   const [logs, setLogs] = useState([]);
   const [proposalCount, setProposalCount] = useState(0);
+  const [cleanupBusy, setCleanupBusy] = useState(false);
+  const [cleanupResult, setCleanupResult] = useState(null);
+
+  const runCleanup = async () => {
+    setCleanupBusy(true);
+    setCleanupResult(null);
+    try {
+      const res = await base44.functions.invoke('cleanupOrphanedDuplicateFlags', {});
+      setCleanupResult(res.data || null);
+    } catch (e) {
+      setCleanupResult({ error: e?.response?.data?.error || 'The cleanup could not run just now.' });
+    }
+    setCleanupBusy(false);
+  };
 
   useEffect(() => {
     base44.auth.me().then(setUser).catch(() => {});
@@ -94,6 +108,24 @@ export default function AdminDashboard() {
           </div>
           <ArrowRight size={16} className="text-amber-light flex-shrink-0" />
         </Link>
+
+        <div className="aged-card rounded-xl p-4 mb-8 flex flex-wrap items-center gap-3">
+          <Wrench size={18} className="text-gold flex-shrink-0" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm text-parchment font-medium">Clean up orphaned duplicate flags</p>
+            <p className="text-xs text-parchment/50">
+              Dismisses open duplicate flags whose target was removed by an earlier merge, or that point at themselves. Valid, still-mergeable flags are left untouched.
+            </p>
+            {cleanupResult && !cleanupResult.error && (
+              <p className="text-xs text-amber-light mt-1">Checked {cleanupResult.checked} · dismissed {cleanupResult.dismissed}</p>
+            )}
+            {cleanupResult?.error && <p className="text-xs text-red-400 mt-1">{cleanupResult.error}</p>}
+          </div>
+          <button onClick={runCleanup} disabled={cleanupBusy}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-[rgba(201,145,58,0.3)] text-amber-light text-xs font-medium hover:bg-[rgba(201,145,58,0.08)] transition-colors disabled:opacity-50">
+            {cleanupBusy ? <Loader2 size={13} className="animate-spin" /> : <Wrench size={13} />} Run cleanup
+          </button>
+        </div>
 
         {loading ? (
           <div className="space-y-3">{[1, 2, 3, 4].map(i => <div key={i} className="aged-card rounded-lg h-16 animate-pulse" />)}</div>
